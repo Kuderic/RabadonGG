@@ -1,4 +1,4 @@
-# CLAUDE.md — Raabadon.GG
+# CLAUDE.md — Rabadon.GG
 
 This file gives Claude Code the context it needs to assist with planning and building this project effectively.
 
@@ -6,7 +6,7 @@ This file gives Claude Code the context it needs to assist with planning and bui
 
 ## Project Overview
 
-**Raabadon.GG** is a League of Legends champion select assistant that solves a gap no existing app has closed: real-time, situational, multi-conditional stat synthesis during champion select (champ select window is ~1–2 minutes).
+**Rabadon.GG** is a League of Legends champion select assistant that solves a gap no existing app has closed: real-time, situational, multi-conditional stat synthesis during champion select (champ select window is ~1–2 minutes).
 
 Existing sites like lolalytics show conditional winrates (e.g. "what items on Jax given Renekton is the matchup AND Graves is the enemy jungler") but each condition requires its own page. A player would need to check up to 9 pages in under 2 minutes — impossible in practice. This app reads the draft, pulls all relevant conditional data simultaneously, and uses an LLM to synthesize a recommendation with plain-language reasoning.
 
@@ -26,7 +26,7 @@ Existing sites like lolalytics show conditional winrates (e.g. "what items on Ja
 ## Monorepo Structure
 
 ```
-raabadon/
+rabadon/
   frontend/        # React app (shared between web and Electron desktop)
   backend/         # FastAPI (Python)
   DECISIONS.md     # Log of non-obvious technical/product decisions
@@ -55,7 +55,7 @@ raabadon/
 ## Architecture
 
 ### Data Flow (MVP)
-1. User inputs their champion + role + full draft (enemy + ally champions) into the web UI, OR the desktop app reads draft automatically via the **LCU API** (Riot-sanctioned local API that reads the League client).
+1. User inputs their role + partial draft (currently selected enemy + ally champions) into the web UI, OR the desktop app reads draft automatically via the **LCU API** (Riot-sanctioned local API that reads the League client).
 2. Backend (FastAPI) receives draft context and queries lolalytics for conditional stats (scraped, cached in Redis).
 3. Stat aggregation logic scores champion recommendations using weighted winrate deltas.
 4. If user has already locked a champion: LLM call (Anthropic API) synthesizes rune page + item build with reasoning.
@@ -71,7 +71,7 @@ raabadon/
 ## Core Features (Priority Order)
 
 ### MVP — Champion Recommendation
-- Input: full draft state (ally + enemy champions + roles)
+- Input: user's role + partial draft state (ally + enemy champions + roles)
 - Output: ranked list of recommended champion picks for the user's role, with scores and explanations
 - Score = weighted aggregate of conditional winrate deltas (ally synergy + enemy counters), with role-based weighting (e.g. ADC vs ADC matchup weighted higher than ADC vs TOP)
 - Transparent data: show the user which conditional stats contributed to the score
@@ -120,8 +120,19 @@ The core algorithm needs to:
 Request:
 {
   "role": "adc",
-  "ally_champions": ["Thresh", "Gnar", "Vi", "Orianna"],
-  "enemy_champions": ["Draven", "Leona", "Renekton", "Graves", "Syndra"],
+  "allies": [
+    { "champion": "Thresh", "role": "support" },
+    { "champion": "Gnar", "role": "top" },
+    { "champion": "Vi", "role": "jungle" },
+    { "champion": "Orianna", "role": "mid" }
+  ],
+  "enemies": [
+    { "champion": "Draven", "role": "adc" },
+    { "champion": "Leona", "role": "support" },
+    { "champion": "Renekton", "role": "top" },
+    { "champion": "Graves", "role": "jungle" },
+    { "champion": "Syndra", "role": "mid" }
+  ],
   "champion_pool": ["Jinx", "Caitlyn", "Jhin"]
 }
 
@@ -131,8 +142,8 @@ Response:
     {
       "champion": "Caitlyn",
       "score": 0.87,
-      "winrate_delta": "+2.3%",
-      "reasoning": "Strong into Draven lane...",
+      "synergy_delta": "+1.1%",
+      "counter_delta": "+1.2%",
       "data_warnings": ["Caitlyn vs Graves: only 180 games this patch"]
     }
   ]
@@ -145,7 +156,13 @@ Request:
 {
   "champion": "Caitlyn",
   "role": "adc",
-  "enemy_champions": ["Leona", "Renekton", "Graves", "Syndra", "Draven"]
+  "enemies": [
+    { "champion": "Draven", "role": "adc" },
+    { "champion": "Leona", "role": "support" },
+    { "champion": "Renekton", "role": "top" },
+    { "champion": "Graves", "role": "jungle" },
+    { "champion": "Syndra", "role": "mid" }
+  ],
 }
 
 Response:
@@ -199,7 +216,7 @@ RIOT_API_KEY=          # for future own-stat pipeline
 - **lolalytics** is the gold standard data source (not an app — a website). The conditional stat depth there is unmatched; we are building on top of it.
 - **Blitz/Mobalytics/Porofessor** are large but stagnating; their draft tools are dressed-up tier lists.
 
-**Positioning:** *"Why don't high elo players always trust the stats? Because they aren't representative of your exact situation. Raabadon.GG is."*
+**Positioning:** *"Why don't high elo players always trust the stats? Because they aren't representative of your exact situation. Rabadon.gg is."*
 
 ---
 
