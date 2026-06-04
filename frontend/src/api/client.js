@@ -1,4 +1,8 @@
-const BASE_URL = 'http://localhost:8000'
+// In dev, hit the local backend. In a production build, default to same-origin
+// (relative) requests so we never call the user's localhost. Override with
+// VITE_API_BASE_URL at build time if the API lives on a different host.
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : '')
 
 export async function getChampions() {
   const res = await fetch(`${BASE_URL}/api/champions`)
