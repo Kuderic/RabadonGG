@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import TierSelector from './TierSelector'
 
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
@@ -27,7 +28,7 @@ function WeightSlider({ role, value, onChange }) {
   )
 }
 
-export default function ConfigPanel({ config, onChange, defaultConfig }) {
+export default function ConfigPanel({ config, onChange, defaultConfig, patch, tier, availablePatches, onPatchChange, onTierChange }) {
   const [viewRole, setViewRole] = useState('adc')
   const weights = config.roleWeights?.[viewRole] || {}
   const allySlots = ALLY_SLOTS[viewRole] || []
@@ -61,6 +62,33 @@ export default function ConfigPanel({ config, onChange, defaultConfig }) {
 
   return (
     <div className="config-panel">
+
+      {/* ── Population ──────────────────────────────────────── */}
+      <div className="config-section">
+        <div className="config-section-title">Population</div>
+        <p className="config-desc">
+          The data set used for all synergy and counter calculations. Larger sample sizes are more reliable; 30 Days aggregates across all recent patches.
+        </p>
+        <div className="config-row">
+          <div className="config-inline-label">
+            <span className="config-field-label">Patch</span>
+            <select
+              className="config-select"
+              value={patch}
+              onChange={e => onPatchChange(e.target.value)}
+            >
+              <option value="30">30 Days</option>
+              {availablePatches?.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+          <div className="config-inline-label">
+            <span className="config-field-label">Tier</span>
+            <TierSelector value={tier} onChange={onTierChange} />
+          </div>
+        </div>
+      </div>
 
       {/* ── Sample size penalty ─────────────────────────────── */}
       <div className="config-section">
