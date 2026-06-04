@@ -96,6 +96,49 @@ body {
   margin-left: auto;
 }
 
+/* Population read-only display on draft tab */
+.draft-population-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #c0c8d8;
+}
+
+.pop-patch {
+  font-weight: 600;
+  color: #c0c8d8;
+}
+
+.pop-sep { color: #4a5568; }
+
+.tier-display {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Config section: field label + control inline */
+.config-field-label {
+  font-size: 12px;
+  color: #8892a4;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+}
+
+.config-select {
+  padding: 7px 32px 7px 10px;
+  background-color: #0a0e1a;
+  color: #fff;
+  border: 1px solid #2a3f5f;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  appearance: auto;
+}
+.config-select:hover, .config-select:focus { border-color: #c89b3c; outline: none; }
+
 .draft-role-selector {
   display: flex;
   align-items: center;
@@ -1045,4 +1088,94 @@ body {
   .bp-columns         { grid-template-columns: 1fr; }
   .bp-summary         { flex-direction: column; gap: 10px; }
   .bp-summary-note    { margin-left: 0; text-align: left; max-width: 100%; }
+}
+
+/* ── Mobile (≤768px) ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-container { padding: 16px 12px; }
+
+  /* Header: wrap role selector and patch/tier onto separate line */
+  .draft-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .draft-header-right {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* Draft section: less padding */
+  .draft-section { padding: 14px 12px; }
+
+  /* Rec toolbar: wrap */
+  .rec-toolbar { flex-wrap: wrap; gap: 6px; }
+
+  /* Bottom sheet for breakdown panel */
+  .breakdown-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 500;
+    backdrop-filter: blur(2px);
+  }
+
+  .breakdown-section {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 501;
+    max-height: 75vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    border: none;
+    border-top: 1px solid #3a4f6f;
+    box-shadow: 0 -6px 32px rgba(0, 0, 0, 0.6);
+    padding: 0;
+    /* Smooth slide-up */
+    animation: slideUp 0.22s ease-out;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .breakdown-section .breakdown-panel-full {
+    padding: 16px 14px;
+    border-radius: 0;
+    border: none;
+  }
+
+  /* Sheet handle pill */
+  .sheet-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: #3a4f6f;
+    border-radius: 2px;
+    margin: 10px auto 4px;
+    flex-shrink: 0;
+  }
+
+  /* Config panel: stack weight columns */
+  .config-weights-grid { grid-template-columns: 1fr; }
+
+  /* Summary items wrap */
+  .bp-summary { flex-wrap: wrap; gap: 12px; }
+  .bp-summary-divider { display: none; }
+  .bp-summary-plus { display: none; }
+  .bp-summary-note { margin-left: 0; text-align: left; max-width: 100%; }
+
+  /* Results section: less padding */
+  .results-section { padding: 14px 12px; }
+}
+
+/* Desktop: backdrop and sheet handle invisible */
+@media (min-width: 769px) {
+  .breakdown-backdrop { display: none; }
+  .sheet-handle { display: none; }
 }

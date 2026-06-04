@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { champIconUrl } from '../utils/champion'
+import { TierDisplay } from './TierSelector'
 
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 
@@ -15,79 +16,8 @@ const ROLE_ICON = {
   support: 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-utility.png',
 }
 
-const OPGG = 'https://opgg-static.akamaized.net/images/medals_new'
-const TIER_OPTIONS = [
-  { value: 'diamond_plus',  label: 'Diamond+',  icon: `${OPGG}/diamond.png` },
-  { value: 'emerald_plus',  label: 'Emerald+',  icon: `${OPGG}/emerald.png` },
-  { value: 'platinum_plus', label: 'Platinum+', icon: `${OPGG}/platinum.png` },
-  { value: 'gold',          label: 'Gold+',     icon: `${OPGG}/gold.png` },
-  { value: 'all',           label: 'All Ranks', icon: null },
-]
-
 const broadcastClose = (exceptId) =>
   document.dispatchEvent(new CustomEvent('closeDropdowns', { detail: exceptId }))
-
-function TierSelector({ value, onChange, disabled }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-  const id = useRef(Math.random())
-
-  useEffect(() => {
-    const closeHandler = e => { if (e.detail !== id.current) setOpen(false) }
-    const outsideHandler = e => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('closeDropdowns', closeHandler)
-    document.addEventListener('mousedown', outsideHandler)
-    return () => {
-      document.removeEventListener('closeDropdowns', closeHandler)
-      document.removeEventListener('mousedown', outsideHandler)
-    }
-  }, [])
-
-  const handleOpen = () => {
-    if (disabled) return
-    if (!open) broadcastClose(id.current)
-    setOpen(o => !o)
-  }
-
-  const selected = TIER_OPTIONS.find(t => t.value === value) || TIER_OPTIONS[1]
-
-  return (
-    <div className={`tier-select ${disabled ? 'tier-select--disabled' : ''}`} ref={ref}>
-      <button
-        className="tier-select-trigger"
-        onClick={handleOpen}
-        type="button"
-      >
-        {selected.icon && (
-          <img src={selected.icon} alt="" className="tier-icon"
-            onError={e => { e.target.style.display = 'none' }} />
-        )}
-        <span>{selected.label}</span>
-        <span className="tier-select-arrow">▾</span>
-      </button>
-      {open && (
-        <div className="tier-select-menu">
-          {TIER_OPTIONS.map(opt => (
-            <div
-              key={opt.value}
-              className={`tier-select-item ${opt.value === value ? 'tier-select-item--active' : ''}`}
-              onMouseDown={() => { onChange(opt.value); setOpen(false) }}
-            >
-              {opt.icon
-                ? <img src={opt.icon} alt="" className="tier-icon"
-                    onError={e => { e.target.style.display = 'none' }} />
-                : <span className="tier-icon-placeholder" />
-              }
-              <span>{opt.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 function RolePill({ role, side }) {
   return (
@@ -197,7 +127,9 @@ function ChampionRow({ role, value, onChange, disabled, side, champions }) {
     }
   }
 
-  const hasChamp = value.trim().length > 3
+  // Show icon only when the entered value is an exact champion name match
+  const hasChamp = value.trim().length > 0 &&
+    champions.some(c => c.toLowerCase() === value.trim().toLowerCase())
 
   return (
     <div className={`champ-row champ-row--${side}`} ref={wrapRef}>
@@ -257,8 +189,10 @@ export default function DraftForm({
   role, allies, enemies, champions,
   onRoleChange, onAllyChange, onEnemyChange,
   onSubmit, loading, error, hasInput,
-  patch, tier, availablePatches, onPatchChange, onTierChange,
+  patch, tier,
 }) {
+  const patchLabel = patch === '30' ? '30 Days' : `Patch ${patch}`
+
   return (
     <div className="draft-section">
       <div className="draft-header">
@@ -274,19 +208,10 @@ export default function DraftForm({
         {error && <span className="draft-error">{error}</span>}
 
         <div className="draft-header-right">
-          <div className="draft-role-selector">
-            <span className="draft-role-label">Patch</span>
-            <select value={patch} onChange={e => onPatchChange(e.target.value)} disabled={loading}>
-              <option value="30">30 Days</option>
-              {availablePatches?.map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="draft-role-selector">
-            <span className="draft-role-label">Tier</span>
-            <TierSelector value={tier} onChange={onTierChange} disabled={loading} />
+          <div className="draft-population-display">
+            <span className="pop-patch">{patchLabel}</span>
+            <span className="pop-sep"> · </span>
+            <TierDisplay tier={tier} />
           </div>
         </div>
       </div>

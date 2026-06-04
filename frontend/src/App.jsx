@@ -133,7 +133,7 @@ export default function App() {
           <img src="/rabadon.png" alt="" className="header-logo-img" />
           <h1>Rabadon.GG</h1>
         </div>
-        <p>Real-time champion select analysis powered by AI</p>
+        <p>Real-time champion select analysis</p>
       </div>
 
       <nav className="tab-nav">
@@ -163,9 +163,6 @@ export default function App() {
             hasInput={hasInput}
             patch={patch}
             tier={tier}
-            availablePatches={availablePatches}
-            onPatchChange={setPatch}
-            onTierChange={setTier}
           />
 
           {(recommendations.length > 0 || loading) && (
@@ -183,15 +180,19 @@ export default function App() {
           )}
 
           {selectedRec !== null && recommendations[selectedRec] && (
-            <div className="breakdown-section">
-              <BreakdownPanel
-                rec={recommendations[selectedRec]}
-                rank={selectedRec + 1}
-                onClose={() => setSelectedRec(null)}
-                settings={config}
-                playerRole={role}
-              />
-            </div>
+            <>
+              <div className="breakdown-backdrop" onClick={() => setSelectedRec(null)} />
+              <div className="breakdown-section">
+                <div className="sheet-handle" />
+                <BreakdownPanel
+                  rec={recommendations[selectedRec]}
+                  rank={selectedRec + 1}
+                  onClose={() => setSelectedRec(null)}
+                  settings={config}
+                  playerRole={role}
+                />
+              </div>
+            </>
           )}
         </>
       )}
@@ -201,6 +202,11 @@ export default function App() {
           config={config}
           onChange={setConfig}
           defaultConfig={DEFAULT_CONFIG}
+          patch={patch}
+          tier={tier}
+          availablePatches={availablePatches}
+          onPatchChange={setPatch}
+          onTierChange={setTier}
         />
       )}
     </div>
