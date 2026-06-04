@@ -1,0 +1,484 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0a0e1a;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+  border-bottom: 2px solid #c89b3c;
+  padding-bottom: 18px;
+}
+
+.header h1 {
+  font-size: 34px;
+  color: #c89b3c;
+  margin-bottom: 6px;
+}
+
+.header p {
+  font-size: 13px;
+  color: #a0a0a0;
+}
+
+/* ── Draft section (full-width top bar) ─────────────────── */
+.draft-section {
+  background-color: #161b29;
+  border: 1px solid #2a3f5f;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+/* Header row: role selector left, button right */
+.draft-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.draft-role-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.draft-role-label {
+  font-size: 12px;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.draft-role-selector select {
+  padding: 8px 12px;
+  background-color: #0a0e1a;
+  color: #ffffff;
+  border: 1px solid #2a3f5f;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.draft-role-selector select:hover,
+.draft-role-selector select:focus {
+  border-color: #c89b3c;
+  outline: none;
+}
+
+.draft-submit-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.draft-error {
+  font-size: 13px;
+  color: #ff9999;
+}
+
+.submit-button {
+  padding: 10px 28px;
+  background-color: #c89b3c;
+  color: #0a0e1a;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: background-color 0.2s, opacity 0.2s;
+  white-space: nowrap;
+}
+
+.submit-button:hover { background-color: #e5b856; }
+.submit-button:disabled { background-color: #6a5c3d; cursor: not-allowed; opacity: 0.6; }
+
+/* Two-column team layout */
+.draft-teams {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 0 20px;
+}
+
+.draft-team-divider {
+  background-color: #2a3f5f;
+  width: 1px;
+}
+
+.draft-team-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2a3f5f;
+}
+
+.ally-title  { color: #4a9a6a; }
+.enemy-title { color: #c84a4a; }
+
+/* Champion input rows */
+.champ-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.role-pill {
+  width: 36px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #606880;
+  flex-shrink: 0;
+  padding: 2px 0;
+}
+
+.champ-row--ally  .role-pill { color: #4a9a6a; }
+.champ-row--enemy .role-pill { color: #c84a4a; }
+
+.champ-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.champ-row-icon {
+  position: absolute;
+  left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #2a3f5f;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.champ-input-wrap input {
+  width: 100%;
+  padding: 8px 10px 8px 38px;
+  background-color: #0a0e1a;
+  color: #ffffff;
+  border: 1px solid #2a3f5f;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+
+.champ-input-wrap input:not(:placeholder-shown) {
+  padding-left: 38px;
+}
+
+.champ-input-wrap input::placeholder {
+  color: #505a6f;
+  padding-left: 0;
+}
+
+.champ-input-wrap input:focus,
+.champ-input-wrap input:hover {
+  border-color: #2a3f5f;
+  outline: none;
+}
+
+.champ-row--ally  .champ-input-wrap input:focus { border-color: #4a9a6a; }
+.champ-row--enemy .champ-input-wrap input:focus { border-color: #c84a4a; }
+
+/* ── Results section ─────────────────────────────────────── */
+.results-section {
+  background-color: #161b29;
+  border: 1px solid #2a3f5f;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+/* Metadata bar */
+.rec-meta-bar {
+  font-size: 12px;
+  color: #606880;
+  text-align: center;
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+/* Recommendations grid */
+.recommendations-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.recommendations-empty {
+  text-align: center;
+  color: #6a6a6a;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.recommendations-loading {
+  text-align: center;
+  color: #c89b3c;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #2a3f5f;
+  border-top-color: #c89b3c;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Recommendation cards ────────────────────────────────── */
+.recommendation-card {
+  background-color: #0a0e1a;
+  border: 1px solid #2a3f5f;
+  border-radius: 6px;
+  padding: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.recommendation-card:hover {
+  border-color: #c89b3c;
+  box-shadow: 0 0 10px rgba(200, 155, 60, 0.1);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.card-champ-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #2a3f5f;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.card-champion-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #c89b3c;
+  flex: 1;
+}
+
+.lola-link {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  opacity: 0;
+  color: #c89b3c;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+
+.lola-link svg { width: 11px; height: 11px; }
+
+.recommendation-card:hover .lola-link { opacity: 0.6; }
+.lola-link:hover { opacity: 1 !important; }
+
+.card-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.card-win-rate {
+  font-size: 12px;
+  color: #a0a0a0;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-total-games {
+  font-size: 11px;
+  color: #606880;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Delta cells */
+.card-deltas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.delta-cell {
+  position: relative;
+  background-color: #161b29;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border-left: 3px solid #2a3f5f;
+  cursor: default;
+  transition: border-color 0.15s;
+}
+
+.delta-cell.has-breakdown { cursor: help; }
+.delta-cell.has-breakdown:hover { border-left-color: #c89b3c; }
+
+.delta-label {
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.breakdown-hint { color: #c89b3c; font-size: 9px; }
+
+.delta-value { font-weight: 600; font-size: 14px; }
+.delta-value.positive { color: #4caf50; }
+.delta-value.negative { color: #f44336; }
+
+/* Breakdown tooltip */
+.breakdown-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  min-width: 240px;
+  background-color: #1e2637;
+  border: 1px solid #3a4f6f;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px;
+  border-radius: 3px;
+}
+
+.breakdown-row:hover { background-color: #252e42; }
+
+.breakdown-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #3a4f6f;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.breakdown-champ { flex: 1; font-size: 12px; color: #e0e0e0; }
+.breakdown-role { font-size: 10px; color: #606880; text-transform: uppercase; }
+
+.breakdown-delta {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+  text-align: right;
+}
+
+.breakdown-delta.positive { color: #4caf50; }
+.breakdown-delta.negative { color: #f44336; }
+
+.breakdown-n {
+  font-size: 10px;
+  color: #606880;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-missing { opacity: 0.5; }
+
+.breakdown-no-data {
+  flex: 1;
+  font-size: 10px;
+  color: #8a6a3a;
+  font-style: italic;
+}
+
+/* Warnings */
+.card-warnings {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #2a3f5f;
+}
+
+.warning-item {
+  font-size: 11px;
+  color: #d4a574;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.warning-item:before {
+  content: '!';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background-color: #c89b3c;
+  color: #0a0e1a;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.warning-item:last-child { margin-bottom: 0; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .draft-teams {
+    grid-template-columns: 1fr;
+    gap: 16px 0;
+  }
+  .draft-team-divider { display: none; }
+  .recommendations-list { grid-template-columns: 1fr; }
+  .draft-header { flex-direction: column; align-items: stretch; }
+}

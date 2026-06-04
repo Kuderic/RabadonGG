@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Generated lolalytics cache (patch-keyed JSON, re-fetched as needed)
+backend/data/lolalytics/
+
+# Logs
+*.log
+*.err
+
+# MCP / editor tool configs (machine-specific)
+.mcp.json
+
+# Playwright test artifacts
+.playwright-mcp/
+
+# IDE
+.vscode/
+.idea/
