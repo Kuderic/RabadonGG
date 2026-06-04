@@ -26,6 +26,8 @@ from typing import Dict, List, Optional, Tuple
 
 import httpx
 
+from . import db
+
 LOLA_API = "https://a1.lolalytics.com/mega/"
 DD_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json"
 PATCH = "16.11"
@@ -50,8 +52,8 @@ logger = logging.getLogger(__name__)
 _slug_to_id: Dict[str, int] = {}
 _id_to_slug: Dict[int, str] = {}
 _current_patch: Optional[str] = None
-_matchup_mem_cache: Dict[str, dict] = {}  # "{slug}:{lane}" → {counters, team}
-_games_by_slug_cache: Dict[str, Dict[str, int]] = {}  # "{lane}" → {slug: games}
+_matchup_mem_cache: Dict[str, dict] = {}  # "{tier}:{patch}:{slug}:{lane}" → {counters, team}
+_games_by_slug_cache: Dict[str, Dict[str, int]] = {}  # "{tier}:{patch}:{lane}" → {slug: games}
 
 
 # ---------------------------------------------------------------------------
@@ -79,32 +81,11 @@ def _is_stale(data: dict) -> bool:
         return True
 
 
-def _cache_path(patch: str, lane: str, filename: str) -> Path:
-    p = CACHE_DIR / patch / lane / filename
-    p.parent.mkdir(parents=True, exist_ok=True)
-    return p
+def _tier_key(tier: str, days: int) -> str:
+    """DB/cache key that encodes both tier and days window."""
+    return f"{tier}_{days}d" if days > 0 else tier
 
 
-def _read_cache(patch: str, lane: str, filename: str) -> Optional[dict]:
-    path = _cache_path(patch, lane, filename)
-    if not path.exists():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        if _is_stale(data):
-            path.unlink(missing_ok=True)
-            return None
-        return data
-    except Exception:
-        path.unlink(missing_ok=True)
-        return None
-
-
-def _write_cache(patch: str, lane: str, filename: str, payload: dict) -> None:
-    payload["fetched_at"] = _today()
-    _cache_path(patch, lane, filename).write_text(
-        json.dumps(payload), encoding="utf-8"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +134,7 @@ async def _ensure_champion_map(patch: str) -> None:
         return
 
     # Try disk cache first (stored at root of CACHE_DIR, 1-day TTL)
-    map_file = CACHE_DIR / "_champ_map.json"
+    map_file = CACHE_DIR / f"_champ_map_{patch}.json"
     if map_file.exists():
         try:
             meta = json.loads(map_file.read_text(encoding="utf-8"))
@@ -178,6 +159,7 @@ async def _ensure_champion_map(patch: str) -> None:
         _slug_to_id[s] = cid
         _id_to_slug[cid] = val["name"]  # display name e.g. "Miss Fortune", "Kog'Maw"
 
+    map_file = CACHE_DIR / f"_champ_map_{patch}.json"
     map_file.write_text(json.dumps({
         "fetched_at": _today(),
         "slug_to_id": {k: str(v) for k, v in _slug_to_id.items()},
@@ -190,18 +172,20 @@ async def _ensure_champion_map(patch: str) -> None:
 # Lolalytics API fetcher
 # ---------------------------------------------------------------------------
 
-async def _fetch(ep: str, lane: str, champ_slug: Optional[str], patch: str,
-                 extra: Optional[Dict[str, str]] = None) -> dict:
+async def _fetch(ep: str, lane: str, champ_slug: Optional[str], patch: str, tier: str = TIER,
+                 days: int = 0, extra: Optional[Dict[str, str]] = None) -> dict:
     """Single request to the lolalytics mega API."""
     params: dict = {
         "ep": ep,
         "v": "1",
         "patch": patch,
         "lane": lane,
-        "tier": TIER,
+        "tier": tier,
         "queue": QUEUE,
         "region": REGION,
     }
+    if days > 0:
+        params["dd"] = str(days)
     if champ_slug:
         params["c"] = champ_slug
     if extra:
@@ -214,7 +198,8 @@ async def _fetch(ep: str, lane: str, champ_slug: Optional[str], patch: str,
 VS_LANES = ["top", "jungle", "middle", "bottom", "support"]
 
 
-async def _fetch_counter_all_lanes(champ_slug: str, lane: str, patch: str) -> tuple[List[dict], float]:
+async def _fetch_counter_all_lanes(champ_slug: str, lane: str, patch: str, tier: str = TIER,
+                                   days: int = 0) -> tuple[List[dict], float]:
     """
     Fetch counter matchups across all 5 opponent lanes in parallel.
 
@@ -226,7 +211,7 @@ async def _fetch_counter_all_lanes(champ_slug: str, lane: str, patch: str) -> tu
     Returns (merged_counter_list, win_rate) — win_rate from first response's stats.
     """
     responses = await asyncio.gather(*[
-        _fetch("counter", lane, champ_slug, patch, extra={"vslane": vs})
+        _fetch("counter", lane, champ_slug, patch, tier, days, extra={"vslane": vs})
         for vs in VS_LANES
     ])
     by_cid: Dict[int, dict] = {}
@@ -253,88 +238,97 @@ async def warm_cache() -> None:
     patch = await _get_patch()
     await _ensure_champion_map(patch)  # must run before parallel requests touch _slug_to_id
     loaded = 0
-    for lane_dir in (CACHE_DIR / patch).iterdir() if (CACHE_DIR / patch).exists() else []:
-        if not lane_dir.is_dir():
+
+    # Load all valid (non-stale) matchups from SQLite into memory
+    rows = db.load_all_valid_matchups()
+    for row in rows:
+        if len(row.get("counters", "")) > 50:  # Minimal validation
+            mem_key = f"{row['tier']}:{row['patch']}:{row['champion']}:{row['lane']}"
+            _matchup_mem_cache[mem_key] = {
+                "counters": json.loads(row["counters"]),
+                "team": json.loads(row["team"]),
+                "win_rate": row["win_rate"],
+            }
+            loaded += 1
+
+    # Also warm the games_by_slug cache from pool files in SQLite
+    # Note: pool data still stored in JSON files per the requirements
+    # (only matchup and pool data moves to SQLite)
+    for tier_dir in CACHE_DIR.iterdir() if CACHE_DIR.exists() else []:
+        if not tier_dir.is_dir() or tier_dir.name.startswith("_"):
             continue
-        lane = lane_dir.name
-        for champ_file in lane_dir.glob("*.json"):
-            if champ_file.stem.startswith("_"):
+        tier = tier_dir.name
+        for patch_dir in tier_dir.iterdir() if tier_dir.exists() else []:
+            if not patch_dir.is_dir():
                 continue
-            try:
-                data = json.loads(champ_file.read_text(encoding="utf-8"))
-                if not _is_stale(data) and "win_rate" in data and len(data.get("counters", [])) > 50:
-                    mem_key = f"{champ_file.stem}:{lane}"
-                    _matchup_mem_cache[mem_key] = {
-                        "counters": data.get("counters", []),
-                        "team": data.get("team", {}),
-                        "win_rate": data.get("win_rate", 0.0),
-                    }
-                    loaded += 1
-            except Exception:
-                pass
-    # Also warm the games_by_slug cache from pool files
-    for lane_dir in (CACHE_DIR / patch).iterdir() if (CACHE_DIR / patch).exists() else []:
-        if not lane_dir.is_dir():
-            continue
-        pool_file = lane_dir / "_pool.json"
-        if pool_file.exists():
-            try:
-                pool = json.loads(pool_file.read_text(encoding="utf-8"))
-                if not _is_stale(pool) and "games_by_slug" in pool:
-                    _games_by_slug_cache[lane_dir.name] = pool["games_by_slug"]
-            except Exception:
-                pass
+            for lane_dir in patch_dir.iterdir() if patch_dir.exists() else []:
+                if not lane_dir.is_dir():
+                    continue
+                pool_file = lane_dir / "_pool.json"
+                if pool_file.exists():
+                    try:
+                        pool = json.loads(pool_file.read_text(encoding="utf-8"))
+                        if not _is_stale(pool) and "games_by_slug" in pool:
+                            games_key = f"{tier}:{patch_dir.name}:{lane_dir.name}"
+                            _games_by_slug_cache[games_key] = pool["games_by_slug"]
+                    except Exception:
+                        pass
+
     logger.info(f"Warm cache: loaded {loaded} champions into memory")
 
 
-async def get_champion_pool(role: str) -> List[str]:
+async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
+                           days: int = 0) -> List[str]:
     """
     Return champion names for this role sourced from the lolalytics tier list.
     Also caches total_games per champion slug for use in recommendations.
     """
-    patch = await _get_patch()
     lane = ROLE_TO_LANE.get(role.lower(), "bottom")
     await _ensure_champion_map(patch)
 
-    cached = _read_cache(patch, lane, "_pool.json")
+    tkey = _tier_key(tier, days)
+    cached = db.read_pool(lane, patch, tkey)
     if cached:
         return cached["champions"]
 
     try:
-        data = await _fetch("list", lane, None, patch)
+        data = await _fetch("list", lane, None, patch, tier, days)
         entries = [
             (int(cid), info)
             for cid, info in data.get("cid", {}).items()
             if info.get("defaultLane") == lane
         ]
         names = [_id_to_slug[cid] for cid, _ in entries if cid in _id_to_slug]
-        # Store games keyed by slug (lowercase, no spaces) for lookup in get_matchup_data
         games_by_slug = {
             _slug(_id_to_slug[cid]): int(info.get("games", 0))
             for cid, info in entries if cid in _id_to_slug
         }
-        _write_cache(patch, lane, "_pool.json", {
+        pool_data = {
             "champions": names,
             "games_by_slug": games_by_slug,
-        })
-        _games_by_slug_cache[lane] = games_by_slug
-        logger.info(f"Pool for {role}: {len(names)} champions")
+        }
+        db.write_pool(lane, patch, tkey, pool_data)
+        games_key = f"{tkey}:{patch}:{lane}"
+        _games_by_slug_cache[games_key] = games_by_slug
+        logger.info(f"Pool for {role} ({tkey}): {len(names)} champions")
         return names
     except Exception as e:
         logger.warning(f"Failed to fetch champion pool for {role}: {e}")
         return []
 
 
-async def get_champion_total_games(champion: str, role: str) -> int:
+async def get_champion_total_games(champion: str, role: str, patch: str = PATCH, tier: str = TIER,
+                                   days: int = 0) -> int:
     """Return the total games played for this champion/role from the cached pool."""
     lane = ROLE_TO_LANE.get(role.lower(), "bottom")
-    if lane in _games_by_slug_cache:
-        return _games_by_slug_cache[lane].get(_slug(champion), 0)
-    patch = await _get_patch()
-    cached = _read_cache(patch, lane, "_pool.json")
+    tkey = _tier_key(tier, days)
+    games_key = f"{tkey}:{patch}:{lane}"
+    if games_key in _games_by_slug_cache:
+        return _games_by_slug_cache[games_key].get(_slug(champion), 0)
+    cached = db.read_pool(lane, patch, tkey)
     if cached:
         games = cached.get("games_by_slug", {})
-        _games_by_slug_cache[lane] = games
+        _games_by_slug_cache[games_key] = games
         return games.get(_slug(champion), 0)
     return 0
 
@@ -348,57 +342,57 @@ async def get_matchup_data(
     role: str,
     allies: List[Dict[str, str]],
     enemies: List[Dict[str, str]],
+    patch: str = PATCH,
+    tier: str = TIER,
+    days: int = 0,
 ) -> Tuple[Dict[Tuple[str, str], float], Dict[Tuple[str, str], int], float, int, List[str]]:
     """
     Fetch conditional winrate deltas for a candidate champion from lolalytics.
 
     Cache hierarchy:
       1. In-process memory (module-level dicts after first load per server run)
-      2. File cache: data/lolalytics/{patch}/{lane}/{champion}.json (1-day TTL)
-      3. Live fetch from a1.lolalytics.com → writes to file cache on success
+      2. SQLite cache: backend/data/rabadon_cache.db (1-day TTL)
+      3. Live fetch from a1.lolalytics.com → writes to SQLite on success
 
     Args:
         candidate: Champion being evaluated (e.g. "Caitlyn")
         role: Player's role (adc, support, mid, jungle, top)
         allies: Ally dicts with 'champion' and 'role' keys
         enemies: Enemy dicts with 'champion' and 'role' keys
+        patch: Patch version (e.g. "16.11")
+        tier: Rank tier (e.g. "emerald_plus")
 
     Returns:
         matchup_data: {(champ.lower(), "ally"|"enemy"): d2/100.0}
         warnings: low sample size flags
     """
-    patch = await _get_patch()
     await _ensure_champion_map(patch)
 
     lane = ROLE_TO_LANE.get(role.lower(), "bottom")
     cand_slug = _slug(candidate)
-    cache_file = f"{cand_slug}.json"
+    tkey = _tier_key(tier, days)
 
-    mem_key = f"{cand_slug}:{lane}"
+    mem_key = f"{tkey}:{patch}:{cand_slug}:{lane}"
     if mem_key in _matchup_mem_cache:
         counter_list = _matchup_mem_cache[mem_key]["counters"]
         team_map = _matchup_mem_cache[mem_key]["team"]
         win_rate = _matchup_mem_cache[mem_key].get("win_rate", 0.0)
     else:
-        file_data = _read_cache(patch, lane, cache_file)
-        if file_data and "win_rate" in file_data and len(file_data.get("counters", [])) > 50:
-            counter_list = file_data["counters"]
-            team_map = file_data["team"]
-            win_rate = file_data["win_rate"]
-            logger.debug(f"File cache hit: {candidate} ({lane}, {patch})")
+        db_data = db.read_matchup(cand_slug, patch, tkey, lane)
+        if db_data and "win_rate" in db_data and len(db_data.get("counters", [])) > 50:
+            counter_list = db_data["counters"]
+            team_map = db_data["team"]
+            win_rate = db_data["win_rate"]
+            logger.debug(f"Database cache hit: {candidate} ({lane}, {patch}, {tkey})")
         else:
             try:
                 (counter_list, win_rate), team_resp = await asyncio.gather(
-                    _fetch_counter_all_lanes(cand_slug, lane, patch),
-                    _fetch("build-team", lane, cand_slug, patch),
+                    _fetch_counter_all_lanes(cand_slug, lane, patch, tier, days),
+                    _fetch("build-team", lane, cand_slug, patch, tier, days),
                 )
                 team_map = team_resp.get("team", {})
-                _write_cache(patch, lane, cache_file, {
-                    "counters": counter_list,
-                    "team": team_map,
-                    "win_rate": win_rate,
-                })
-                logger.info(f"Fetched and cached: {candidate} ({lane}, {patch})")
+                db.write_matchup(cand_slug, patch, tkey, lane, counter_list, team_map, win_rate, 0)
+                logger.info(f"Fetched and cached: {candidate} ({lane}, {patch}, {tkey})")
             except Exception as e:
                 logger.warning(f"lolalytics fetch failed for {candidate}: {e}")
                 return {}, {}, 0.0, 0, [f"{candidate}: data unavailable ({e})"]
@@ -462,7 +456,7 @@ async def get_matchup_data(
                 )
 
     # Look up total games for this champion from the pool cache
-    total_games = await get_champion_total_games(candidate, role)
+    total_games = await get_champion_total_games(candidate, role, patch, tier, days)
 
     logger.info(
         f"lolalytics data for {candidate} ({role}): "

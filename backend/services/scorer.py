@@ -1,8 +1,4 @@
-"""Pure scoring logic for champion recommendations.
-
-This module computes a weighted score for a given champion candidate
-using conditional matchup data and role-based weights from scoring_config.
-"""
+"""Pure scoring logic for champion recommendations."""
 
 from typing import Dict, List, Tuple
 
@@ -16,76 +12,44 @@ def score_champion(
     enemies: List[Dict[str, str]],
     matchup_data: Dict[Tuple[str, str], float],
 ) -> float:
-    """
-    Compute a weighted score for a champion candidate.
-
-    This is a pure function with no I/O. It aggregates conditional winrate
-    deltas using role-based weights from scoring_config.
-
-    Args:
-        candidate: Champion being evaluated
-        role: Player's role (adc, support, mid, jungle, top)
-        allies: List of ally dicts with keys 'champion' and 'role'
-        enemies: List of enemy dicts with keys 'champion' and 'role'
-        matchup_data: Dict mapping (champion_pair, relationship) tuples
-                      to winrate deltas. Relationship is 'ally' or 'enemy'.
-                      E.g., {('Thresh', 'ally'): 0.015, ('Draven', 'enemy'): -0.012}
-
-    Returns:
-        Weighted composite score. Higher is better.
-    """
-    # Get role weights from config
+    """Role-weighted composite score used for internal tie-breaking."""
     role_key = role.lower()
-    if role_key not in [
-        "adc", "support", "mid", "jungle", "top"
-    ]:
-        raise ValueError(f"Unknown role: {role_key}")
+    enemy_weights = getattr(scoring_config, f"{role_key.upper()}_ENEMY_ROLE_WEIGHTS")
+    ally_weights  = getattr(scoring_config, f"{role_key.upper()}_ALLY_ROLE_WEIGHTS")
+    role_blend    = getattr(scoring_config, f"{role_key.upper()}_ROLE_BLEND")
 
-    # Fetch config for this role
-    enemy_weights = getattr(
-        scoring_config, f"{role_key.upper()}_ENEMY_ROLE_WEIGHTS"
+    counter_score = sum(
+        matchup_data[(e["champion"].lower(), "enemy")] * enemy_weights.get(e["role"].lower(), 0.0)
+        for e in enemies if (e["champion"].lower(), "enemy") in matchup_data
     )
-    ally_weights = getattr(
-        scoring_config, f"{role_key.upper()}_ALLY_ROLE_WEIGHTS"
+    synergy_score = sum(
+        matchup_data[(a["champion"].lower(), "ally")] * ally_weights.get(a["role"].lower(), 0.0)
+        for a in allies if (a["champion"].lower(), "ally") in matchup_data
     )
-    role_blend = getattr(scoring_config, f"{role_key.upper()}_ROLE_BLEND")
+    final = role_blend["W_counter"] * counter_score + role_blend["W_synergy"] * synergy_score
+    return max(0.0, 0.5 + final)
 
-    # Compute weighted counter score (vs. enemies)
-    counter_score = 0.0
-    for enemy in enemies:
-        enemy_champ = enemy["champion"].lower()
-        enemy_role = enemy["role"].lower()
-        key = (enemy_champ, "enemy")
 
-        if key in matchup_data:
-            delta = matchup_data[key]
-            weight = enemy_weights.get(enemy_role, 0.0)
-            counter_score += delta * weight
+def compute_rating(
+    win_rate: float,
+    allies: List[Dict[str, str]],
+    enemies: List[Dict[str, str]],
+    matchup_data: Dict[Tuple[str, str], float],
+) -> float:
+    """
+    Transparent rating = base WR + Σ synergy deltas + Σ counter deltas (all in %).
 
-    # Compute weighted synergy score (vs. allies)
-    synergy_score = 0.0
-    for ally in allies:
-        ally_champ = ally["champion"].lower()
-        ally_role = ally["role"].lower()
-        key = (ally_champ, "ally")
-
-        if key in matchup_data:
-            delta = matchup_data[key]
-            weight = ally_weights.get(ally_role, 0.0)
-            synergy_score += delta * weight
-
-    # Blend counter and synergy scores
-    w_counter = role_blend["W_counter"]
-    w_synergy = role_blend["W_synergy"]
-
-    # Normalize to make the final score interpretable (0.0 to 1.0 range)
-    # by scaling and offsetting
-    final_score = (w_counter * counter_score) + (w_synergy * synergy_score)
-
-    # Offset to keep in roughly 0.5-1.0 range for display
-    final_score = max(0.0, 0.5 + final_score)
-
-    return final_score
+    This is the primary sort key and the value shown to the user.
+    """
+    syn_sum = sum(
+        matchup_data[(a["champion"].lower(), "ally")] * 100
+        for a in allies if (a["champion"].lower(), "ally") in matchup_data
+    )
+    ctr_sum = sum(
+        matchup_data[(e["champion"].lower(), "enemy")] * 100
+        for e in enemies if (e["champion"].lower(), "enemy") in matchup_data
+    )
+    return round(win_rate + syn_sum + ctr_sum, 2)
 
 
 def _fmt(delta: float) -> str:
@@ -98,7 +62,6 @@ def get_synergy_breakdown(
     matchup_data: Dict[Tuple[str, str], float],
     matchup_n: Dict[Tuple[str, str], int],
 ) -> tuple[List[Dict], List[str]]:
-    """Return (per-ally delta list, missing ally names list) for tooltip display."""
     found, missing = [], []
     for ally in allies:
         key = (ally["champion"].lower(), "ally")
@@ -119,7 +82,6 @@ def get_counter_breakdown(
     matchup_data: Dict[Tuple[str, str], float],
     matchup_n: Dict[Tuple[str, str], int],
 ) -> tuple[List[Dict], List[str]]:
-    """Return (per-enemy delta list, missing enemy names list) for tooltip display."""
     found, missing = [], []
     for enemy in enemies:
         key = (enemy["champion"].lower(), "enemy")
@@ -140,30 +102,13 @@ def get_synergy_delta_string(
     allies: List[Dict[str, str]],
     matchup_data: Dict[Tuple[str, str], float],
 ) -> str:
-    """
-    Format the average ally synergy delta as a percentage string.
-
-    Args:
-        candidate: Champion name
-        allies: List of ally dicts
-        matchup_data: Conditional data dict
-
-    Returns:
-        String like '+1.1%' or '-0.3%'
-    """
-    deltas = []
-    for ally in allies:
-        ally_champ = ally["champion"].lower()
-        key = (ally_champ, "ally")
-        if key in matchup_data:
-            deltas.append(matchup_data[key])
-
-    if not deltas:
-        return "+0.0%"
-
-    avg_delta = sum(deltas) / len(deltas)
-    sign = "+" if avg_delta >= 0 else ""
-    return f"{sign}{avg_delta * 100:.1f}%"
+    """Sum of ally synergy deltas (not average) as a formatted string."""
+    total = sum(
+        matchup_data[(a["champion"].lower(), "ally")]
+        for a in allies if (a["champion"].lower(), "ally") in matchup_data
+    )
+    sign = "+" if total >= 0 else ""
+    return f"{sign}{total * 100:.1f}%"
 
 
 def get_counter_delta_string(
@@ -171,27 +116,10 @@ def get_counter_delta_string(
     enemies: List[Dict[str, str]],
     matchup_data: Dict[Tuple[str, str], float],
 ) -> str:
-    """
-    Format the average enemy counter delta as a percentage string.
-
-    Args:
-        candidate: Champion name
-        enemies: List of enemy dicts
-        matchup_data: Conditional data dict
-
-    Returns:
-        String like '+1.2%' or '-0.5%'
-    """
-    deltas = []
-    for enemy in enemies:
-        enemy_champ = enemy["champion"].lower()
-        key = (enemy_champ, "enemy")
-        if key in matchup_data:
-            deltas.append(matchup_data[key])
-
-    if not deltas:
-        return "+0.0%"
-
-    avg_delta = sum(deltas) / len(deltas)
-    sign = "+" if avg_delta >= 0 else ""
-    return f"{sign}{avg_delta * 100:.1f}%"
+    """Sum of enemy counter deltas (not average) as a formatted string."""
+    total = sum(
+        matchup_data[(e["champion"].lower(), "enemy")]
+        for e in enemies if (e["champion"].lower(), "enemy") in matchup_data
+    )
+    sign = "+" if total >= 0 else ""
+    return f"{sign}{total * 100:.1f}%"

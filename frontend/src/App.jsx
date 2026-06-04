@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DraftForm from './components/DraftForm'
 import RecommendationList from './components/RecommendationList'
-import { getRecommendations } from './api/client'
+import BreakdownPanel from './components/BreakdownPanel'
+import ConfigPanel from './components/ConfigPanel'
+import { getRecommendations, getChampions, getPatches } from './api/client'
 
 const ROLE_ALLY_SLOTS = {
   top:     ['jungle', 'mid', 'adc', 'support'],
@@ -12,6 +14,38 @@ const ROLE_ALLY_SLOTS = {
 }
 
 const ENEMY_SLOTS = ['top', 'jungle', 'mid', 'adc', 'support']
+
+export const DEFAULT_CONFIG = {
+  penalize: true,
+  penalizeThreshold: 1000,
+  roleWeights: {
+    top: {
+      enemy: { top: 1.0, jungle: 1.0, mid: 1.0, support: 1.0, adc: 1.0 },
+      ally:  { jungle: 1.0, mid: 1.0, support: 1.0, adc: 1.0 },
+      blend: { counter: 1, synergy: 1 },
+    },
+    jungle: {
+      enemy: { jungle: 1.0, mid: 1.0, top: 1.0, support: 1.0, adc: 1.0 },
+      ally:  { mid: 1.0, top: 1.0, support: 1.0, adc: 1.0 },
+      blend: { counter: 1, synergy: 1 },
+    },
+    mid: {
+      enemy: { mid: 1.0, jungle: 1.0, support: 1.0, adc: 1.0, top: 1.0 },
+      ally:  { jungle: 1.0, support: 1.0, adc: 1.0, top: 1.0 },
+      blend: { counter: 1, synergy: 1 },
+    },
+    adc: {
+      enemy: { adc: 1.0, support: 1.0, jungle: 1.0, mid: 1.0, top: 1.0 },
+      ally:  { support: 1.0, jungle: 1.0, mid: 1.0, top: 1.0 },
+      blend: { counter: 1, synergy: 1 },
+    },
+    support: {
+      enemy: { support: 1.0, adc: 1.0, jungle: 1.0, mid: 1.0, top: 1.0 },
+      ally:  { adc: 1.0, jungle: 1.0, mid: 1.0, top: 1.0 },
+      blend: { counter: 1, synergy: 1 },
+    },
+  }
+}
 
 function makeAllies(slots, existing = []) {
   return slots.map(slot => ({
@@ -28,13 +62,27 @@ function makeEnemies(existing = []) {
 }
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState('draft')
   const [role, setRole] = useState('adc')
   const [allies, setAllies] = useState(() => makeAllies(ROLE_ALLY_SLOTS['adc']))
   const [enemies, setEnemies] = useState(() => makeEnemies())
   const [recommendations, setRecommendations] = useState([])
-  const [meta, setMeta] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [champions, setChampions] = useState([])
+  const [patch, setPatch] = useState('16.11')
+  const [tier, setTier] = useState('emerald_plus')
+  const [availablePatches, setAvailablePatches] = useState(['16.11'])
+  const [selectedRec, setSelectedRec] = useState(null)
+  const [config, setConfig] = useState(DEFAULT_CONFIG)
+
+  useEffect(() => {
+    getChampions().then(setChampions).catch(() => {})
+    getPatches().then(patches => {
+      setAvailablePatches(patches)
+      if (patches.length > 0) setPatch(patches[0])
+    }).catch(() => {})
+  }, [])
 
   const handleRoleChange = (newRole) => {
     setRole(newRole)
@@ -56,14 +104,16 @@ export default function App() {
   const handleSubmit = async () => {
     setLoading(true)
     setError(null)
+    setSelectedRec(null)
     try {
       const result = await getRecommendations(
         role,
         allies.filter(a => a.champion.trim()),
-        enemies.filter(e => e.champion.trim())
+        enemies.filter(e => e.champion.trim()),
+        patch,
+        tier
       )
       setRecommendations(result.recommendations || [])
-      setMeta({ patch: result.patch, tier: result.tier })
     } catch (err) {
       setError('Failed to get recommendations. Is the backend running?')
       console.error(err)
@@ -79,31 +129,79 @@ export default function App() {
   return (
     <div className="app-container">
       <div className="header">
-        <h1>Rabadon.GG</h1>
+        <div className="header-logo">
+          <img src="/rabadon.png" alt="" className="header-logo-img" />
+          <h1>Rabadon.GG</h1>
+        </div>
         <p>Real-time champion select analysis powered by AI</p>
       </div>
 
-      <DraftForm
-        role={role}
-        allies={allies}
-        enemies={enemies}
-        onRoleChange={handleRoleChange}
-        onAllyChange={handleAllyChange}
-        onEnemyChange={handleEnemyChange}
-        onSubmit={handleSubmit}
-        loading={loading}
-        error={error}
-        hasInput={hasInput}
-      />
+      <nav className="tab-nav">
+        <button
+          className={`tab-btn ${activeTab === 'draft' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('draft')}
+        >Draft</button>
+        <button
+          className={`tab-btn ${activeTab === 'config' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('config')}
+        >Configuration</button>
+      </nav>
 
-      {(recommendations.length > 0 || loading) && (
-        <div className="results-section">
-          <RecommendationList
-            recommendations={recommendations}
-            meta={meta}
+      {activeTab === 'draft' && (
+        <>
+          <DraftForm
+            role={role}
+            allies={allies}
+            enemies={enemies}
+            champions={champions}
+            onRoleChange={handleRoleChange}
+            onAllyChange={handleAllyChange}
+            onEnemyChange={handleEnemyChange}
+            onSubmit={handleSubmit}
             loading={loading}
+            error={error}
+            hasInput={hasInput}
+            patch={patch}
+            tier={tier}
+            availablePatches={availablePatches}
+            onPatchChange={setPatch}
+            onTierChange={setTier}
           />
-        </div>
+
+          {(recommendations.length > 0 || loading) && (
+            <div className="results-section">
+              <RecommendationList
+                recommendations={recommendations}
+                loading={loading}
+                selectedIndex={selectedRec}
+                onSelect={setSelectedRec}
+                config={config}
+                playerRole={role}
+                onTogglePenalty={() => setConfig(c => ({ ...c, penalize: !c.penalize }))}
+              />
+            </div>
+          )}
+
+          {selectedRec !== null && recommendations[selectedRec] && (
+            <div className="breakdown-section">
+              <BreakdownPanel
+                rec={recommendations[selectedRec]}
+                rank={selectedRec + 1}
+                onClose={() => setSelectedRec(null)}
+                settings={config}
+                playerRole={role}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'config' && (
+        <ConfigPanel
+          config={config}
+          onChange={setConfig}
+          defaultConfig={DEFAULT_CONFIG}
+        />
       )}
     </div>
   )
