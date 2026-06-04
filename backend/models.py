@@ -13,6 +13,8 @@ class RecommendRequest(BaseModel):
     role: str = Field(..., description="Player's role")
     allies: List[ChampionRole] = Field(..., description="Already-selected ally champions")
     enemies: List[ChampionRole] = Field(..., description="Already-selected enemy champions")
+    patch: str = Field(default="16.11", description="Patch version e.g. '16.11'")
+    tier: str = Field(default="emerald_plus", description="Rank tier e.g. 'emerald_plus'")
 
 
 class ChampionDelta(BaseModel):
@@ -26,6 +28,7 @@ class ChampionDelta(BaseModel):
 class Recommendation(BaseModel):
     champion: str
     win_rate: float = Field(..., description="Champion baseline win rate for this role (e.g. 51.07)")
+    rating: float = Field(..., description="win_rate + Σ synergy deltas + Σ counter deltas (%)")
     total_games: int = Field(0, description="Total games analyzed for this champion in this role/patch/tier")
     synergy_delta: str
     synergy_breakdown: List[ChampionDelta] = Field(default_factory=list)

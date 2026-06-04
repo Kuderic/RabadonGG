@@ -19,6 +19,9 @@ dist/
 # Generated lolalytics cache (patch-keyed JSON, re-fetched as needed)
 backend/data/lolalytics/
 
+# SQLite cache database
+backend/data/*.db
+
 # Logs
 *.log
 *.err

@@ -1,67 +1,92 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { champIconUrl, champSlug } from '../utils/champion'
 
-function fmt(n) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K'
-  return String(n)
+
+function RankBadge({ rank }) {
+  const cls = rank <= 3 ? `rank-badge rank-${rank}` : 'rank-badge rank-other'
+  return <span className={cls}>#{rank}</span>
 }
 
-function DeltaCell({ label, value, breakdown, missing }) {
-  const [open, setOpen] = useState(false)
-  const isPositive = value.startsWith('+')
-  const hasBreakdown = (breakdown && breakdown.length > 0) || (missing && missing.length > 0)
-
+function ExternalLink({ champion }) {
   return (
-    <div
-      className={`delta-cell ${hasBreakdown ? 'has-breakdown' : ''}`}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+    <a
+      href={`https://lolalytics.com/lol/${champSlug(champion)}/build/`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="lola-link"
+      title={`Open ${champion} on lolalytics.com`}
+      onClick={e => e.stopPropagation()}
     >
-      <div className="delta-label">
-        {label}
-        {hasBreakdown && <span className="breakdown-hint">▾</span>}
-      </div>
-      <div className={`delta-value ${isPositive ? 'positive' : 'negative'}`}>{value}</div>
-
-      {open && hasBreakdown && (
-        <div className="breakdown-tooltip">
-          {breakdown && breakdown.map((b, i) => {
-            const isPos = b.delta.startsWith('+')
-            return (
-              <div key={i} className="breakdown-row">
-                <img
-                  src={champIconUrl(b.champion)}
-                  alt={b.champion}
-                  className="breakdown-icon"
-                  onError={e => { e.target.style.display = 'none' }}
-                />
-                <span className="breakdown-champ">{b.champion}</span>
-                <span className="breakdown-role">{b.role}</span>
-                <span className={`breakdown-delta ${isPos ? 'positive' : 'negative'}`}>{b.delta}</span>
-                <span className="breakdown-n">n={b.n.toLocaleString()}</span>
-              </div>
-            )
-          })}
-          {missing && missing.map((name, i) => (
-            <div key={`m${i}`} className="breakdown-row breakdown-missing">
-              <img
-                src={champIconUrl(name)}
-                alt={name}
-                className="breakdown-icon"
-                onError={e => { e.target.style.display = 'none' }}
-              />
-              <span className="breakdown-champ">{name}</span>
-              <span className="breakdown-no-data">no data in top 40</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 1h4v4M11 1L5.5 6.5M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V8"
+          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </a>
   )
 }
 
-export default function RecommendationList({ recommendations, meta, loading }) {
+function getMultiplier(n, config) {
+  if (!config?.penalize) return 1
+  if (!n || n <= 0) return 0
+  if (n >= config.penalizeThreshold) return 1
+  return n / config.penalizeThreshold
+}
+
+function hasLowN(rec, config) {
+  if (!config?.penalize) return false
+  const all = [...(rec.synergy_breakdown || []), ...(rec.counter_breakdown || [])]
+  return all.some(b => b.n > 0 && b.n < config.penalizeThreshold)
+}
+
+// Returns the three adjusted components so cards can display them directly
+function computeComponents(rec, config, playerRole) {
+  const parseD = str => parseFloat(str) || 0
+  const rw = config?.roleWeights?.[playerRole]
+  const enemyW = rw?.enemy || {}
+  const allyW  = rw?.ally  || {}
+  const blend  = rw?.blend || { counter: 0.5, synergy: 0.5 }
+
+  const adjSyn = (rec.synergy_breakdown || []).reduce((s, b) => {
+    return s + parseD(b.delta) * getMultiplier(b.n, config) * (allyW[b.role] ?? 1)
+  }, 0)
+  const adjCtr = (rec.counter_breakdown || []).reduce((s, b) => {
+    return s + parseD(b.delta) * getMultiplier(b.n, config) * (enemyW[b.role] ?? 1)
+  }, 0)
+
+  const delta = blend.counter * adjCtr + blend.synergy * adjSyn
+  return { adjSyn, adjCtr, delta }
+}
+
+function computeAdjustedScore(rec, sortMode, config, playerRole) {
+  const { delta } = computeComponents(rec, config, playerRole)
+  return sortMode === 'delta' ? delta : rec.win_rate + delta
+}
+
+export default function RecommendationList({ recommendations, loading, selectedIndex, onSelect, config, playerRole, onTogglePenalty }) {
+  const [sortMode, setSortMode] = useState('rating')
+
+  const { sorted, penalizedCount } = useMemo(() => {
+    if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
+
+    // Count total low-n matchup entries across all recs
+    let penalizedCount = 0
+    if (config?.penalize) {
+      for (const rec of recommendations) {
+        const all = [...(rec.synergy_breakdown || []), ...(rec.counter_breakdown || [])]
+        penalizedCount += all.filter(b => b.n > 0 && b.n < config.penalizeThreshold).length
+      }
+    }
+
+    const sorted = [...recommendations]
+      .map((rec, origIdx) => ({ rec, origIdx }))
+      .sort((a, b) =>
+        computeAdjustedScore(b.rec, sortMode, config, playerRole) -
+        computeAdjustedScore(a.rec, sortMode, config, playerRole)
+      )
+
+    return { sorted, penalizedCount }
+  }, [recommendations, sortMode, config, playerRole])
+
   if (loading) {
     return (
       <div className="recommendations-loading">
@@ -79,68 +104,102 @@ export default function RecommendationList({ recommendations, meta, loading }) {
     )
   }
 
+
   return (
     <div className="recommendations-list">
-      {meta && (
-        <div className="rec-meta-bar">
-          Patch {meta.patch} · {meta.tier}
-        </div>
-      )}
-      {recommendations.map((rec, index) => (
-        <div key={index} className="recommendation-card">
-          <div className="card-header">
-            <img
-              src={champIconUrl(rec.champion)}
-              alt={rec.champion}
-              className="card-champ-icon"
-              onError={e => { e.target.style.display = 'none' }}
-            />
-            <span className="card-champion-name">
-              {rec.champion}
-              <a
-                href={`https://lolalytics.com/lol/${champSlug(rec.champion)}/build/`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="lola-link"
-                title={`Open ${rec.champion} on lolalytics.com`}
-              >
-                <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M7 1h4v4M11 1L5.5 6.5M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </a>
-            </span>
-            <div className="card-stats">
-              <span className="card-win-rate">{rec.win_rate.toFixed(1)}% WR</span>
-              {rec.total_games > 0 && (
-                <span className="card-total-games">{fmt(rec.total_games)} games</span>
-              )}
-            </div>
-          </div>
+      <div className="rec-toolbar">
+        <span className="rec-toolbar-label">Sort by</span>
+        <button
+          className={`sort-btn ${sortMode === 'rating' ? 'sort-btn--active' : ''}`}
+          onClick={() => setSortMode('rating')}
+        >WR + Δ</button>
+        <button
+          className={`sort-btn ${sortMode === 'delta' ? 'sort-btn--active' : ''}`}
+          onClick={() => setSortMode('delta')}
+        >Δ only</button>
 
-          <div className="card-deltas">
-            <DeltaCell
-              label="Synergy"
-              value={rec.synergy_delta}
-              breakdown={rec.synergy_breakdown}
-              missing={rec.synergy_missing}
-            />
-            <DeltaCell
-              label="Counter"
-              value={rec.counter_delta}
-              breakdown={rec.counter_breakdown}
-              missing={rec.counter_missing}
-            />
-          </div>
+        <div className="rec-toolbar-sep" />
 
-          {rec.data_warnings?.length > 0 && (
-            <div className="card-warnings">
-              {rec.data_warnings.map((w, i) => (
-                <div key={i} className="warning-item">{w}</div>
-              ))}
+        <label className="penalty-toggle" title="Weight matchups with fewer games than the threshold (configure in Settings)">
+          <input
+            type="checkbox"
+            checked={!!config?.penalize}
+            onChange={onTogglePenalty}
+          />
+          Penalize low sample
+        </label>
+        {config?.penalize && (
+          <span
+            className={`penalty-count ${penalizedCount > 0 ? 'penalty-count--active' : 'penalty-count--none'}`}
+            title={penalizedCount > 0
+              ? `${penalizedCount} matchup${penalizedCount !== 1 ? 's' : ''} weighted down (n < ${config.penalizeThreshold.toLocaleString()} games)`
+              : `All matchups have ≥ ${config.penalizeThreshold.toLocaleString()} games — penalty has no effect`}
+          >
+            {penalizedCount > 0 ? `${penalizedCount} weighted` : 'no effect'}
+          </span>
+        )}
+      </div>
+
+      <div className="rec-grid">
+        {sorted.map(({ rec, origIdx }, rank) => {
+          const isSelected = selectedIndex === origIdx
+          const lowN = hasLowN(rec, config)
+          const { adjSyn, adjCtr, delta } = computeComponents(rec, config, playerRole)
+          const fmt = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
+          return (
+            <div
+              key={origIdx}
+              className={`recommendation-card ${isSelected ? 'card-selected' : ''}`}
+              onClick={() => onSelect(isSelected ? null : origIdx)}
+            >
+              <div className="card-header">
+                <RankBadge rank={rank + 1} />
+                <img
+                  src={champIconUrl(rec.champion)}
+                  alt={rec.champion}
+                  className="card-champ-icon"
+                  onError={e => { e.target.style.display = 'none' }}
+                />
+                <span className="card-champion-name">
+                  {rec.champion}
+                  <ExternalLink champion={rec.champion} />
+                </span>
+                <div className="card-stats">
+                  <div className="card-wr-line">
+                    <span className="card-win-rate">{rec.win_rate.toFixed(1)}%</span>
+                    <span className={`card-wr-delta ${delta >= 0 ? 'positive' : 'negative'}`}>
+                      {fmt(delta)}
+                    </span>
+                    {lowN && (
+                      <span className="low-n-warning" title={`Some matchups have fewer than ${config.penalizeThreshold} games — score is weighted down`}>⚠</span>
+                    )}
+                  </div>
+                  {rec.total_games > 0 && (
+                    <span className="card-total-games">{(rec.total_games / 1000).toFixed(0)}K games</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="card-deltas">
+                <div className="delta-cell">
+                  <div className="delta-label">Synergy</div>
+                  <div className={`delta-value ${adjSyn >= 0 ? 'positive' : 'negative'}`}>
+                    {fmt(adjSyn)}
+                  </div>
+                </div>
+                <div className="delta-cell">
+                  <div className="delta-label">Counter</div>
+                  <div className={`delta-value ${adjCtr >= 0 ? 'positive' : 'negative'}`}>
+                    {fmt(adjCtr)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="card-expand-hint">{isSelected ? '▲ collapse' : '▼ details'}</div>
             </div>
-          )}
-        </div>
-      ))}
+          )
+        })}
+      </div>
     </div>
   )
 }
