@@ -1,0 +1,42 @@
+"""Pydantic models for API requests and responses."""
+
+from pydantic import BaseModel, Field
+from typing import List
+
+
+class ChampionRole(BaseModel):
+    champion: str = Field(..., description="Champion name (e.g., 'Thresh')")
+    role: str = Field(..., description="Role (adc, support, mid, jungle, top)")
+
+
+class RecommendRequest(BaseModel):
+    role: str = Field(..., description="Player's role")
+    allies: List[ChampionRole] = Field(..., description="Already-selected ally champions")
+    enemies: List[ChampionRole] = Field(..., description="Already-selected enemy champions")
+
+
+class ChampionDelta(BaseModel):
+    """Per-champion contribution to the synergy or counter score."""
+    champion: str
+    role: str
+    delta: str   # formatted e.g. "+2.2%"
+    n: int = 0   # number of games this matchup is based on
+
+
+class Recommendation(BaseModel):
+    champion: str
+    win_rate: float = Field(..., description="Champion baseline win rate for this role (e.g. 51.07)")
+    total_games: int = Field(0, description="Total games analyzed for this champion in this role/patch/tier")
+    synergy_delta: str
+    synergy_breakdown: List[ChampionDelta] = Field(default_factory=list)
+    synergy_missing: List[str] = Field(default_factory=list, description="Allies with no synergy data")
+    counter_delta: str
+    counter_breakdown: List[ChampionDelta] = Field(default_factory=list)
+    counter_missing: List[str] = Field(default_factory=list, description="Enemies with no counter data")
+    data_warnings: List[str] = Field(default_factory=list)
+
+
+class RecommendResponse(BaseModel):
+    patch: str
+    tier: str
+    recommendations: List[Recommendation]
