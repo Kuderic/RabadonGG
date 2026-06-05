@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import DraftForm from './components/DraftForm'
 import { getRecommendations, getChampions, getPatches } from './api/client'
+import { useLCUSession } from './services/lcu'
 
 const RecommendationList = lazy(() => import('./components/RecommendationList'))
 const ConfigPanel = lazy(() => import('./components/ConfigPanel'))
@@ -91,6 +92,30 @@ export default function App() {
   const [lowDetail, setLowDetail] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const debounceRef = useRef(null)
+
+  const { connected: lcuConnected, session: lcuSession } = useLCUSession()
+
+  // Auto-fill draft form when the LCU session changes.
+  // Role must be applied first so ally slots are rebuilt for the correct role
+  // before champions are filled in — otherwise role-based slot matching fails.
+  useEffect(() => {
+    if (!lcuConnected || !lcuSession) return
+
+    const detectedRole = lcuSession.my_role || role
+    const slots = ROLE_ALLY_SLOTS[detectedRole] || ROLE_ALLY_SLOTS['adc']
+
+    if (lcuSession.my_role) setRole(lcuSession.my_role)
+
+    setAllies(makeAllies(slots).map(slot => {
+      const match = lcuSession.allies.find(a => a.role === slot.role)
+      return match ? { ...slot, champion: match.champion } : slot
+    }))
+
+    setEnemies(makeEnemies().map((slot, i) => {
+      const e = lcuSession.enemies[i]
+      return e ? { ...slot, champion: e.champion } : slot
+    }))
+  }, [lcuSession, lcuConnected]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     getChampions().then(setChampions).catch(() => {})
@@ -213,6 +238,7 @@ export default function App() {
               tier={tier}
               onShare={handleShare}
               shareCopied={shareCopied}
+              lcuConnected={lcuConnected}
             />
 
             {(recommendations.length > 0 || loading) && (
@@ -273,7 +299,7 @@ export default function App() {
                 <li><span className="ally-color">Synergy Δ</span> — the sum of win-rate deltas when this champion is paired with each ally. Positive means strong team synergy.</li>
               </ul>
               <p>
-                All delta values come directly from <strong>lolalytics.com</strong> matchup data — millions of real games from your selected patch and tier. No guesswork, no tier lists, no editorial opinion.
+                All delta values are calculated on our servers using data from the official Riot Games API — millions of real games from your selected patch and tier. No guesswork, no tier lists, no editorial opinion.
               </p>
             </div>
 
@@ -290,7 +316,7 @@ export default function App() {
             <div className="about-section">
               <h2 className="about-heading">Data source</h2>
               <p>
-                Matchup data is fetched live from <strong>lolalytics.com</strong> and cached for 24 hours. You can select the patch window (current patch, previous patches, or a rolling 30-day aggregate) and the rank tier in the Configuration tab. Higher tiers like Emerald+ give you data calibrated to your actual MMR range.
+                Counter and synergy win rates are computed on our servers by processing match data from the official Riot Games API. You can select the patch window (current patch, previous patches, or a rolling 30-day aggregate) and the rank tier in the Configuration tab.
               </p>
             </div>
           </div>

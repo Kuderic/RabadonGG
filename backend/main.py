@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from routes.recommend import router as recommend_router
+from routes.lcu import router as lcu_router
 
 # Configure logging
 logging.basicConfig(
@@ -54,6 +55,7 @@ app.add_middleware(
 
 # Mount routers
 app.include_router(recommend_router, prefix="/api", tags=["recommendations"])
+app.include_router(lcu_router, prefix="/api", tags=["lcu"])
 
 
 @app.get("/api/patches")
@@ -150,14 +152,24 @@ async def health_check() -> dict:
 @app.on_event("startup")
 async def startup_event():
     """Run on application startup."""
+    import asyncio
     logger.info("Rabadon.GG API starting up")
     logger.info(f"Environment: {os.getenv('ENV', 'development')}")
     # Initialize database
     from services import db
     db.init_db()
     # Pre-warm in-process cache from database so first user requests are fast
-    from services.scraper import warm_cache
+    from services.scraper import warm_cache, _id_to_slug, _ensure_champion_map, _get_patch
     await warm_cache()
+
+    # Start the LCU watcher only in desktop builds
+    if os.getenv("RABADON_DESKTOP"):
+        from services.lcu import watcher
+        patch = await _get_patch()
+        await _ensure_champion_map(patch)
+        watcher.set_id_map(_id_to_slug)
+        asyncio.create_task(watcher.run())
+        logger.info("LCU watcher started")
 
 
 @app.on_event("shutdown")
@@ -167,11 +179,27 @@ async def shutdown_event():
 
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
+
+    parser = argparse.ArgumentParser(description="Rabadon.GG backend server")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to listen on (default: 8000)",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to bind to (default: 127.0.0.1)",
+    )
+    args = parser.parse_args()
 
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
+        host=args.host,
+        port=args.port,
+        reload=False,
     )

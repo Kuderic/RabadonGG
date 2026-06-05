@@ -199,6 +199,7 @@ export default function DraftForm({
   onSubmit, loading, error,
   patch, tier,
   onShare, shareCopied,
+  lcuConnected = false,
 }) {
   const patchLabel = patch === '30' ? '30 Days' : `Patch ${patch}`
 
@@ -212,6 +213,7 @@ export default function DraftForm({
               <option key={r} value={r}>{ROLE_DISPLAY[r]}</option>
             ))}
           </select>
+          {lcuConnected && <span className="lcu-live-badge">&#x25cf; Live</span>}
         </div>
 
         {error && <span className="draft-error">{error}</span>}
