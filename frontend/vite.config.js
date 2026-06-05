@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: 'node',
+    globals: true,
+  },
   build: {
     cssCodeSplit: true,
     rollupOptions: {

@@ -268,6 +268,131 @@ async fn get_lcu_session(
 }
 
 // ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -----------------------------------------------------------------------
+    // parse_lockfile
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_parse_lockfile_valid() {
+        let result = parse_lockfile("LeagueClient:12345:54321:abc123:https");
+        assert_eq!(result, Some((54321u16, "abc123".to_string())));
+    }
+
+    #[test]
+    fn test_parse_lockfile_trailing_newline() {
+        let result = parse_lockfile("LeagueClient:12345:54321:abc123:https\n");
+        assert_eq!(result, Some((54321u16, "abc123".to_string())));
+    }
+
+    #[test]
+    fn test_parse_lockfile_too_few_parts() {
+        let result = parse_lockfile("LeagueClient:12345:54321:abc123");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_lockfile_empty() {
+        assert!(parse_lockfile("").is_none());
+    }
+
+    #[test]
+    fn test_parse_lockfile_non_numeric_port() {
+        let result = parse_lockfile("LeagueClient:12345:notaport:abc:https");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_lockfile_port_zero() {
+        let result = parse_lockfile("LeagueClient:12345:0:abc123:https");
+        assert_eq!(result, Some((0u16, "abc123".to_string())));
+    }
+
+    #[test]
+    fn test_parse_lockfile_port_max_valid() {
+        let result = parse_lockfile("LeagueClient:12345:65535:abc123:https");
+        assert_eq!(result, Some((65535u16, "abc123".to_string())));
+    }
+
+    #[test]
+    fn test_parse_lockfile_port_overflow() {
+        let result = parse_lockfile("LeagueClient:12345:65536:abc123:https");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_lockfile_realistic() {
+        let result = parse_lockfile("LeagueClient:99271:52195:Qjw8xKmP4nRs2vLt:https");
+        assert_eq!(result, Some((52195u16, "Qjw8xKmP4nRs2vLt".to_string())));
+    }
+
+    // -----------------------------------------------------------------------
+    // map_position
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_map_position_top() {
+        assert_eq!(map_position("top"), "top");
+    }
+
+    #[test]
+    fn test_map_position_jungle() {
+        assert_eq!(map_position("jungle"), "jungle");
+    }
+
+    #[test]
+    fn test_map_position_middle() {
+        assert_eq!(map_position("middle"), "mid");
+    }
+
+    #[test]
+    fn test_map_position_bottom() {
+        assert_eq!(map_position("bottom"), "adc");
+    }
+
+    #[test]
+    fn test_map_position_utility() {
+        assert_eq!(map_position("utility"), "support");
+    }
+
+    #[test]
+    fn test_map_position_case_middle_upper() {
+        assert_eq!(map_position("MIDDLE"), "mid");
+    }
+
+    #[test]
+    fn test_map_position_case_top_upper() {
+        assert_eq!(map_position("TOP"), "top");
+    }
+
+    #[test]
+    fn test_map_position_case_bottom_mixed() {
+        assert_eq!(map_position("Bottom"), "adc");
+    }
+
+    #[test]
+    fn test_map_position_empty_string() {
+        assert_eq!(map_position(""), "fill");
+    }
+
+    #[test]
+    fn test_map_position_fill_passthrough() {
+        assert_eq!(map_position("fill"), "fill");
+    }
+
+    #[test]
+    fn test_map_position_unknown_role() {
+        assert_eq!(map_position("unknown_role"), "fill");
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 

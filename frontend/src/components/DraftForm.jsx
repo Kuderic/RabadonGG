@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { champIconUrl } from '../utils/champion'
+import { champIconUrl, filterChampions } from '../utils/champion'
 import { TierDisplay } from './TierSelector'
 
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
@@ -44,29 +44,7 @@ function YouRow({ role }) {
   )
 }
 
-// Match champions by normalized name (handles "miss" → "Miss Fortune", "kogm" → "Kog'Maw")
-function filterChampions(champions, query) {
-  if (!query || query.length < 1) return []
-  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '')
-  const q = norm(query)
-  const ql = query.toLowerCase()
 
-  const results = champions.filter(c => {
-    const cn = norm(c)
-    const cl = c.toLowerCase()
-    return cn.startsWith(q) || cl.startsWith(ql) || cn.includes(q)
-  })
-
-  results.sort((a, b) => {
-    const an = norm(a), bn = norm(b)
-    const ap = an.startsWith(q) ? 0 : 1
-    const bp = bn.startsWith(q) ? 0 : 1
-    if (ap !== bp) return ap - bp
-    return a.localeCompare(b)
-  })
-
-  return results.slice(0, 8)
-}
 
 function ChampionRow({ role, value, onChange, disabled, side, champions, onEnterSubmit }) {
   const [open, setOpen] = useState(false)

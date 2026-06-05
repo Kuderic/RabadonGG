@@ -59,3 +59,27 @@ export function champPrimaryRole(name) {
   const key = name.replace(/[ '&]/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
   return CHAMPION_PRIMARY_ROLE[key] || CHAMPION_PRIMARY_ROLE[name.replace(/[ ']/g, '')] || null
 }
+
+// Match champions by normalized name (handles "miss" → "Miss Fortune", "kogm" → "Kog'Maw")
+export function filterChampions(champions, query) {
+  if (!query || query.length < 1) return []
+  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const q = norm(query)
+  const ql = query.toLowerCase()
+
+  const results = champions.filter(c => {
+    const cn = norm(c)
+    const cl = c.toLowerCase()
+    return cn.startsWith(q) || cl.startsWith(ql) || cn.includes(q)
+  })
+
+  results.sort((a, b) => {
+    const an = norm(a), bn = norm(b)
+    const ap = an.startsWith(q) ? 0 : 1
+    const bp = bn.startsWith(q) ? 0 : 1
+    if (ap !== bp) return ap - bp
+    return a.localeCompare(b)
+  })
+
+  return results.slice(0, 8)
+}
