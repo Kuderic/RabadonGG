@@ -12,7 +12,6 @@
 use std::collections::HashMap;
 use base64::Engine as _;
 use serde_json::{json, Value};
-use tauri::Manager;
 use tokio::sync::Mutex;
 
 // ---------------------------------------------------------------------------
