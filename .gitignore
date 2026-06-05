@@ -30,6 +30,9 @@ backend/data/*.db
 # MCP / editor tool configs (machine-specific)
 .mcp.json
 
+# Claude Code subagent worktrees (temporary, never committed)
+.claude/worktrees/
+
 # Playwright test artifacts and screenshots dumped at repo root
 .playwright-mcp/
 [0-9][0-9]-*.png
