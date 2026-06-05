@@ -71,8 +71,9 @@ export default function ConfigPanel({ config, onChange, defaultConfig, patch, ti
         </p>
         <div className="config-row">
           <div className="config-inline-label">
-            <span className="config-field-label">Patch</span>
+            <label htmlFor="config-patch-select" className="config-field-label">Patch</label>
             <select
+              id="config-patch-select"
               className="config-select"
               value={patch}
               onChange={e => onPatchChange(e.target.value)}

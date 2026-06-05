@@ -205,8 +205,8 @@ export default function DraftForm({
     <div className="draft-section">
       <div className="draft-header">
         <div className="draft-role-selector">
-          <span className="draft-role-label">Your Role</span>
-          <select value={role} onChange={e => onRoleChange(e.target.value)} disabled={loading}>
+          <label htmlFor="role-select" className="draft-role-label">Your Role</label>
+          <select id="role-select" value={role} onChange={e => onRoleChange(e.target.value)} disabled={loading}>
             {ROLES.map(r => (
               <option key={r} value={r}>{ROLE_DISPLAY[r]}</option>
             ))}
