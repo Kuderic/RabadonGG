@@ -292,7 +292,24 @@ body {
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border-soft);
 }
-.draft-header-right { display: flex; align-items: center; gap: 16px; margin-left: auto; }
+.draft-header-right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
+
+.share-btn {
+  font-family: var(--font-stat);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  padding: 5px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--ink-3);
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.share-btn:hover { border-color: var(--gold-deep); color: var(--ink-2); }
+.share-btn--copied { border-color: var(--gold) !important; color: var(--gold-bright) !important; }
 
 .draft-population-display {
   display: flex; align-items: center; gap: 8px;

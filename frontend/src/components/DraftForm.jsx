@@ -198,6 +198,7 @@ export default function DraftForm({
   onRoleChange, onAllyChange, onEnemyChange,
   onSubmit, loading, error,
   patch, tier,
+  onShare, shareCopied,
 }) {
   const patchLabel = patch === '30' ? '30 Days' : `Patch ${patch}`
 
@@ -221,6 +222,15 @@ export default function DraftForm({
             <span className="pop-sep"> · </span>
             <TierDisplay tier={tier} />
           </div>
+          {onShare && (
+            <button
+              className={`share-btn${shareCopied ? ' share-btn--copied' : ''}`}
+              onClick={onShare}
+              title="Copy link to this draft"
+            >
+              {shareCopied ? '✓ Copied' : '⎘ Share'}
+            </button>
+          )}
         </div>
       </div>
 
