@@ -196,7 +196,7 @@ const ROLE_DISPLAY = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', sup
 export default function DraftForm({
   role, allies, enemies, champions,
   onRoleChange, onAllyChange, onEnemyChange,
-  onSubmit, loading, error, hasInput,
+  onSubmit, loading, error,
   patch, tier,
 }) {
   const patchLabel = patch === '30' ? '30 Days' : `Patch ${patch}`
@@ -241,7 +241,7 @@ export default function DraftForm({
                 disabled={loading}
                 side="ally"
                 champions={champions}
-                onEnterSubmit={hasInput && !loading ? onSubmit : undefined}
+                onEnterSubmit={!loading ? onSubmit : undefined}
               />
             )
           })}
@@ -260,17 +260,18 @@ export default function DraftForm({
               disabled={loading}
               side="enemy"
               champions={champions}
-              onEnterSubmit={hasInput && !loading ? onSubmit : undefined}
+              onEnterSubmit={!loading ? onSubmit : undefined}
             />
           ))}
         </div>
       </div>
 
-      <div className="draft-footer">
-        <button className="submit-button" onClick={onSubmit} disabled={loading || !hasInput}>
-          {loading ? 'Analyzing...' : 'Recommend Picks'}
-        </button>
-      </div>
+      {loading && (
+        <div className="draft-analyzing">
+          <span className="spinner" />
+          Analyzing draft...
+        </div>
+      )}
     </div>
   )
 }

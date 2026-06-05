@@ -28,7 +28,7 @@ function WeightSlider({ role, value, onChange }) {
   )
 }
 
-export default function ConfigPanel({ config, onChange, defaultConfig, patch, tier, availablePatches, onPatchChange, onTierChange }) {
+export default function ConfigPanel({ config, onChange, defaultConfig, patch, tier, availablePatches, onPatchChange, onTierChange, lowDetail, onLowDetailChange }) {
   const [viewRole, setViewRole] = useState('adc')
   const weights = config.roleWeights?.[viewRole] || {}
   const allySlots = ALLY_SLOTS[viewRole] || []
@@ -199,6 +199,24 @@ export default function ConfigPanel({ config, onChange, defaultConfig, patch, ti
               <span className="weight-val">{synBlend.toFixed(1)}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Display ─────────────────────────────────────────── */}
+      <div className="config-section">
+        <div className="config-section-title">Display</div>
+        <p className="config-desc">
+          Low detail mode removes splash art, animations, and GPU-heavy visual effects. Useful on lower-end hardware or if the breakdown panel feels sluggish.
+        </p>
+        <div className="config-row">
+          <label className="config-check-label">
+            <input
+              type="checkbox"
+              checked={!!lowDetail}
+              onChange={e => onLowDetailChange(e.target.checked)}
+            />
+            Low detail mode
+          </label>
         </div>
       </div>
 

@@ -2,7 +2,7 @@ import { champSlug } from '../utils/champion'
 
 export function RankBadge({ rank }) {
   const cls = rank <= 3 ? `rank-badge rank-${rank}` : 'rank-badge rank-other'
-  return <span className={cls}>#{rank}</span>
+  return <span className={cls}><span className="rank-num">{rank}</span></span>
 }
 
 export function ExternalLink({ champion }) {
