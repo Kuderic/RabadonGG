@@ -237,21 +237,18 @@ async fn get_lcu_session(
         .unwrap_or("fill")
         .to_string();
 
-    // theirTeam
+    // theirTeam — assignedPosition is unreliable for enemies; role assignment
+    // is handled by champPrimaryRole on the frontend.
     if let Some(their_team) = session["theirTeam"].as_array() {
         for member in their_team {
             let champ_id = member["championId"].as_u64().unwrap_or(0);
-            let position = member["assignedPosition"].as_str().unwrap_or("");
             let champ_name = champ_map
                 .get(&champ_id)
                 .cloned()
                 .unwrap_or_default();
 
             if !champ_name.is_empty() {
-                enemies.push(json!({
-                    "champion": champ_name,
-                    "role": map_position(position),
-                }));
+                enemies.push(json!({ "champion": champ_name }));
             }
         }
     }

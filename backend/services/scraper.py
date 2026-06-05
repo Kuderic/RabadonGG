@@ -51,6 +51,11 @@ logger = logging.getLogger(__name__)
 # In-process caches (populated once per server lifetime)
 _slug_to_id: Dict[str, int] = {}
 _id_to_slug: Dict[int, str] = {}
+# Maps any slug (display or DDragon key) → the DDragon key slug used by lolalytics API.
+# Needed for champions whose display name differs from their DDragon key:
+#   "Nunu & Willump" → key "Nunu" → api slug "nunu"
+#   "Wukong" → key "MonkeyKing" → api slug "monkeyking"
+_api_slug_map: Dict[str, str] = {}
 _current_patch: Optional[str] = None
 _matchup_mem_cache: Dict[str, dict] = {}  # "{tier}:{patch}:{slug}:{lane}" → {counters, team}
 _games_by_slug_cache: Dict[str, Dict[str, int]] = {}  # "{tier}:{patch}:{lane}" → {slug: games}
@@ -129,20 +134,22 @@ async def _get_patch() -> str:
 
 async def _ensure_champion_map(patch: str) -> None:
     """Load champion slug ↔ ID mapping from Data Dragon (once per process, disk-cached)."""
-    global _slug_to_id, _id_to_slug
+    global _slug_to_id, _id_to_slug, _api_slug_map
     if _slug_to_id:
         return
 
-    # Try disk cache first (stored at root of CACHE_DIR, 1-day TTL)
-    map_file = CACHE_DIR / f"_champ_map_{patch}.json"
+    # v2 cache adds api_slug_map; old _champ_map_{patch}.json files are ignored.
+    map_file = CACHE_DIR / f"_champ_map_{patch}_v2.json"
     if map_file.exists():
         try:
             meta = json.loads(map_file.read_text(encoding="utf-8"))
             if not _is_stale(meta):
                 for s, cid in meta["slug_to_id"].items():
                     _slug_to_id[s] = int(cid)
-                for cid, key in meta["id_to_slug"].items():
-                    _id_to_slug[int(cid)] = key
+                for cid, name in meta["id_to_slug"].items():
+                    _id_to_slug[int(cid)] = name
+                for s, api_s in meta["api_slug_map"].items():
+                    _api_slug_map[s] = api_s
                 logger.debug(f"Champion map loaded from disk ({len(_slug_to_id)} champs)")
                 return
         except Exception:
@@ -155,15 +162,21 @@ async def _ensure_champion_map(patch: str) -> None:
 
     for key, val in data["data"].items():
         cid = int(val["key"])
-        s = _slug(key)
-        _slug_to_id[s] = cid
-        _id_to_slug[cid] = val["name"]  # display name e.g. "Miss Fortune", "Kog'Maw"
+        key_s = _slug(key)           # DDragon key slug, e.g. "monkeyking", "nunu"
+        display_s = _slug(val["name"])  # display slug, e.g. "wukong", "nunuwillump"
+        _slug_to_id[key_s] = cid
+        _id_to_slug[cid] = val["name"]
+        _api_slug_map[key_s] = key_s
+        if display_s != key_s:
+            # Alias so display-name lookups (ally/enemy matching) work too
+            _slug_to_id[display_s] = cid
+            _api_slug_map[display_s] = key_s
 
-    map_file = CACHE_DIR / f"_champ_map_{patch}.json"
     map_file.write_text(json.dumps({
         "fetched_at": _today(),
         "slug_to_id": {k: str(v) for k, v in _slug_to_id.items()},
         "id_to_slug": {str(k): v for k, v in _id_to_slug.items()},
+        "api_slug_map": _api_slug_map,
     }), encoding="utf-8")
     logger.info(f"Loaded {len(_slug_to_id)} champions from Data Dragon {patch}")
 
@@ -370,6 +383,9 @@ async def get_matchup_data(
 
     lane = ROLE_TO_LANE.get(role.lower(), "bottom")
     cand_slug = _slug(candidate)
+    # Use the DDragon key slug for lolalytics API calls; display slug for cache keys.
+    # e.g. "Nunu & Willump" → cand_slug="nunuwillump", api_slug="nunu"
+    api_slug = _api_slug_map.get(cand_slug, cand_slug)
     tkey = _tier_key(tier, days)
 
     mem_key = f"{tkey}:{patch}:{cand_slug}:{lane}"
@@ -387,8 +403,8 @@ async def get_matchup_data(
         else:
             try:
                 (counter_list, win_rate), team_resp = await asyncio.gather(
-                    _fetch_counter_all_lanes(cand_slug, lane, patch, tier, days),
-                    _fetch("build-team", lane, cand_slug, patch, tier, days),
+                    _fetch_counter_all_lanes(api_slug, lane, patch, tier, days),
+                    _fetch("build-team", lane, api_slug, patch, tier, days),
                 )
                 team_map = team_resp.get("team", {})
                 db.write_matchup(cand_slug, patch, tkey, lane, counter_list, team_map, win_rate, 0)
