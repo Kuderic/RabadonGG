@@ -1547,7 +1547,36 @@ body {
   .results-section, .config-section { padding: 16px 14px; }
   .rec-toolbar { flex-wrap: wrap; gap: 8px; }
   .config-weights-grid { grid-template-columns: 1fr; gap: 20px; }
-  .tab-btn { padding: 12px 18px; }
+
+  /* 2×2 tab grid on mobile */
+  .tab-nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-bottom: none;
+    border: 1px solid var(--border-soft);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .tab-btn {
+    padding: 11px 8px;
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border-soft);
+    border-right: 1px solid var(--border-soft);
+    text-align: center;
+  }
+  /* remove right border from even columns, bottom border from last row */
+  .tab-btn:nth-child(2n) { border-right: none; }
+  .tab-btn:nth-last-child(-n+2) { border-bottom: none; }
+  /* active state: filled background instead of underline */
+  .tab-btn--active {
+    background: rgba(200,155,60,0.10);
+    color: var(--gold-bright);
+  }
+  .tab-btn--active::after { display: none; }
 
   /* Bottom-sheet breakdown */
   .breakdown-backdrop {
