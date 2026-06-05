@@ -194,7 +194,6 @@ async fn get_lcu_session(
     if let Some(my_team) = session["myTeam"].as_array() {
         for member in my_team {
             let cell_id = member["cellId"].as_i64().unwrap_or(-2);
-            let champ_id = member["championId"].as_u64().unwrap_or(0);
             let position = member["assignedPosition"]
                 .as_str()
                 .unwrap_or("");
@@ -205,15 +204,23 @@ async fn get_lcu_session(
                 continue;
             }
 
-            let champ_name = champ_map
-                .get(&champ_id)
-                .cloned()
-                .unwrap_or_default();
+            let champ_id = member["championId"].as_u64().unwrap_or(0);
+            let pick_intent = member["championPickIntent"].as_u64().unwrap_or(0);
 
+            let (effective_id, is_intent) = if champ_id > 0 {
+                (champ_id, false)
+            } else if pick_intent > 0 {
+                (pick_intent, true)
+            } else {
+                continue; // nothing to show
+            };
+
+            let champ_name = champ_map.get(&effective_id).cloned().unwrap_or_default();
             if !champ_name.is_empty() {
                 allies.push(json!({
                     "champion": champ_name,
                     "role": map_position(position),
+                    "is_intent": is_intent,
                 }));
             }
         }
@@ -234,13 +241,17 @@ async fn get_lcu_session(
     if let Some(their_team) = session["theirTeam"].as_array() {
         for member in their_team {
             let champ_id = member["championId"].as_u64().unwrap_or(0);
+            let position = member["assignedPosition"].as_str().unwrap_or("");
             let champ_name = champ_map
                 .get(&champ_id)
                 .cloned()
                 .unwrap_or_default();
 
             if !champ_name.is_empty() {
-                enemies.push(json!({ "champion": champ_name }));
+                enemies.push(json!({
+                    "champion": champ_name,
+                    "role": map_position(position),
+                }));
             }
         }
     }

@@ -131,7 +131,10 @@ export default function RecommendationList({ recommendations, loading, selectedI
                     src={champIconUrl(rec.champion)}
                     alt={rec.champion}
                     className="card-champ-icon"
-                    onError={e => { e.target.style.display = 'none' }}
+                    onError={e => {
+                      e.target.onerror = null
+                      e.target.classList.add('card-champ-icon--error')
+                    }}
                   />
                   <span className="card-champion-name">
                     {rec.champion}
