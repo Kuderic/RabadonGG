@@ -3,6 +3,7 @@ import { champIconUrl, champDDragonKey } from '../utils/champion'
 import { computeComponents } from '../utils/scoring'
 import { RankBadge, ExternalLink } from './ChampionShared'
 import BreakdownPanel from './BreakdownPanel'
+import { trackEvent } from '../utils/analytics'
 
 const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
 
@@ -17,7 +18,7 @@ function computeAdjustedScore(rec, sortMode, config, playerRole) {
   return sortMode === 'delta' ? totalDelta : rec.win_rate + totalDelta
 }
 
-export default function RecommendationList({ recommendations, loading, selectedIndex, onSelect, config, playerRole, onTogglePenalty }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, onTogglePenalty }) {
   const [sortMode, setSortMode] = useState('rating')
   const breakdownRef = useRef(null)
 
@@ -107,6 +108,7 @@ export default function RecommendationList({ recommendations, loading, selectedI
           </span>
         )}
 
+        {refreshing && <span className="rec-refreshing">Updating…</span>}
       </div>
 
       <div className="rec-grid rec-grid--row">
@@ -119,7 +121,10 @@ export default function RecommendationList({ recommendations, loading, selectedI
             <Fragment key={origIdx}>
               <div
                 className={`recommendation-card ${isSelected ? 'card-selected' : ''}`}
-                onClick={() => onSelect(isSelected ? null : origIdx)}
+                onClick={() => {
+                  if (!isSelected) trackEvent('view_breakdown', { category: 'engagement', label: rec.champion })
+                  onSelect(isSelected ? null : origIdx)
+                }}
                 onMouseEnter={() => {
                   const img = new Image()
                   img.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champDDragonKey(rec.champion)}_0.jpg`
