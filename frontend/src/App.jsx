@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import DraftForm from './components/DraftForm'
 import { getRecommendations, getChampions, getPatches } from './api/client'
 
 const RecommendationList = lazy(() => import('./components/RecommendationList'))
-const BreakdownPanel = lazy(() => import('./components/BreakdownPanel'))
 const ConfigPanel = lazy(() => import('./components/ConfigPanel'))
 
 const ROLE_ALLY_SLOTS = {
@@ -76,13 +75,8 @@ export default function App() {
   const [availablePatches, setAvailablePatches] = useState(['16.11'])
   const [selectedRec, setSelectedRec] = useState(null)
   const [config, setConfig] = useState(DEFAULT_CONFIG)
-  const breakdownRef = useRef(null)
-
-  useEffect(() => {
-    if (selectedRec !== null && breakdownRef.current) {
-      breakdownRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
-    }
-  }, [selectedRec])
+  const [lowDetail, setLowDetail] = useState(false)
+  const debounceRef = useRef(null)
 
   useEffect(() => {
     getChampions().then(setChampions).catch(() => {})
@@ -109,7 +103,7 @@ export default function App() {
     setEnemies(updated)
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setLoading(true)
     setError(null)
     setSelectedRec(null)
@@ -128,14 +122,25 @@ export default function App() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [role, allies, enemies, patch, tier])
 
-  const hasInput =
-    allies.some(a => a.champion.trim()) ||
-    enemies.some(e => e.champion.trim())
+  // Check if at least one entered value matches a known champion name
+  const hasValidChampion = useMemo(() => {
+    const champSet = new Set(champions.map(c => c.toLowerCase()))
+    return allies.some(a => champSet.has(a.champion.trim().toLowerCase())) ||
+           enemies.some(e => champSet.has(e.champion.trim().toLowerCase()))
+  }, [allies, enemies, champions])
+
+  // Auto-submit: debounce 600ms after any champion/patch/tier/role change
+  useEffect(() => {
+    if (!hasValidChampion) return
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(handleSubmit, 600)
+    return () => clearTimeout(debounceRef.current)
+  }, [handleSubmit, hasValidChampion])
 
   return (
-    <div className="app-container">
+    <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
       <header className="header">
         <div className="header-logo">
           <img src="/rabadon.png" alt="" className="header-logo-img" />
@@ -153,6 +158,10 @@ export default function App() {
           className={`tab-btn ${activeTab === 'config' ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab('config')}
         >Configuration</button>
+        <button
+          className={`tab-btn ${activeTab === 'about' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('about')}
+        >About</button>
       </nav>
 
       <main>
@@ -169,7 +178,6 @@ export default function App() {
               onSubmit={handleSubmit}
               loading={loading}
               error={error}
-              hasInput={hasInput}
               patch={patch}
               tier={tier}
             />
@@ -190,23 +198,6 @@ export default function App() {
               </div>
             )}
 
-            {selectedRec !== null && recommendations[selectedRec] && (
-              <>
-                <div className="breakdown-backdrop" onClick={() => setSelectedRec(null)} />
-                <div className="breakdown-section" ref={breakdownRef}>
-                  <div className="sheet-handle" />
-                  <Suspense fallback={null}>
-                    <BreakdownPanel
-                      rec={recommendations[selectedRec]}
-                      rank={selectedRec + 1}
-                      onClose={() => setSelectedRec(null)}
-                      settings={config}
-                      playerRole={role}
-                    />
-                  </Suspense>
-                </div>
-              </>
-            )}
           </>
         )}
 
@@ -221,8 +212,55 @@ export default function App() {
               availablePatches={availablePatches}
               onPatchChange={setPatch}
               onTierChange={setTier}
+              lowDetail={lowDetail}
+              onLowDetailChange={setLowDetail}
             />
           </Suspense>
+        )}
+
+        {activeTab === 'about' && (
+          <div className="about-panel">
+            <div className="about-section">
+              <h2 className="about-heading">What is Rabadon.GG?</h2>
+              <p>
+                Rabadon.GG is a champion-select assistant for League of Legends. Enter your role and the champions already picked on both sides — it scores every viable champion for your role against the real draft and surfaces the top 10 picks, ranked by how well they perform <em>in this specific game</em>.
+              </p>
+            </div>
+
+            <div className="about-section">
+              <h2 className="about-heading">How the scoring works</h2>
+              <p>
+                Every score starts from the champion's base win rate for your role and tier. On top of that, two adjustments are added:
+              </p>
+              <div className="about-score-formula">
+                Rating = Base WR + <span className="enemy-color">Counter Δ</span> + <span className="ally-color">Synergy Δ</span>
+              </div>
+              <ul className="about-list">
+                <li><span className="enemy-color">Counter Δ</span> — the sum of win-rate deltas this champion achieves against each enemy in the draft. Positive means this pick counters the enemy composition; negative means it struggles.</li>
+                <li><span className="ally-color">Synergy Δ</span> — the sum of win-rate deltas when this champion is paired with each ally. Positive means strong team synergy.</li>
+              </ul>
+              <p>
+                All delta values come directly from <strong>lolalytics.com</strong> matchup data — millions of real games from your selected patch and tier. No guesswork, no tier lists, no editorial opinion.
+              </p>
+            </div>
+
+            <div className="about-section">
+              <h2 className="about-heading">Why it's better than a tier list</h2>
+              <ul className="about-list">
+                <li><strong>Draft-aware:</strong> A champion that's mediocre in a vacuum might be the perfect pick into a specific enemy comp. Rabadon scores the full context, not just the champion in isolation.</li>
+                <li><strong>Data-driven:</strong> Every number traces back to real match outcomes. The algorithm doesn't know what's "meta" — it just reads the win rates.</li>
+                <li><strong>Configurable:</strong> Role weighting lets you decide how much each enemy or ally lane should influence the score. Set counter weight higher if you're playing carry-heavy; lean into synergy weight when team coordination matters.</li>
+                <li><strong>Sample-size honest:</strong> Rare matchups get flagged and optionally down-weighted. A 60% win rate across 50 games is not the same as 60% across 10,000 games.</li>
+              </ul>
+            </div>
+
+            <div className="about-section">
+              <h2 className="about-heading">Data source</h2>
+              <p>
+                Matchup data is fetched live from <strong>lolalytics.com</strong> and cached for 24 hours. You can select the patch window (current patch, previous patches, or a rolling 30-day aggregate) and the rank tier in the Configuration tab. Higher tiers like Emerald+ give you data calibrated to your actual MMR range.
+              </p>
+            </div>
+          </div>
         )}
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { champIconUrl } from '../utils/champion'
+import { champIconUrl, champDDragonKey } from '../utils/champion'
 import { getMultiplier, computeComponents } from '../utils/scoring'
 import { RankBadge, ExternalLink } from './ChampionShared'
 
@@ -33,12 +33,11 @@ function BreakdownRow({ champion, role, delta, n, missing, settings, isEmpty }) 
               {isLowN && <span className="bd-warn">⚠</span>}
               n={n?.toLocaleString()}
             </span>
-            {showMult && (
-              <span
-                className="bd-mult"
-                title={`Only ${n?.toLocaleString()} games — ${multPct}% weight applied (threshold: ${settings.penalizeThreshold.toLocaleString()})`}
-              >×{(mult).toFixed(2)}</span>
-            )}
+            <span
+              className="bd-mult"
+              style={!showMult ? { visibility: 'hidden' } : undefined}
+              title={showMult ? `Only ${n?.toLocaleString()} games — ${multPct}% weight applied (threshold: ${settings.penalizeThreshold.toLocaleString()})` : undefined}
+            >×{mult.toFixed(2)}</span>
           </>
       }
     </div>
@@ -69,6 +68,10 @@ export default function BreakdownPanel({ rec, rank, onClose, settings, playerRol
 
   return (
     <div className="breakdown-panel-full">
+      <div
+        className="bp-splash"
+        style={{ backgroundImage: `url(https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champDDragonKey(rec.champion)}_0.jpg)` }}
+      />
       <div className="bp-header">
         <div className="bp-title">
           <RankBadge rank={rank} />

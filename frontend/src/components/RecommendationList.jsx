@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
-import { champIconUrl } from '../utils/champion'
+import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
+import { champIconUrl, champDDragonKey } from '../utils/champion'
 import { computeComponents } from '../utils/scoring'
 import { RankBadge, ExternalLink } from './ChampionShared'
+import BreakdownPanel from './BreakdownPanel'
 
 function hasLowN(rec, config) {
   if (!config?.penalize) return false
@@ -16,6 +17,15 @@ function computeAdjustedScore(rec, sortMode, config, playerRole) {
 
 export default function RecommendationList({ recommendations, loading, selectedIndex, onSelect, config, playerRole, onTogglePenalty }) {
   const [sortMode, setSortMode] = useState('rating')
+  const breakdownRef = useRef(null)
+
+  useEffect(() => {
+    if (selectedIndex !== null && breakdownRef.current) {
+      requestAnimationFrame(() => {
+        breakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      })
+    }
+  }, [selectedIndex])
 
   const { sorted, penalizedCount } = useMemo(() => {
     if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
@@ -88,67 +98,84 @@ export default function RecommendationList({ recommendations, loading, selectedI
             {penalizedCount > 0 ? `${penalizedCount} weighted` : 'no effect'}
           </span>
         )}
+
       </div>
 
-      <div className="rec-grid">
+      <div className="rec-grid rec-grid--row">
         {sorted.map(({ rec, origIdx }, rank) => {
           const isSelected = selectedIndex === origIdx
           const lowN = hasLowN(rec, config)
           const { adjSyn, adjCtr, totalDelta } = computeComponents(rec, config, playerRole)
           const fmt = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
           return (
-            <div
-              key={origIdx}
-              className={`recommendation-card ${isSelected ? 'card-selected' : ''}`}
-              onClick={() => onSelect(isSelected ? null : origIdx)}
-            >
-              <div className="card-header">
-                <RankBadge rank={rank + 1} />
-                <img
-                  src={champIconUrl(rec.champion)}
-                  alt={rec.champion}
-                  className="card-champ-icon"
-                  onError={e => { e.target.style.display = 'none' }}
-                />
-                <span className="card-champion-name">
-                  {rec.champion}
-                  <ExternalLink champion={rec.champion} />
-                </span>
-                <div className="card-stats">
-                  <div className="card-wr-line">
-                    <span className="card-win-rate">{rec.win_rate.toFixed(1)}%</span>
-                    <span className={`card-wr-delta ${totalDelta >= 0 ? 'positive' : 'negative'}`}>
-                      {fmt(totalDelta)}
-                    </span>
-                    {lowN && (
-                      <span className="low-n-warning" title={`Some matchups have fewer than ${config.penalizeThreshold} games — score is weighted down`}>⚠</span>
+            <Fragment key={origIdx}>
+              <div
+                className={`recommendation-card ${isSelected ? 'card-selected' : ''}`}
+                onClick={() => onSelect(isSelected ? null : origIdx)}
+                onMouseEnter={() => {
+                  const img = new Image()
+                  img.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champDDragonKey(rec.champion)}_0.jpg`
+                }}
+              >
+                <div className="card-header">
+                  <RankBadge rank={rank + 1} />
+                  <img
+                    src={champIconUrl(rec.champion)}
+                    alt={rec.champion}
+                    className="card-champ-icon"
+                    onError={e => { e.target.style.display = 'none' }}
+                  />
+                  <span className="card-champion-name">
+                    {rec.champion}
+                    <ExternalLink champion={rec.champion} />
+                  </span>
+                  <div className="card-stats">
+                    <div className="card-wr-line">
+                      <span className="card-win-rate">{rec.win_rate.toFixed(1)}%</span>
+                      <span className={`card-wr-delta ${totalDelta >= 0 ? 'positive' : 'negative'}`}>
+                        {fmt(totalDelta)}
+                      </span>
+                      {lowN && (
+                        <span className="low-n-warning" title={`Some matchups have fewer than ${config.penalizeThreshold} games — score is weighted down`}>⚠</span>
+                      )}
+                    </div>
+                    {rec.total_games > 0 && (
+                      <span className="card-total-games">{(rec.total_games / 1000).toFixed(0)}K games</span>
                     )}
                   </div>
-                  {rec.total_games > 0 && (
-                    <span className="card-total-games">{(rec.total_games / 1000).toFixed(0)}K games</span>
-                  )}
                 </div>
-              </div>
 
-              <div className="card-deltas">
-                <div className="delta-cell">
-                  <div className="delta-label">Synergy</div>
-                  <div className={`delta-value ${adjSyn >= 0 ? 'positive' : 'negative'}`}>
-                    {fmt(adjSyn)}
+                <div className="card-deltas">
+                  <div className="delta-cell">
+                    <div className="delta-label">Synergy</div>
+                    <div className={`delta-value ${adjSyn >= 0 ? 'positive' : 'negative'}`}>
+                      {fmt(adjSyn)}
+                    </div>
+                  </div>
+                  <div className="delta-cell">
+                    <div className="delta-label">Counter</div>
+                    <div className={`delta-value ${adjCtr >= 0 ? 'positive' : 'negative'}`}>
+                      {fmt(adjCtr)}
+                    </div>
                   </div>
                 </div>
-                <div className="delta-cell">
-                  <div className="delta-label">Counter</div>
-                  <div className={`delta-value ${adjCtr >= 0 ? 'positive' : 'negative'}`}>
-                    {fmt(adjCtr)}
-                  </div>
-                </div>
-              </div>
 
-              <button className="card-details-toggle">
-                {isSelected ? '▲ collapse' : '▼ details'}
-              </button>
-            </div>
+                <button className="card-details-toggle">
+                  {isSelected ? '▲ collapse' : '▼ details'}
+                </button>
+              </div>
+              {isSelected && (
+                <div ref={breakdownRef} className="breakdown-inline">
+                  <BreakdownPanel
+                    rec={rec}
+                    rank={rank + 1}
+                    onClose={() => onSelect(null)}
+                    settings={config}
+                    playerRole={playerRole}
+                  />
+                </div>
+              )}
+            </Fragment>
           )
         })}
       </div>
