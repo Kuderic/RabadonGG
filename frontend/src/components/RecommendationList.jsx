@@ -4,6 +4,8 @@ import { computeComponents } from '../utils/scoring'
 import { RankBadge, ExternalLink } from './ChampionShared'
 import BreakdownPanel from './BreakdownPanel'
 
+const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
+
 function hasLowN(rec, config) {
   if (!config?.penalize) return false
   const all = [...(rec.synergy_breakdown || []), ...(rec.counter_breakdown || [])]
@@ -67,6 +69,12 @@ export default function RecommendationList({ recommendations, loading, selectedI
 
   return (
     <div className="recommendations-list">
+      <div className="rec-panel-heading">
+        <span className="rec-panel-title">Recommended Picks</span>
+        {playerRole && (
+          <span className="rec-panel-role">{ROLE_LABEL[playerRole] || playerRole}</span>
+        )}
+      </div>
       <div className="rec-toolbar">
         <span className="rec-toolbar-label">Sort by</span>
         <button
