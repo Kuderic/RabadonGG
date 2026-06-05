@@ -637,6 +637,7 @@ body {
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
+  scroll-margin-top: 16px;
 }
 
 .recommendations-empty {

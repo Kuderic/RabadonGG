@@ -68,10 +68,10 @@ function filterChampions(champions, query) {
   return results.slice(0, 8)
 }
 
-function ChampionRow({ role, value, onChange, disabled, side, champions }) {
+function ChampionRow({ role, value, onChange, disabled, side, champions, onEnterSubmit }) {
   const [open, setOpen] = useState(false)
   const [filtered, setFiltered] = useState([])
-  const [cursor, setCursor] = useState(-1)
+  const [cursor, setCursor] = useState(0)  // default to first item highlighted
   const wrapRef = useRef(null)
   const id = useRef(Math.random())
 
@@ -90,16 +90,17 @@ function ChampionRow({ role, value, onChange, disabled, side, champions }) {
 
   const handleInput = (v) => {
     onChange(v)
-    setCursor(-1)
     if (v.trim().length > 0 && champions.length > 0) {
       const matches = filterChampions(champions, v)
       if (matches.length > 0) {
         broadcastClose(id.current)
         setOpen(true)
+        setFiltered(matches)
+        setCursor(0)  // always pre-highlight first match
       } else {
         setOpen(false)
+        setFiltered([])
       }
-      setFiltered(matches)
     } else {
       setOpen(false)
     }
@@ -108,10 +109,20 @@ function ChampionRow({ role, value, onChange, disabled, side, champions }) {
   const select = (name) => {
     onChange(name)
     setOpen(false)
-    setCursor(-1)
+    setCursor(0)
   }
 
   const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (open && filtered.length > 0) {
+        e.preventDefault()
+        select(filtered[Math.max(0, cursor)])
+      } else if (!open && onEnterSubmit) {
+        e.preventDefault()
+        onEnterSubmit()
+      }
+      return
+    }
     if (!open) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()
@@ -119,9 +130,6 @@ function ChampionRow({ role, value, onChange, disabled, side, champions }) {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setCursor(c => Math.max(c - 1, 0))
-    } else if (e.key === 'Enter' && cursor >= 0) {
-      e.preventDefault()
-      select(filtered[cursor])
     } else if (e.key === 'Escape') {
       setOpen(false)
     }
@@ -233,6 +241,7 @@ export default function DraftForm({
                 disabled={loading}
                 side="ally"
                 champions={champions}
+                onEnterSubmit={hasInput && !loading ? onSubmit : undefined}
               />
             )
           })}
@@ -251,6 +260,7 @@ export default function DraftForm({
               disabled={loading}
               side="enemy"
               champions={champions}
+              onEnterSubmit={hasInput && !loading ? onSubmit : undefined}
             />
           ))}
         </div>
@@ -258,7 +268,7 @@ export default function DraftForm({
 
       <div className="draft-footer">
         <button className="submit-button" onClick={onSubmit} disabled={loading || !hasInput}>
-          {loading ? 'Analyzing...' : 'Get Recommendations'}
+          {loading ? 'Analyzing...' : 'Recommend Picks'}
         </button>
       </div>
     </div>
