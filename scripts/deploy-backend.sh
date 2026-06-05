@@ -46,7 +46,13 @@ fi
 echo "   import OK."
 
 echo "==> Restarting backend..."
-if command -v systemctl &>/dev/null && systemctl list-unit-files | grep -q "^${SERVICE}\.service"; then
+# NOTE: detect the unit with `systemctl cat` (no pipe). The old check
+# `systemctl list-unit-files | grep -q ...` races under `set -o pipefail`:
+# grep -q closes the pipe on first match, systemctl dies with SIGPIPE (141),
+# and pipefail reports the pipeline as failed → it wrongly took the raw-uvicorn
+# fallback, pkill'd the systemd process, and orphaned uvicorn onto port 8000
+# (the 2026-06-05 incident). `systemctl cat` returns 0 iff the unit exists.
+if command -v systemctl &>/dev/null && systemctl cat "${SERVICE}.service" &>/dev/null; then
   sudo systemctl restart "$SERVICE"
 else
   echo "   (systemd unit '${SERVICE}' not installed — using raw-uvicorn fallback)"
