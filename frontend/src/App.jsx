@@ -80,7 +80,7 @@ export default function App() {
 
   useEffect(() => {
     if (selectedRec !== null && breakdownRef.current) {
-      breakdownRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      breakdownRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
     }
   }, [selectedRec])
 

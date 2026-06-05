@@ -1,59 +1,8 @@
-import { champIconUrl, champSlug } from '../utils/champion'
+import { champIconUrl } from '../utils/champion'
+import { getMultiplier, computeComponents } from '../utils/scoring'
+import { RankBadge, ExternalLink } from './ChampionShared'
 
 const ROLE_LABEL = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP' }
-
-function RankBadge({ rank }) {
-  const cls = rank <= 3 ? `rank-badge rank-${rank}` : 'rank-badge rank-other'
-  return <span className={cls}>#{rank}</span>
-}
-
-function ExternalLink({ champion }) {
-  return (
-    <a
-      href={`https://lolalytics.com/lol/${champSlug(champion)}/build/`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="lola-link bp-lola-link"
-      title={`Open ${champion} on lolalytics.com`}
-      onClick={e => e.stopPropagation()}
-    >
-      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M7 1h4v4M11 1L5.5 6.5M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V8"
-          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </a>
-  )
-}
-
-function getMultiplier(n, settings) {
-  if (!settings?.penalize) return 1
-  if (!n || n <= 0) return 0
-  if (n >= settings.penalizeThreshold) return 1
-  return n / settings.penalizeThreshold
-}
-
-// Compute role-weighted, penalty-adjusted synergy and counter sums
-function computeAdjComponents(rec, settings, playerRole) {
-  const parseD = str => parseFloat(str) || 0
-  const rw = settings?.roleWeights?.[playerRole]
-  const enemyW = rw?.enemy || {}
-  const allyW  = rw?.ally  || {}
-  const blend  = rw?.blend || { counter: 0.5, synergy: 0.5 }
-
-  const adjSyn = (rec.synergy_breakdown || []).reduce((s, b) => {
-    return s + parseD(b.delta) * getMultiplier(b.n, settings) * (allyW[b.role] ?? 1)
-  }, 0)
-  const adjCtr = (rec.counter_breakdown || []).reduce((s, b) => {
-    return s + parseD(b.delta) * getMultiplier(b.n, settings) * (enemyW[b.role] ?? 1)
-  }, 0)
-
-  // Blended contributions — these sum exactly to totalDelta
-  const synContrib = blend.synergy * adjSyn
-  const ctrContrib = blend.counter * adjCtr
-  const totalDelta = synContrib + ctrContrib
-
-  return { adjSyn, adjCtr, synContrib, ctrContrib, totalDelta, blend }
-}
 
 function BreakdownRow({ champion, role, delta, n, missing, settings, isEmpty }) {
   if (isEmpty) return <div className="bd-row bd-row--empty" />
@@ -71,6 +20,7 @@ function BreakdownRow({ champion, role, delta, n, missing, settings, isEmpty }) 
         src={champIconUrl(champion)}
         alt={champion}
         className="bd-icon"
+        loading="lazy"
         onError={e => { e.target.style.display = 'none' }}
       />
       <span className="bd-champ">{champion}</span>
@@ -96,7 +46,7 @@ function BreakdownRow({ champion, role, delta, n, missing, settings, isEmpty }) 
 }
 
 export default function BreakdownPanel({ rec, rank, onClose, settings, playerRole }) {
-  const { synContrib, ctrContrib, totalDelta, blend } = computeAdjComponents(rec, settings, playerRole)
+  const { synContrib, ctrContrib, totalDelta, blend } = computeComponents(rec, settings, playerRole)
   const adjRating = rec.win_rate + totalDelta
 
   const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
@@ -185,8 +135,8 @@ export default function BreakdownPanel({ rec, rank, onClose, settings, playerRol
             <div className="bp-col-title ally-title">Ally Synergy</div>
             {synRows.map((row, i) =>
               row === null
-                ? <BreakdownRow key={`syn-empty-${i}`} isEmpty settings={settings} />
-                : <BreakdownRow key={i} {...row} settings={settings} />
+                ? <BreakdownRow key={`syn-spacer-${i}`} isEmpty settings={settings} />
+                : <BreakdownRow key={`syn-${row.champion}`} {...row} settings={settings} />
             )}
           </div>
         )}
@@ -195,8 +145,8 @@ export default function BreakdownPanel({ rec, rank, onClose, settings, playerRol
             <div className="bp-col-title enemy-title">Enemy Counter</div>
             {ctrRows.map((row, i) =>
               row === null
-                ? <BreakdownRow key={`ctr-empty-${i}`} isEmpty settings={settings} />
-                : <BreakdownRow key={i} {...row} settings={settings} />
+                ? <BreakdownRow key={`ctr-spacer-${i}`} isEmpty settings={settings} />
+                : <BreakdownRow key={`ctr-${row.champion}`} {...row} settings={settings} />
             )}
           </div>
         )}

@@ -2,10 +2,13 @@
 
 import logging
 import os
+import re
+from io import BytesIO
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from routes.recommend import router as recommend_router
 
@@ -86,6 +89,56 @@ async def get_all_champions() -> dict:
     patch = await _get_patch()
     await _ensure_champion_map(patch)
     return {"champions": sorted(_id_to_slug.values())}
+
+
+_icon_cache: dict[str, bytes] = {}
+_ddragon_full_version: str | None = None
+
+
+async def _get_ddragon_version() -> str:
+    global _ddragon_full_version
+    if _ddragon_full_version:
+        return _ddragon_full_version
+    async with httpx.AsyncClient(timeout=5) as client:
+        resp = await client.get("https://ddragon.leagueoflegends.com/api/versions.json")
+        versions = resp.json()
+    _ddragon_full_version = versions[0]
+    return _ddragon_full_version
+
+
+@app.get("/api/icon/{name}")
+async def champion_icon(name: str) -> Response:
+    """Proxy champion icons from DDragon — resized to 80×80 WebP with a 7-day cache."""
+    if not re.fullmatch(r"[A-Za-z0-9]+", name):
+        raise HTTPException(status_code=400, detail="Invalid champion name")
+
+    if name in _icon_cache:
+        return Response(
+            content=_icon_cache[name],
+            media_type="image/webp",
+            headers={"Cache-Control": "public, max-age=604800"},
+        )
+
+    version = await _get_ddragon_version()
+    url = f"https://ddragon.leagueoflegends.com/cdn/{version}/img/champion/{name}.png"
+    async with httpx.AsyncClient(timeout=5) as client:
+        resp = await client.get(url)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=404, detail="Champion icon not found")
+
+    from PIL import Image
+    img = Image.open(BytesIO(resp.content)).convert("RGBA")
+    img = img.resize((80, 80), Image.LANCZOS)
+    buf = BytesIO()
+    img.save(buf, format="WEBP", quality=85)
+    img_bytes = buf.getvalue()
+
+    _icon_cache[name] = img_bytes
+    return Response(
+        content=img_bytes,
+        media_type="image/webp",
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
 
 
 @app.get("/health")
