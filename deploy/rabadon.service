@@ -1,0 +1,32 @@
+# Production systemd unit for the Rabadon.GG backend.
+# Installed at /etc/systemd/system/rabadon.service. Version-controlled here so
+# the deployed unit isn't only living on the box.
+#
+# To update the running unit after editing this file:
+#   sudo cp deploy/rabadon.service /etc/systemd/system/rabadon.service
+#   sudo systemctl daemon-reload && sudo systemctl restart rabadon
+#
+# Logs: journalctl -u rabadon -f
+[Unit]
+Description=Rabadon.GG FastAPI (uvicorn)
+After=network.target
+
+[Service]
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/srv/rabadon/backend
+EnvironmentFile=/srv/rabadon/backend/.env
+
+# Pre-flight guard: refuse to start if the app can't even import. This protects
+# the reboot path — a broken commit (e.g. the missing 'from typing import List'
+# that caused the 2026-06-05 incident) fails loudly here instead of leaving a
+# half-started service. Deploys are additionally gated by scripts/deploy-backend.sh,
+# which runs the same check BEFORE restarting so broken code never causes downtime.
+ExecStartPre=/srv/rabadon/backend/venv/bin/python -c "import main"
+
+ExecStart=/srv/rabadon/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

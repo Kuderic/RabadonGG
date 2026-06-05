@@ -74,4 +74,5 @@ backend/
 | [docs/algorithm.md](docs/algorithm.md) | Champion scoring algorithm design |
 | [docs/api.md](docs/api.md) | Actual API contract with real request/response shapes |
 | [docs/dev-guide.md](docs/dev-guide.md) | Git workflow, environment variables |
+| [docs/ops.md](docs/ops.md) | **Production runbook**: hosting topology, the `rabadon` systemd service, deploy scripts, and operational gotchas. Read before touching the running backend. |
 | [docs/open-questions.md](docs/open-questions.md) | Resolved decisions + remaining open items |
