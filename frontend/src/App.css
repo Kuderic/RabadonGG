@@ -346,6 +346,16 @@ body {
   padding: 3px 8px;
   white-space: nowrap;
 }
+.lcu-waiting-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--ink-3);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  padding: 2px 8px;
+  border-radius: 2px;
+}
 
 .draft-role-selector select,
 .config-select {
@@ -760,6 +770,11 @@ body {
   object-fit: cover;
   flex-shrink: 0;
   box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+.card-champ-icon--error {
+  background: var(--panel-raised);
+  border-color: var(--border);
+  visibility: hidden;
 }
 .card-champion-name {
   font-family: var(--font-display);

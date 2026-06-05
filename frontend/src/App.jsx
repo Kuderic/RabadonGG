@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } fro
 import DraftForm from './components/DraftForm'
 import { getRecommendations, getChampions, getPatches } from './api/client'
 import { useLCUSession } from './services/lcu'
+import { champPrimaryRole } from './utils/champion'
 
 const RecommendationList = lazy(() => import('./components/RecommendationList'))
 const ConfigPanel = lazy(() => import('./components/ConfigPanel'))
@@ -91,6 +92,7 @@ export default function App() {
   const [config, setConfig] = useState(DEFAULT_CONFIG)
   const [lowDetail, setLowDetail] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
+  const [manualOverrides, setManualOverrides] = useState(() => new Set())
   const debounceRef = useRef(null)
 
   const { connected: lcuConnected, session: lcuSession } = useLCUSession()
@@ -107,13 +109,40 @@ export default function App() {
     if (lcuSession.my_role) setRole(lcuSession.my_role)
 
     setAllies(makeAllies(slots).map(slot => {
+      if (manualOverrides.has(`ally.${slot.role}`)) {
+        const existing = allies.find(a => a.role === slot.role)
+        return existing || slot
+      }
       const match = lcuSession.allies.find(a => a.role === slot.role)
       return match ? { ...slot, champion: match.champion } : slot
     }))
 
-    setEnemies(makeEnemies().map((slot, i) => {
-      const e = lcuSession.enemies[i]
-      return e ? { ...slot, champion: e.champion } : slot
+    const knownRoles = ['top','jungle','mid','adc','support']
+    const filledSlots = {}
+
+    for (const e of lcuSession.enemies) {
+      if (e.role && e.role !== 'fill' && knownRoles.includes(e.role)) {
+        filledSlots[e.role] = e.champion
+      }
+    }
+
+    for (const e of lcuSession.enemies) {
+      if (!e.role || e.role === 'fill') {
+        const primary = champPrimaryRole(e.champion)
+        if (primary && !filledSlots[primary]) {
+          filledSlots[primary] = e.champion
+        } else {
+          for (const r of knownRoles) {
+            if (!filledSlots[r]) { filledSlots[r] = e.champion; break }
+          }
+        }
+      }
+    }
+
+    setEnemies(prev => prev.map(slot => {
+      if (manualOverrides.has(`enemy.${slot.role}`)) return slot
+      if (filledSlots[slot.role]) return { ...slot, champion: filledSlots[slot.role] }
+      return slot
     }))
   }, [lcuSession, lcuConnected]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -134,12 +163,26 @@ export default function App() {
     const updated = [...allies]
     updated[index] = { ...updated[index], champion }
     setAllies(updated)
+    setManualOverrides(prev => {
+      const next = new Set(prev)
+      const key = `ally.${allies[index].role}`
+      if (champion.trim()) next.add(key)
+      else next.delete(key)
+      return next
+    })
   }
 
   const handleEnemyChange = (index, champion) => {
     const updated = [...enemies]
     updated[index] = { ...updated[index], champion }
     setEnemies(updated)
+    setManualOverrides(prev => {
+      const next = new Set(prev)
+      const key = `enemy.${enemies[index].role}`
+      if (champion.trim()) next.add(key)
+      else next.delete(key)
+      return next
+    })
   }
 
   const handleSubmit = useCallback(async () => {
@@ -239,6 +282,7 @@ export default function App() {
               onShare={handleShare}
               shareCopied={shareCopied}
               lcuConnected={lcuConnected}
+              lcuSession={lcuSession}
             />
 
             {(recommendations.length > 0 || loading) && (

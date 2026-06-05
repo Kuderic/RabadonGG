@@ -200,6 +200,7 @@ export default function DraftForm({
   patch, tier,
   onShare, shareCopied,
   lcuConnected = false,
+  lcuSession = null,
 }) {
   const patchLabel = patch === '30' ? '30 Days' : `Patch ${patch}`
 
@@ -213,7 +214,8 @@ export default function DraftForm({
               <option key={r} value={r}>{ROLE_DISPLAY[r]}</option>
             ))}
           </select>
-          {lcuConnected && <span className="lcu-live-badge">&#x25cf; Live</span>}
+          {lcuConnected && lcuSession && <span className="lcu-live-badge">&#x25cf; Live</span>}
+          {lcuConnected && !lcuSession && <span className="lcu-waiting-badge">&#x25cb; Waiting for champion select</span>}
         </div>
 
         {error && <span className="draft-error">{error}</span>}
