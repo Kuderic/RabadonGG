@@ -15,6 +15,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.desktop        # non-secret desktop build vars (VITE_DESKTOP, VITE_API_BASE_URL)
 
 # Generated lolalytics cache (patch-keyed JSON, re-fetched as needed)
 backend/data/lolalytics/
@@ -29,8 +30,15 @@ backend/data/*.db
 # MCP / editor tool configs (machine-specific)
 .mcp.json
 
-# Playwright test artifacts
+# Playwright test artifacts and screenshots dumped at repo root
 .playwright-mcp/
+[0-9][0-9]-*.png
+[0-9][0-9]-*.md
+
+# Rust / Tauri build output
+desktop/src-tauri/target/
+desktop/build/
+desktop/src-tauri/binaries/
 
 # IDE
 .vscode/
