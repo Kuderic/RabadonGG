@@ -280,8 +280,6 @@ body {
   margin-bottom: 20px;
 }
 
-.config-weights-col {}
-
 .config-weights-title {
   font-size: 12px;
   font-weight: 700;
@@ -814,8 +812,25 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 7px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
+
+.card-details-toggle {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid #1e2d44;
+  padding: 5px 0 0;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #4a5568;
+  cursor: pointer;
+  text-align: center;
+  letter-spacing: 0.4px;
+  transition: color 0.15s;
+}
+.card-details-toggle:hover { color: #8892a4; }
 
 .delta-cell {
   background-color: #161b29;

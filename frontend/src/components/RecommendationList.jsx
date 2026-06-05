@@ -1,36 +1,7 @@
 import { useState, useMemo } from 'react'
-import { champIconUrl, champSlug } from '../utils/champion'
-
-
-function RankBadge({ rank }) {
-  const cls = rank <= 3 ? `rank-badge rank-${rank}` : 'rank-badge rank-other'
-  return <span className={cls}>#{rank}</span>
-}
-
-function ExternalLink({ champion }) {
-  return (
-    <a
-      href={`https://lolalytics.com/lol/${champSlug(champion)}/build/`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="lola-link"
-      title={`Open ${champion} on lolalytics.com`}
-      onClick={e => e.stopPropagation()}
-    >
-      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M7 1h4v4M11 1L5.5 6.5M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V8"
-          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </a>
-  )
-}
-
-function getMultiplier(n, config) {
-  if (!config?.penalize) return 1
-  if (!n || n <= 0) return 0
-  if (n >= config.penalizeThreshold) return 1
-  return n / config.penalizeThreshold
-}
+import { champIconUrl } from '../utils/champion'
+import { computeComponents } from '../utils/scoring'
+import { RankBadge, ExternalLink } from './ChampionShared'
 
 function hasLowN(rec, config) {
   if (!config?.penalize) return false
@@ -38,28 +9,9 @@ function hasLowN(rec, config) {
   return all.some(b => b.n > 0 && b.n < config.penalizeThreshold)
 }
 
-// Returns the three adjusted components so cards can display them directly
-function computeComponents(rec, config, playerRole) {
-  const parseD = str => parseFloat(str) || 0
-  const rw = config?.roleWeights?.[playerRole]
-  const enemyW = rw?.enemy || {}
-  const allyW  = rw?.ally  || {}
-  const blend  = rw?.blend || { counter: 0.5, synergy: 0.5 }
-
-  const adjSyn = (rec.synergy_breakdown || []).reduce((s, b) => {
-    return s + parseD(b.delta) * getMultiplier(b.n, config) * (allyW[b.role] ?? 1)
-  }, 0)
-  const adjCtr = (rec.counter_breakdown || []).reduce((s, b) => {
-    return s + parseD(b.delta) * getMultiplier(b.n, config) * (enemyW[b.role] ?? 1)
-  }, 0)
-
-  const delta = blend.counter * adjCtr + blend.synergy * adjSyn
-  return { adjSyn, adjCtr, delta }
-}
-
 function computeAdjustedScore(rec, sortMode, config, playerRole) {
-  const { delta } = computeComponents(rec, config, playerRole)
-  return sortMode === 'delta' ? delta : rec.win_rate + delta
+  const { totalDelta } = computeComponents(rec, config, playerRole)
+  return sortMode === 'delta' ? totalDelta : rec.win_rate + totalDelta
 }
 
 export default function RecommendationList({ recommendations, loading, selectedIndex, onSelect, config, playerRole, onTogglePenalty }) {
@@ -68,7 +20,6 @@ export default function RecommendationList({ recommendations, loading, selectedI
   const { sorted, penalizedCount } = useMemo(() => {
     if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
 
-    // Count total low-n matchup entries across all recs
     let penalizedCount = 0
     if (config?.penalize) {
       for (const rec of recommendations) {
@@ -103,7 +54,6 @@ export default function RecommendationList({ recommendations, loading, selectedI
       </div>
     )
   }
-
 
   return (
     <div className="recommendations-list">
@@ -144,7 +94,7 @@ export default function RecommendationList({ recommendations, loading, selectedI
         {sorted.map(({ rec, origIdx }, rank) => {
           const isSelected = selectedIndex === origIdx
           const lowN = hasLowN(rec, config)
-          const { adjSyn, adjCtr, delta } = computeComponents(rec, config, playerRole)
+          const { adjSyn, adjCtr, totalDelta } = computeComponents(rec, config, playerRole)
           const fmt = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
           return (
             <div
@@ -167,8 +117,8 @@ export default function RecommendationList({ recommendations, loading, selectedI
                 <div className="card-stats">
                   <div className="card-wr-line">
                     <span className="card-win-rate">{rec.win_rate.toFixed(1)}%</span>
-                    <span className={`card-wr-delta ${delta >= 0 ? 'positive' : 'negative'}`}>
-                      {fmt(delta)}
+                    <span className={`card-wr-delta ${totalDelta >= 0 ? 'positive' : 'negative'}`}>
+                      {fmt(totalDelta)}
                     </span>
                     {lowN && (
                       <span className="low-n-warning" title={`Some matchups have fewer than ${config.penalizeThreshold} games — score is weighted down`}>⚠</span>
@@ -195,7 +145,9 @@ export default function RecommendationList({ recommendations, loading, selectedI
                 </div>
               </div>
 
-              <div className="card-expand-hint">{isSelected ? '▲ collapse' : '▼ details'}</div>
+              <button className="card-details-toggle">
+                {isSelected ? '▲ collapse' : '▼ details'}
+              </button>
             </div>
           )
         })}

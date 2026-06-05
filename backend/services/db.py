@@ -190,7 +190,7 @@ def load_all_valid_matchups() -> list:
 
     cursor.execute(
         "SELECT champion, patch, tier, lane, counters, team, win_rate, total_games, fetched_at "
-        "FROM matchup_cache WHERE fetched_at >= ?",
+        "FROM matchup_cache WHERE fetched_at = ?",
         (today,),
     )
     rows = cursor.fetchall()
