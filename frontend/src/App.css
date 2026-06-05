@@ -560,6 +560,33 @@ body {
 
 .recommendations-list { display: flex; flex-direction: column; gap: 18px; }
 
+.rec-panel-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+.rec-panel-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--ink-2);
+}
+.rec-panel-role {
+  font-family: var(--font-stat);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(200,155,60,0.08);
+  border: 1px solid rgba(200,155,60,0.25);
+  border-radius: 2px;
+  padding: 2px 7px;
+}
+
 .rec-toolbar {
   display: flex;
   align-items: center;
@@ -1298,9 +1325,20 @@ body {
   .rec-grid--row .card-stats { order: 4; grid-column: 3; align-items: flex-end; }
   .rec-grid--row .card-deltas { order: 5; grid-column: 1 / -1; }
   .bp-columns { grid-template-columns: 1fr; }
-  .bp-summary { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .bp-summary-note { margin-left: 0; text-align: left; max-width: 100%; }
+  /* bp-summary: 2-col grid. Dividers/plusses hidden so only the 5 stat items + note remain. */
+  .bp-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: 14px 16px;
+  }
   .bp-summary-divider, .bp-summary-plus { display: none; }
+  /* Rating spans full width and stays prominent */
+  .bp-summary > .bp-summary-item:first-child { grid-column: 1 / -1; }
+  /* Note always spans full width */
+  .bp-summary-note { grid-column: 1 / -1; margin-left: 0; text-align: left; max-width: 100%; }
+  /* Slightly smaller stat values so two fit comfortably side-by-side */
+  .bp-summary .bp-summary-value { font-size: 20px; }
 }
 
 @media (max-width: 768px) {
