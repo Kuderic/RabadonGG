@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import DraftForm from './components/DraftForm'
-import RecommendationList from './components/RecommendationList'
-import BreakdownPanel from './components/BreakdownPanel'
-import ConfigPanel from './components/ConfigPanel'
 import { getRecommendations, getChampions, getPatches } from './api/client'
+
+const RecommendationList = lazy(() => import('./components/RecommendationList'))
+const BreakdownPanel = lazy(() => import('./components/BreakdownPanel'))
+const ConfigPanel = lazy(() => import('./components/ConfigPanel'))
 
 const ROLE_ALLY_SLOTS = {
   top:     ['jungle', 'mid', 'adc', 'support'],
@@ -135,13 +136,13 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <div className="header">
+      <header className="header">
         <div className="header-logo">
           <img src="/rabadon.png" alt="" className="header-logo-img" />
           <h1>Rabadon.GG</h1>
         </div>
         <p>Real-time champion select analysis</p>
-      </div>
+      </header>
 
       <nav className="tab-nav">
         <button
@@ -154,68 +155,76 @@ export default function App() {
         >Configuration</button>
       </nav>
 
-      {activeTab === 'draft' && (
-        <>
-          <DraftForm
-            role={role}
-            allies={allies}
-            enemies={enemies}
-            champions={champions}
-            onRoleChange={handleRoleChange}
-            onAllyChange={handleAllyChange}
-            onEnemyChange={handleEnemyChange}
-            onSubmit={handleSubmit}
-            loading={loading}
-            error={error}
-            hasInput={hasInput}
-            patch={patch}
-            tier={tier}
-          />
+      <main>
+        {activeTab === 'draft' && (
+          <>
+            <DraftForm
+              role={role}
+              allies={allies}
+              enemies={enemies}
+              champions={champions}
+              onRoleChange={handleRoleChange}
+              onAllyChange={handleAllyChange}
+              onEnemyChange={handleEnemyChange}
+              onSubmit={handleSubmit}
+              loading={loading}
+              error={error}
+              hasInput={hasInput}
+              patch={patch}
+              tier={tier}
+            />
 
-          {(recommendations.length > 0 || loading) && (
-            <div className="results-section">
-              <RecommendationList
-                recommendations={recommendations}
-                loading={loading}
-                selectedIndex={selectedRec}
-                onSelect={setSelectedRec}
-                config={config}
-                playerRole={role}
-                onTogglePenalty={() => setConfig(c => ({ ...c, penalize: !c.penalize }))}
-              />
-            </div>
-          )}
-
-          {selectedRec !== null && recommendations[selectedRec] && (
-            <>
-              <div className="breakdown-backdrop" onClick={() => setSelectedRec(null)} />
-              <div className="breakdown-section" ref={breakdownRef}>
-                <div className="sheet-handle" />
-                <BreakdownPanel
-                  rec={recommendations[selectedRec]}
-                  rank={selectedRec + 1}
-                  onClose={() => setSelectedRec(null)}
-                  settings={config}
-                  playerRole={role}
-                />
+            {(recommendations.length > 0 || loading) && (
+              <div className="results-section">
+                <Suspense fallback={null}>
+                  <RecommendationList
+                    recommendations={recommendations}
+                    loading={loading}
+                    selectedIndex={selectedRec}
+                    onSelect={setSelectedRec}
+                    config={config}
+                    playerRole={role}
+                    onTogglePenalty={() => setConfig(c => ({ ...c, penalize: !c.penalize }))}
+                  />
+                </Suspense>
               </div>
-            </>
-          )}
-        </>
-      )}
+            )}
 
-      {activeTab === 'config' && (
-        <ConfigPanel
-          config={config}
-          onChange={setConfig}
-          defaultConfig={DEFAULT_CONFIG}
-          patch={patch}
-          tier={tier}
-          availablePatches={availablePatches}
-          onPatchChange={setPatch}
-          onTierChange={setTier}
-        />
-      )}
+            {selectedRec !== null && recommendations[selectedRec] && (
+              <>
+                <div className="breakdown-backdrop" onClick={() => setSelectedRec(null)} />
+                <div className="breakdown-section" ref={breakdownRef}>
+                  <div className="sheet-handle" />
+                  <Suspense fallback={null}>
+                    <BreakdownPanel
+                      rec={recommendations[selectedRec]}
+                      rank={selectedRec + 1}
+                      onClose={() => setSelectedRec(null)}
+                      settings={config}
+                      playerRole={role}
+                    />
+                  </Suspense>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {activeTab === 'config' && (
+          <Suspense fallback={null}>
+            <ConfigPanel
+              config={config}
+              onChange={setConfig}
+              defaultConfig={DEFAULT_CONFIG}
+              patch={patch}
+              tier={tier}
+              availablePatches={availablePatches}
+              onPatchChange={setPatch}
+              onTierChange={setTier}
+            />
+          </Suspense>
+        )}
+      </main>
     </div>
   )
 }
