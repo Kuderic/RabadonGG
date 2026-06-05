@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import DraftForm from './components/DraftForm'
 import RecommendationList from './components/RecommendationList'
 import BreakdownPanel from './components/BreakdownPanel'
@@ -75,6 +75,13 @@ export default function App() {
   const [availablePatches, setAvailablePatches] = useState(['16.11'])
   const [selectedRec, setSelectedRec] = useState(null)
   const [config, setConfig] = useState(DEFAULT_CONFIG)
+  const breakdownRef = useRef(null)
+
+  useEffect(() => {
+    if (selectedRec !== null && breakdownRef.current) {
+      breakdownRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [selectedRec])
 
   useEffect(() => {
     getChampions().then(setChampions).catch(() => {})
@@ -182,7 +189,7 @@ export default function App() {
           {selectedRec !== null && recommendations[selectedRec] && (
             <>
               <div className="breakdown-backdrop" onClick={() => setSelectedRec(null)} />
-              <div className="breakdown-section">
+              <div className="breakdown-section" ref={breakdownRef}>
                 <div className="sheet-handle" />
                 <BreakdownPanel
                   rec={recommendations[selectedRec]}
