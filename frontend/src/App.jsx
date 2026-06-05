@@ -61,21 +61,35 @@ function makeEnemies(existing = []) {
   }))
 }
 
+function parseUrlDraft() {
+  const p = new URLSearchParams(window.location.search)
+  const role = p.get('role')
+  if (!role || !ROLE_ALLY_SLOTS[role]) return null
+  return { role, params: p }
+}
+
+const _url = parseUrlDraft()
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('draft')
-  const [role, setRole] = useState('adc')
-  const [allies, setAllies] = useState(() => makeAllies(ROLE_ALLY_SLOTS['adc']))
-  const [enemies, setEnemies] = useState(() => makeEnemies())
+  const [role, setRole] = useState(_url?.role ?? 'adc')
+  const [allies, setAllies] = useState(() => _url
+    ? ROLE_ALLY_SLOTS[_url.role].map(s => ({ role: s, champion: _url.params.get(`a.${s}`) ?? '' }))
+    : makeAllies(ROLE_ALLY_SLOTS['adc']))
+  const [enemies, setEnemies] = useState(() => _url
+    ? ENEMY_SLOTS.map(s => ({ role: s, champion: _url.params.get(`e.${s}`) ?? '' }))
+    : makeEnemies())
   const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [champions, setChampions] = useState([])
-  const [patch, setPatch] = useState('16.11')
-  const [tier, setTier] = useState('emerald_plus')
+  const [patch, setPatch] = useState(_url?.params.get('patch') ?? '16.11')
+  const [tier, setTier] = useState(_url?.params.get('tier') ?? 'emerald_plus')
   const [availablePatches, setAvailablePatches] = useState(['16.11'])
   const [selectedRec, setSelectedRec] = useState(null)
   const [config, setConfig] = useState(DEFAULT_CONFIG)
   const [lowDetail, setLowDetail] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
   const debounceRef = useRef(null)
 
   useEffect(() => {
@@ -139,6 +153,23 @@ export default function App() {
     return () => clearTimeout(debounceRef.current)
   }, [handleSubmit, hasValidChampion])
 
+  // Keep URL in sync with draft state so any URL can be shared
+  useEffect(() => {
+    const p = new URLSearchParams()
+    p.set('role', role)
+    allies.forEach(a => { if (a.champion.trim()) p.set(`a.${a.role}`, a.champion.trim()) })
+    enemies.forEach(e => { if (e.champion.trim()) p.set(`e.${e.role}`, e.champion.trim()) })
+    p.set('patch', patch)
+    p.set('tier', tier)
+    window.history.replaceState(null, '', `?${p}`)
+  }, [role, allies, enemies, patch, tier])
+
+  const handleShare = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href)
+    setShareCopied(true)
+    setTimeout(() => setShareCopied(false), 2000)
+  }, [])
+
   return (
     <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
       <header className="header">
@@ -180,6 +211,8 @@ export default function App() {
               error={error}
               patch={patch}
               tier={tier}
+              onShare={handleShare}
+              shareCopied={shareCopied}
             />
 
             {(recommendations.length > 0 || loading) && (
