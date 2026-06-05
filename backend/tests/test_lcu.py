@@ -5,12 +5,8 @@ Run from the backend/ directory:
 """
 
 import sys
-import os
-import types
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-
-import pytest
 
 # Ensure the backend package root is on sys.path so imports resolve correctly
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -60,7 +56,7 @@ ID_MAP = {
 # parse_session tests
 # ===========================================================================
 
-from services.lcu import parse_session, _POSITION_MAP, ChampSelectSession, AllyPick, EnemyPick
+from services.lcu import parse_session, _POSITION_MAP, ChampSelectSession
 
 
 class TestParseSession:
