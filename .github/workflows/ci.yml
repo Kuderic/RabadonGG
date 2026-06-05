@@ -1,0 +1,67 @@
+name: CI
+
+# Guards the "main is always deployable" invariant. Runs on every PR and on
+# pushes to main. The lint + import-smoke steps below would have caught the
+# NameError that made the backend undeployable (e333bca removed a typing
+# import but left List[...] usages).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt ruff
+
+      - name: Lint (pyflakes rules — undefined names & unused imports)
+        # --select F is the pyflakes rule set: F821 (undefined name) and
+        # F401 (unused import). This is the exact check that fails the build
+        # on the kind of bug that caused the outage.
+        run: ruff check --select F .
+
+      - name: Import smoke test (app must load)
+        run: python -c "import main"
+
+      - name: Unit tests (if present)
+        run: |
+          if ls tests/test_*.py test_*.py >/dev/null 2>&1; then
+            pip install pytest
+            pytest -q
+          else
+            echo "No tests found — skipping."
+          fi
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
