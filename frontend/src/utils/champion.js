@@ -2,6 +2,14 @@
 const DDRAGON_KEY_EXCEPTIONS = {
   'Wukong': 'MonkeyKing',
   'Nunu & Willump': 'Nunu',
+  "Bel'Veth": 'Belveth',
+  "Cho'Gath": 'Chogath',
+  'Dr. Mundo': 'DrMundo',
+  "Kai'Sa": 'Kaisa',
+  "Kha'Zix": 'Khazix',
+  'LeBlanc': 'Leblanc',
+  'Renata Glasc': 'Renata',
+  "Vel'Koz": 'Velkoz',
 }
 
 export function champDDragonKey(name) {
