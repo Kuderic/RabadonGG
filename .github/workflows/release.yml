@@ -89,6 +89,7 @@ jobs:
           name: "Rabadon.GG ${{ steps.version.outputs.TAG }}"
           draft: false
           prerelease: false
+          generate_release_notes: true
           files: |
             ${{ steps.artifacts.outputs.INSTALLER }}
             ${{ steps.artifacts.outputs.NSIS_ZIP }}
@@ -98,7 +99,8 @@ jobs:
       - name: Read signature
         id: sig
         run: |
-          $sig = (Get-Content "${{ steps.artifacts.outputs.NSIS_SIG }}" -Raw).Trim()
+          $sig_file = Get-ChildItem "desktop/src-tauri/target/release/bundle/nsis/*.sig" | Select-Object -First 1
+          $sig = (Get-Content $sig_file.FullName -Raw).Trim()
           echo "SIGNATURE=$sig" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
