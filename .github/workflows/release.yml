@@ -81,21 +81,7 @@ jobs:
           echo "INSTALLER=$installer" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
-      # ── Publish GitHub Release ─────────────────────────────────────────────
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.TAG }}
-          name: "Rabadon.GG ${{ steps.version.outputs.TAG }}"
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            ${{ steps.artifacts.outputs.INSTALLER }}
-            ${{ steps.artifacts.outputs.NSIS_ZIP }}
-            ${{ steps.artifacts.outputs.NSIS_SIG }}
-
-      # ── Update latest.json and commit back to main ─────────────────────────
+      # ── Build latest.json update manifest ─────────────────────────────────
       - name: Read signature
         id: sig
         run: |
@@ -124,11 +110,17 @@ jobs:
           Set-Content -Path "desktop/update/latest.json" -Value $json -Encoding utf8
         shell: pwsh
 
-      - name: Commit updated latest.json
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add desktop/update/latest.json
-          git commit -m "chore: update manifest to ${{ steps.version.outputs.TAG }}"
-          git push origin HEAD:main
-        shell: pwsh
+      # ── Publish GitHub Release ─────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: "Rabadon.GG ${{ steps.version.outputs.TAG }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            ${{ steps.artifacts.outputs.INSTALLER }}
+            ${{ steps.artifacts.outputs.NSIS_ZIP }}
+            ${{ steps.artifacts.outputs.NSIS_SIG }}
+            desktop/update/latest.json
