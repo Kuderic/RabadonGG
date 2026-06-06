@@ -399,6 +399,8 @@ async fn main() {
         .manage(AppState {
             champion_map: Mutex::new(None),
         })
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![get_lcu_session])
         .run(tauri::generate_context!())
         .expect("error while running Rabadon desktop");
