@@ -126,7 +126,7 @@ function AboutPanel() {
         </div>
         <div className="creator-body">
           <div className="about-eyebrow">Who built this</div>
-          <h2 className="about-heading">Made by Kuderic — a Challenger main</h2>
+          <h2 className="about-heading">Made by Kuderic — a Challenger ADC main</h2>
           <p>Kuderic climbed from <strong>Master to Challenger</strong> by trusting the data: every game, he and his support picked the champion with the best win rate <em>into the specific draft</em> — not the one sitting on top of a tier list. With a degree in <strong>Applied Statistics</strong>, he knew the edge was real, measurable, and repeatable.</p>
           <p>Rabadon.GG is that method, automated. The same draft-aware scoring he used to reach the top of the ladder is now in front of you, every champion select — so you can climb the same way.</p>
           <div className="creator-badges">
