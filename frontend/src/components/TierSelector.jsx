@@ -6,7 +6,7 @@ export const TIER_OPTIONS = [
   { value: 'diamond_plus',  label: 'Diamond+',  icon: `${OPGG}/diamond.png` },
   { value: 'emerald_plus',  label: 'Emerald+',  icon: `${OPGG}/emerald.png` },
   { value: 'platinum_plus', label: 'Platinum+', icon: `${OPGG}/platinum.png` },
-  { value: 'gold',          label: 'Gold+',     icon: `${OPGG}/gold.png` },
+  { value: 'gold_plus',     label: 'Gold+',     icon: `${OPGG}/gold.png` },
   { value: 'all',           label: 'All Ranks', icon: null },
 ]
 

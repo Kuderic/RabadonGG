@@ -182,6 +182,23 @@ def write_pool(lane: str, patch: str, tier: str, pool: dict) -> None:
     conn.close()
 
 
+def load_all_valid_pools() -> list:
+    """Return all non-stale pool rows as list of dicts (for warm_cache)."""
+    today = datetime.date.today().isoformat()
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT lane, patch, tier, pool_json FROM pool_cache WHERE fetched_at = ?",
+        (today,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    result = []
+    for lane, patch, tier, pool_json in rows:
+        result.append({"lane": lane, "patch": patch, "tier": tier, "pool": json.loads(pool_json)})
+    return result
+
+
 def load_all_valid_matchups() -> list:
     """Return all non-stale matchup rows as list of dicts (for warm_cache)."""
     today = datetime.date.today().isoformat()

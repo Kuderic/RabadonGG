@@ -20,13 +20,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 VALID_ROLES = {"adc", "support", "mid", "jungle", "top"}
-VALID_TIERS = {"emerald_plus", "diamond_plus", "platinum_plus", "gold", "all"}
+VALID_TIERS = {"emerald_plus", "diamond_plus", "platinum_plus", "gold_plus", "all"}
 
 TIER_DISPLAY = {
     "emerald_plus": "Emerald+",
     "diamond_plus": "Diamond+",
     "platinum_plus": "Platinum+",
-    "gold": "Gold",
+    "gold_plus": "Gold+",
     "all": "All Ranks",
 }
 

@@ -264,28 +264,12 @@ async def warm_cache() -> None:
             }
             loaded += 1
 
-    # Also warm the games_by_slug cache from pool files in SQLite
-    # Note: pool data still stored in JSON files per the requirements
-    # (only matchup and pool data moves to SQLite)
-    for tier_dir in CACHE_DIR.iterdir() if CACHE_DIR.exists() else []:
-        if not tier_dir.is_dir() or tier_dir.name.startswith("_"):
-            continue
-        tier = tier_dir.name
-        for patch_dir in tier_dir.iterdir() if tier_dir.exists() else []:
-            if not patch_dir.is_dir():
-                continue
-            for lane_dir in patch_dir.iterdir() if patch_dir.exists() else []:
-                if not lane_dir.is_dir():
-                    continue
-                pool_file = lane_dir / "_pool.json"
-                if pool_file.exists():
-                    try:
-                        pool = json.loads(pool_file.read_text(encoding="utf-8"))
-                        if not _is_stale(pool) and "games_by_slug" in pool:
-                            games_key = f"{tier}:{patch_dir.name}:{lane_dir.name}"
-                            _games_by_slug_cache[games_key] = pool["games_by_slug"]
-                    except Exception:
-                        pass
+    # Warm the games_by_slug cache from pool_cache in SQLite
+    for row in db.load_all_valid_pools():
+        gbs = row["pool"].get("games_by_slug")
+        if gbs:
+            games_key = f"{row['tier']}:{row['patch']}:{row['lane']}"
+            _games_by_slug_cache[games_key] = gbs
 
     logger.info(f"Warm cache: loaded {loaded} champions into memory")
 
