@@ -353,6 +353,8 @@ export default function App() {
   const [shareCopied, setShareCopied] = useState(false)
   const [manualOverrides, setManualOverrides] = useState(() => new Set())
   const [refreshing, setRefreshing] = useState(false)
+  const [updateInfo, setUpdateInfo] = useState(null)
+  const [updateStatus, setUpdateStatus] = useState('idle')
   const debounceRef = useRef(null)
 
   // Refs so handleSubmit can read current state without being in its dep array
@@ -418,6 +420,25 @@ export default function App() {
       setAvailablePatches(patches)
       if (patches.length > 0) setPatch(patches[0])
     }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!window.__TAURI_INTERNALS__) return
+    let cancelled = false
+    async function checkForUpdate() {
+      try {
+        const { check } = await import('@tauri-apps/plugin-updater')
+        const update = await check()
+        if (!cancelled && update?.available) {
+          setUpdateInfo({ version: update.version, body: update.body ?? '' })
+          window.__pendingUpdate = update
+        }
+      } catch (e) {
+        console.warn('[updater] check failed', e)
+      }
+    }
+    checkForUpdate()
+    return () => { cancelled = true }
   }, [])
 
   const handleRoleChange = (newRole) => {
@@ -514,6 +535,24 @@ export default function App() {
     window.history.replaceState(null, '', `?${p}`)
   }, [role, allies, enemies, patch, tier])
 
+  const handleInstallUpdate = useCallback(async () => {
+    if (!window.__pendingUpdate) return
+    setUpdateStatus('downloading')
+    try {
+      const { relaunch } = await import('@tauri-apps/plugin-process')
+      await window.__pendingUpdate.downloadAndInstall()
+      await relaunch()
+    } catch (e) {
+      console.error('[updater] install failed', e)
+      setUpdateStatus('error')
+    }
+  }, [])
+
+  const handleDismissUpdate = useCallback(() => {
+    setUpdateInfo(null)
+    setUpdateStatus('idle')
+  }, [])
+
   const handleShare = useCallback(() => {
     let url = window.location.href
     if (import.meta.env.VITE_DESKTOP) {
@@ -526,6 +565,28 @@ export default function App() {
 
   return (
     <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
+      {updateInfo && (
+        <div className="update-banner" role="status" aria-live="polite">
+          <span className="update-banner-text">
+            Version <strong>{updateInfo.version}</strong> is available
+          </span>
+          <button
+            className="update-banner-btn"
+            onClick={handleInstallUpdate}
+            disabled={updateStatus === 'downloading'}
+          >
+            {updateStatus === 'downloading' ? 'Installing…' : 'Update now'}
+          </button>
+          <button
+            className="update-banner-dismiss"
+            onClick={handleDismissUpdate}
+            aria-label="Dismiss update notification"
+          >✕</button>
+          {updateStatus === 'error' && (
+            <span className="update-banner-error">Install failed — check your connection</span>
+          )}
+        </div>
+      )}
       <header className="header">
         <a
           href="https://github.com/Kuderic/RabadonGG"

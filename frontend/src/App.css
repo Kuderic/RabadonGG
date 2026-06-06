@@ -1999,3 +1999,48 @@ body {
   margin: 0 auto;
   letter-spacing: 0.2px;
 }
+
+/* ── Update banner ────────────────────────────────────────────────────────── */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, var(--panel-raised) 0%, #1a1e2e 100%);
+  border-bottom: 1px solid var(--gold-deep);
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.update-banner-text { flex: 1; }
+.update-banner-text strong { color: var(--gold-mid); }
+.update-banner-btn {
+  padding: 4px 14px;
+  background: var(--gold-shadow);
+  border: 1px solid var(--gold-deep);
+  color: var(--gold-bright);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.update-banner-btn:hover:not(:disabled) { background: var(--gold-deep); }
+.update-banner-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.update-banner-dismiss {
+  background: none;
+  border: none;
+  color: var(--ink-4);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.update-banner-dismiss:hover { color: var(--ink-2); }
+.update-banner-error {
+  color: var(--neg);
+  font-size: 0.78rem;
+}

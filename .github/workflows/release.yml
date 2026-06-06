@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Node / frontend ────────────────────────────────────────────────────
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+        shell: pwsh
+
+      # ── Rust ───────────────────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: windows-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+          restore-keys: windows-cargo-
+
+      # ── Tauri build ────────────────────────────────────────────────────────
+      - name: Install Tauri CLI
+        run: npm install --save-dev @tauri-apps/cli@^2
+        working-directory: desktop
+        shell: pwsh
+
+      - name: Build and sign
+        run: npm run tauri build
+        working-directory: desktop
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        shell: pwsh
+
+      # ── Extract version and locate artifacts ───────────────────────────────
+      - name: Extract version from tag
+        id: version
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $ver = $tag.TrimStart('v')
+          echo "VERSION=$ver" >> $env:GITHUB_OUTPUT
+          echo "TAG=$tag" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Locate release artifacts
+        id: artifacts
+        run: |
+          $bundleDir = "desktop/src-tauri/target/release/bundle/nsis"
+          $nsis_zip  = Get-ChildItem "$bundleDir/*.nsis.zip" | Select-Object -First 1 -ExpandProperty FullName
+          $nsis_sig  = "$nsis_zip.sig"
+          $installer = Get-ChildItem "$bundleDir/*-setup.exe" | Select-Object -First 1 -ExpandProperty FullName
+          echo "NSIS_ZIP=$nsis_zip"   >> $env:GITHUB_OUTPUT
+          echo "NSIS_SIG=$nsis_sig"   >> $env:GITHUB_OUTPUT
+          echo "INSTALLER=$installer" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      # ── Publish GitHub Release ─────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: "Rabadon.GG ${{ steps.version.outputs.TAG }}"
+          draft: false
+          prerelease: false
+          files: |
+            ${{ steps.artifacts.outputs.INSTALLER }}
+            ${{ steps.artifacts.outputs.NSIS_ZIP }}
+            ${{ steps.artifacts.outputs.NSIS_SIG }}
+
+      # ── Update latest.json and commit back to main ─────────────────────────
+      - name: Read signature
+        id: sig
+        run: |
+          $sig = (Get-Content "${{ steps.artifacts.outputs.NSIS_SIG }}" -Raw).Trim()
+          echo "SIGNATURE=$sig" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Write latest.json
+        run: |
+          $ver = "${{ steps.version.outputs.VERSION }}"
+          $tag = "${{ steps.version.outputs.TAG }}"
+          $sig = "${{ steps.sig.outputs.SIGNATURE }}"
+          $date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+          $json = [ordered]@{
+            version  = $ver
+            notes    = "See https://github.com/Kuderic/RabadonGG/releases/tag/$tag"
+            pub_date = $date
+            platforms = [ordered]@{
+              "windows-x86_64" = [ordered]@{
+                signature = $sig
+                url       = "https://github.com/Kuderic/RabadonGG/releases/download/$tag/Rabadon_${ver}_x64-setup.nsis.zip"
+              }
+            }
+          } | ConvertTo-Json -Depth 4
+          Set-Content -Path "desktop/update/latest.json" -Value $json -Encoding utf8
+        shell: pwsh
+
+      - name: Commit updated latest.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add desktop/update/latest.json
+          git commit -m "chore: update manifest to ${{ steps.version.outputs.TAG }}"
+          git push origin HEAD:main
+        shell: pwsh
