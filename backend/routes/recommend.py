@@ -73,7 +73,7 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
                 matchup_data, matchup_n, win_rate, total_games, data_warnings = (
                     await get_matchup_data(candidate, role, allies, enemies, patch=patch, tier=tier)
                 )
-                rating = compute_rating(win_rate, allies, enemies, matchup_data)
+                rating = compute_rating(win_rate, allies, enemies, matchup_data, matchup_n)
                 syn_breakdown, syn_missing = get_synergy_breakdown(allies, matchup_data, matchup_n)
                 ctr_breakdown, ctr_missing = get_counter_breakdown(enemies, matchup_data, matchup_n)
                 rec = Recommendation(
