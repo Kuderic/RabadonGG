@@ -2044,3 +2044,172 @@ body {
   color: var(--neg);
   font-size: 0.78rem;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   DESKTOP SHELL — title bar + custom scrollbar
+   All layout rules scoped under html[data-desktop] (stamped by
+   TitleBar.jsx on mount) so the web build is completely unaffected.
+   ════════════════════════════════════════════════════════════════════ */
+
+:root { --titlebar-h: 40px; }
+
+html[data-desktop],
+html[data-desktop] body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html[data-desktop] #root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+html[data-desktop] .app-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+.titlebar {
+  height: var(--titlebar-h);
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  background:
+    radial-gradient(120% 200% at 50% -60%, rgba(200,155,60,0.10), rgba(200,155,60,0) 55%),
+    linear-gradient(180deg, #0d1220, #0a0e1a);
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--gold-deep) 22%, var(--gold) 50%, var(--gold-deep) 78%, transparent) 1;
+  position: relative;
+  z-index: 50;
+  user-select: none;
+}
+
+.titlebar > * { pointer-events: none; }
+.titlebar .tb-controls,
+.titlebar .tb-controls * { pointer-events: auto; }
+
+.tb-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 14px;
+  height: 100%;
+}
+
+.tb-logo {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: var(--grad-gold);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 5px rgba(200,155,60,0.4));
+}
+.tb-logo::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  background: var(--bg);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.tb-word {
+  font-family: var(--font-stat);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--grad-gold-flat);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.tb-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid var(--hairline);
+  font-family: var(--font-stat);
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  color: var(--ink-3);
+}
+
+.tb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  animation: tb-pulse 1.8s ease-in-out infinite;
+}
+
+.tb-status.connected .tb-dot {
+  background: var(--ally);
+  box-shadow: 0 0 8px var(--ally);
+}
+
+.tb-status.live .tb-dot {
+  background: var(--pos);
+  box-shadow: 0 0 8px var(--pos);
+}
+
+@keyframes tb-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.tb-spacer { flex: 1; height: 100%; }
+
+.tb-controls { display: flex; align-items: stretch; }
+
+.tb-btn {
+  width: 46px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  transition: background-color 0.15s, color 0.15s;
+}
+.tb-btn svg { width: 11px; height: 11px; }
+.tb-btn:hover { background: rgba(200,155,60,0.14); color: var(--gold-bright); }
+.tb-btn:active { background: rgba(200,155,60,0.22); }
+.tb-btn.close:hover { background: linear-gradient(180deg, #e5485c, #b3303f); color: #fff; }
+.tb-btn.close:active { background: #a02835; }
+
+html[data-desktop] .app-container::-webkit-scrollbar { width: 13px; }
+html[data-desktop] .app-container::-webkit-scrollbar-track {
+  background: linear-gradient(90deg, var(--panel-inset), var(--bg-2));
+  border-left: 1px solid var(--hairline);
+}
+html[data-desktop] .app-container::-webkit-scrollbar-thumb {
+  background: var(--grad-gold-flat);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+  min-height: 40px;
+}
+html[data-desktop] .app-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f4e8c8, #caa04a 55%, #9a7530);
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px rgba(240,230,210,0.35);
+}
+html[data-desktop] .app-container::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #ffffff, #e2c98a 55%, #b58c3e);
+  background-clip: padding-box;
+}

@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import DraftForm from './components/DraftForm'
+import TitleBar from './components/TitleBar'
 import { getRecommendations, getChampions, getPatches } from './api/client'
 import { useLCUSession } from './services/lcu'
 import { champPrimaryRole, champIconUrl } from './utils/champion'
+
+const IS_DESKTOP = import.meta.env.VITE_DESKTOP === 'true'
 
 const RecommendationList = lazy(() => import('./components/RecommendationList'))
 const ConfigPanel = lazy(() => import('./components/ConfigPanel'))
@@ -564,7 +567,9 @@ export default function App() {
   }, [])
 
   return (
-    <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
+    <>
+      {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} />}
+      <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
       {updateInfo && (
         <div className="update-banner" role="status" aria-live="polite">
           <span className="update-banner-text">
@@ -699,5 +704,6 @@ export default function App() {
         <p>Rabadon.GG isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
       </footer>
     </div>
+    </>
   )
 }

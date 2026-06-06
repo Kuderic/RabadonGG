@@ -71,7 +71,7 @@ Recommendations are sorted by composite score (descending). Top 10 returned.
 
 ## Data source
 
-All stats from `https://a1.lolalytics.com/mega/` — queried with:
+All stats queried with:
 - `ep=counter` × 5 (`vslane=top|jungle|middle|bottom|support`) — merged, ~161 unique matchups
 - `ep=build-team` — ally synergy organized by lane
 - `ep=list` — champion pool for a role (`defaultLane` filter)
