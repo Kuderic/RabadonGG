@@ -26,8 +26,8 @@ describe('champDDragonKey', () => {
     expect(champDDragonKey('Aurelion Sol')).toBe('AurelionSol')
   })
 
-  it('removes apostrophe: "Cho\'Gath" → "ChoGath"', () => {
-    expect(champDDragonKey("Cho'Gath")).toBe('ChoGath')
+  it('uses exception: "Cho\'Gath" → "Chogath"', () => {
+    expect(champDDragonKey("Cho'Gath")).toBe('Chogath')
   })
 })
 
