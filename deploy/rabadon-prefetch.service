@@ -1,0 +1,12 @@
+[Unit]
+Description=Rabadon.GG daily lolalytics prefetch into SQLite cache
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ec2-user
+WorkingDirectory=/srv/rabadon/backend
+ExecStart=/srv/rabadon/backend/venv/bin/python prefetch_all.py
+StandardOutput=append:/srv/rabadon/backend/logs/cron.log
+StandardError=append:/srv/rabadon/backend/logs/cron.log
