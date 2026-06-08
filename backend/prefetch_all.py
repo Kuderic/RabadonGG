@@ -118,7 +118,7 @@ async def prefetch(tiers: list[str], patch: str | None) -> None:
 
     # ── Summary log entry ────────────────────────────────────────────────────
     summary_lines = [
-        f"",
+        "",
         f"{'='*70}",
         f"RUN: {datetime.datetime.now().isoformat(timespec='seconds')}",
         f"PATCH: {patch}   TIERS: {', '.join(tiers)}",

@@ -1,5 +1,7 @@
 import { champSlug } from '../utils/champion'
 
+const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
+
 export function RankBadge({ rank }) {
   const cls = rank <= 3 ? `rank-badge rank-${rank}` : 'rank-badge rank-other'
   return <span className={cls}><span className="rank-num">{rank}</span></span>
@@ -13,7 +15,13 @@ export function ExternalLink({ champion }) {
       rel="noopener noreferrer"
       className="lola-link bp-lola-link"
       title={`Open ${champion} on lolalytics.com`}
-      onClick={e => e.stopPropagation()}
+      onClick={e => {
+        e.stopPropagation()
+        if (IS_TAURI) {
+          e.preventDefault()
+          window.__TAURI__.core.invoke('open_url', { url: e.currentTarget.href })
+        }
+      }}
     >
       <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M7 1h4v4M11 1L5.5 6.5M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V8"

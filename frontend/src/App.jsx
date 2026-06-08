@@ -6,7 +6,7 @@ import { useLCUSession } from './services/lcu'
 import { champPrimaryRole, champSecondaryRole, champIconUrl } from './utils/champion'
 
 const IS_DESKTOP = import.meta.env.VITE_DESKTOP === 'true'
-const IS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
 
 // In Tauri the WebView doesn't route <a target="_blank"> to the system browser.
 // Intercept clicks and call the native open_url command instead.
