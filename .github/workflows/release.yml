@@ -71,17 +71,15 @@ jobs:
 
       # Create the updater zip explicitly — Tauri's createUpdaterArtifacts is
       # unreliable when signing env vars are absent or in certain CLI versions.
-      - name: Package updater artifact
+      # Tauri's build step creates the .nsis.zip (createUpdaterArtifacts: true).
+      # We sign it here as a safety net in case auto-signing didn't fire.
+      # Compress-Archive was removed — it produced an incompatible compression
+      # method that Tauri's zip extractor rejects at install time.
+      - name: Sign updater artifact
         run: |
           $ver       = "${{ steps.version.outputs.VERSION }}"
           $bundleDir = "src-tauri/target/release/bundle/nsis"
-          $exe = "$bundleDir\Rabadon_${ver}_x64-setup.exe"
           $zip = "$bundleDir\Rabadon_${ver}_x64-setup.nsis.zip"
-          Compress-Archive -Path $exe -DestinationPath $zip -Force
-          # Strip whitespace so line-wrapped base64 (e.g. from GNU base64) becomes a single token.
-          # Pass via --private-key in an array element — splatting gives it a hard argument boundary
-          # so multiline/special-char content is safe (the original reason for the temp-file approach).
-          # Clearing the env var avoids the implicit --private-key conflict.
           $keyBase64 = $env:TAURI_SIGNING_PRIVATE_KEY -replace '\s+', ''
           $env:TAURI_SIGNING_PRIVATE_KEY = ""
           $signerArgs = @('tauri', 'signer', 'sign', '--private-key', $keyBase64)
