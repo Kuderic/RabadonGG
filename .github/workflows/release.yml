@@ -72,10 +72,11 @@ jobs:
       - name: Locate release artifacts
         id: artifacts
         run: |
+          $ver      = "${{ steps.version.outputs.VERSION }}"
           $bundleDir = "desktop/src-tauri/target/release/bundle/nsis"
-          $nsis_zip  = Get-ChildItem "$bundleDir/*.nsis.zip" | Select-Object -First 1 -ExpandProperty FullName
+          $nsis_zip  = "$bundleDir/Rabadon_${ver}_x64-setup.nsis.zip"
           $nsis_sig  = "$nsis_zip.sig"
-          $installer = Get-ChildItem "$bundleDir/*-setup.exe" | Select-Object -First 1 -ExpandProperty FullName
+          $installer = "$bundleDir/Rabadon_${ver}_x64-setup.exe"
           echo "NSIS_ZIP=$nsis_zip"   >> $env:GITHUB_OUTPUT
           echo "NSIS_SIG=$nsis_sig"   >> $env:GITHUB_OUTPUT
           echo "INSTALLER=$installer" >> $env:GITHUB_OUTPUT
