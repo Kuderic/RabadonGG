@@ -124,6 +124,11 @@ async fn fetch_champion_map() -> Result<HashMap<u64, String>, String> {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
+fn open_url(url: String) {
+    let _ = open::that(url);
+}
+
+#[tauri::command]
 async fn get_lcu_session(
     state: tauri::State<'_, AppState>,
 ) -> Result<Value, String> {
@@ -442,7 +447,7 @@ async fn main() {
                 .build(app)?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_lcu_session])
+        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url])
         .run(tauri::generate_context!())
         .expect("error while running Rabadon desktop");
 }

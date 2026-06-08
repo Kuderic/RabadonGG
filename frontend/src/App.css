@@ -2533,13 +2533,13 @@ html[data-desktop] .app-container::-webkit-scrollbar-thumb:active {
   border-color: var(--gold);
   color: var(--gold-bright, #f0d060);
 }
-/* Only the champion icon + input area signals draggability */
-.enemy-drag-wrap .champ-input-wrap { cursor: grab; }
-.enemy-drag-wrap input { cursor: grab; }
+/* Grab cursor only when the slot has a champion to drag */
+.enemy-drag-wrap.has-champ .champ-input-wrap { cursor: grab; }
+.enemy-drag-wrap.has-champ input { cursor: grab; }
 .enemy-drag-wrap .role-pill { cursor: default; }
-/* Keep grabbing cursor across the whole page during a drag operation */
+/* Keep grabbing cursor + suppress text selection across the whole page during a drag */
 body.is-dragging,
-body.is-dragging * { cursor: grabbing !important; }
+body.is-dragging * { cursor: grabbing !important; user-select: none !important; }
 
 /* ---------------------------------------------------------------------------
    Champion Pool panel — role-tied entries
