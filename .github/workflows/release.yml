@@ -69,17 +69,24 @@ jobs:
           echo "TAG=$tag" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
-      # Compress-Archive can use Deflate64 (method 9) which Tauri's zip extractor
-      # doesn't support. 7-Zip with -mm=Deflate forces standard Deflate (method 8).
-      # createUpdaterArtifacts is unreliable across CLI versions, so we always
-      # create the zip here to guarantee a fresh, compatible file each run.
+      # createUpdaterArtifacts may have already created the zip; 7z a would
+      # *append* to it rather than replacing it, producing two entries with
+      # different paths that corrupt the archive and confuse the zip extractor.
+      # Fix: delete any existing zip first, then build from the bundle dir so
+      # the entry lands at the archive root (not src-tauri/target/…).
+      # -mx=0 = Stored (no compression) — the exe is already compressed and
+      # method 0 is universally supported by every zip implementation.
       - name: Package and sign updater artifact
         run: |
           $ver       = "${{ steps.version.outputs.VERSION }}"
           $bundleDir = "src-tauri/target/release/bundle/nsis"
-          $exe = "$bundleDir\Rabadon_${ver}_x64-setup.exe"
-          $zip = "$bundleDir\Rabadon_${ver}_x64-setup.nsis.zip"
-          7z a -tzip -mm=Deflate -mx=5 "$zip" "$exe"
+          $exeName = "Rabadon_${ver}_x64-setup.exe"
+          $zipName = "Rabadon_${ver}_x64-setup.nsis.zip"
+          $zip = "$bundleDir\$zipName"
+          Remove-Item $zip -ErrorAction SilentlyContinue
+          Push-Location $bundleDir
+          7z a -tzip -mx=0 $zipName $exeName
+          Pop-Location
           $keyBase64 = $env:TAURI_SIGNING_PRIVATE_KEY -replace '\s+', ''
           $env:TAURI_SIGNING_PRIVATE_KEY = ""
           $signerArgs = @('tauri', 'signer', 'sign', '--private-key', $keyBase64)
