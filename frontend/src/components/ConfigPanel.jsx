@@ -34,7 +34,9 @@ export default function ConfigPanel({
   config, onChange, defaultConfig,
   patch, tier, availablePatches, onPatchChange, onTierChange,
   lowDetail, onLowDetailChange,
-  pool = [], onPoolAdd, onPoolRemove, onPoolRoleChange, champions = [], playerRole,
+  pool = [], onPoolAdd, onPoolRemove, onPoolRoleChange,
+  poolVariant, onPoolVariantChange, onAddRole, onRemoveRole, onToggleRole,
+  champions = [], playerRole,
   wrModifiers = {}, onModifierChange,
 }) {
   const [viewRole, setViewRole] = useState('adc')
@@ -101,12 +103,13 @@ export default function ConfigPanel({
 
       {/* ── My Champions ────────────────────────────────────── */}
       <ChampionPoolPanel
+        variant={poolVariant}
+        onVariantChange={onPoolVariantChange}
         pool={pool}
-        onAdd={onPoolAdd}
-        onRemove={onPoolRemove}
-        onRoleChange={onPoolRoleChange}
         champions={champions}
-        playerRole={playerRole}
+        onAddRole={onAddRole}
+        onRemoveRole={onRemoveRole}
+        onToggleRole={onToggleRole}
       />
 
       {/* ── Custom Modifiers ────────────────────────────────── */}

@@ -2648,3 +2648,609 @@ body.is-dragging * { cursor: grabbing !important; user-select: none !important; 
   color: var(--ink-4);
   font-style: italic;
 }
+
+/* ============================================================================
+   Rabadon.GG — core-flow redesign (core.css)
+   Layered on top of App.real.css. Touches ONLY the 5 requested areas:
+     1. Header secondary links (About / Download demoted from primary tabs)
+     2. Enemy drag-and-drop — explicit grip handle + clearer states
+     3. Sort: Synergy / Counter as clickable column headers above their columns
+     4. Fix: in-pool star no longer breaks the Overall row grid
+     5. My Champions — two role-first redesign variants
+   Uses only existing design tokens. Same hextech language.
+   ========================================================================== */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1 · HEADER — primary tabs = Draft + Configuration.
+       About / Download become quiet secondary links in the top-right corner.
+   ───────────────────────────────────────────────────────────────────────── */
+.header { position: relative; }
+
+.header-secondary {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.header-secondary-link {
+  background: none;
+  border: none;
+  font-family: var(--font-stat);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 2px;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+}
+.header-secondary-link:hover { color: var(--ink-2); }
+.header-secondary-link--active { color: var(--gold-bright); }
+.header-secondary-link--active::after {
+  content: "";
+  display: block;
+  height: 1px;
+  margin-top: 5px;
+  background: var(--grad-gold-flat);
+}
+.header-secondary-sep { width: 1px; height: 14px; background: var(--border); margin: 0 4px; }
+/* GitHub icon now lives inside the secondary cluster, not floated on its own */
+.header-secondary .header-github-link {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px;
+}
+
+/* When About/Download is open, give it a slim "back to app" affordance */
+.secondary-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: -8px 0 22px;
+  font-family: var(--font-stat);
+  font-size: 12px;
+  color: var(--ink-4);
+  letter-spacing: 0.4px;
+}
+.secondary-context-bar button {
+  background: none;
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  color: var(--gold-mid);
+  font-family: var(--font-stat);
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.secondary-context-bar button:hover { border-color: var(--gold-deep); color: var(--gold-bright); }
+
+@media (max-width: 700px) {
+  .header-secondary { position: static; justify-content: center; margin-top: 12px; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2 · ENEMY DRAG-AND-DROP — drag from an explicit grip handle.
+       Dragging the input no longer fights the autocomplete; the handle is the
+       only drag affordance, so the gesture is unambiguous.
+   ───────────────────────────────────────────────────────────────────────── */
+/* wrapper is a plain block; the grip now lives INSIDE the row, between the role
+   pill and the champion input (a flex child of .champ-row). */
+.enemy-drag-wrap { position: relative; width: 100%; }
+
+.enemy-drag-handle {
+  flex-shrink: 0;
+  width: 24px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-right: 1px solid var(--hairline);
+  color: var(--ink-4);
+  background: none;
+  cursor: grab;
+  touch-action: none;
+  transition: color 0.12s, background 0.12s, border-color 0.12s, opacity 0.12s;
+  opacity: 0.45;
+}
+/* filled slots: handle is faintly visible (discoverable) and lifts on hover */
+.enemy-drag-wrap.has-champ:hover .enemy-drag-handle,
+.enemy-drag-wrap.has-champ .enemy-drag-handle:focus-visible { opacity: 1; }
+.enemy-drag-handle:hover {
+  color: var(--gold-mid);
+  background: rgba(200,155,60,0.08);
+  border-right-color: var(--gold-deep);
+}
+.enemy-drag-handle svg { width: 12px; height: 16px; display: block; }
+/* empty slots: handle is invisible + inert, but keeps its width so rows align */
+.enemy-drag-wrap:not(.has-champ) .enemy-drag-handle { opacity: 0; pointer-events: none; }
+/* the input itself is a normal text field again — NOT a drag surface */
+.enemy-drag-wrap.has-champ .champ-input-wrap,
+.enemy-drag-wrap.has-champ input { cursor: text; }
+
+.enemy-drag-wrap.drag-source { opacity: 0.32; }
+.enemy-drag-wrap.drag-source .enemy-drag-handle { opacity: 1; color: var(--gold-mid); cursor: grabbing; }
+.enemy-drag-wrap.drag-over {
+  background: rgba(200,155,60,0.10);
+  outline: 2px dashed var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.enemy-drag-wrap.drag-over .role-pill {
+  background: rgba(200,155,60,0.22);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+/* a swap glyph that appears on the hovered target during a drag */
+.enemy-drag-wrap.drag-over .enemy-drag-handle { opacity: 1; color: var(--gold-bright); }
+
+.enemy-drag-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-family: var(--font-stat);
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  color: var(--ink-4);
+}
+.enemy-drag-hint svg { width: 12px; height: 14px; opacity: 0.7; }
+
+body.is-dragging,
+body.is-dragging * { user-select: none !important; }
+body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3 · SORT — Synergy / Counter promoted to clickable COLUMN HEADERS that sit
+       directly above their value columns. WR+Δ / Δ-only stay as the main sort.
+   ───────────────────────────────────────────────────────────────────────── */
+/* primary sort stays in the toolbar; just push the secondary controls apart */
+.rec-toolbar .rec-toolbar-spacer { flex: 1; }
+
+.rec-col-headers {
+  display: grid;
+  grid-template-columns: 30px 42px minmax(80px, 1fr) 165px 130px;
+  align-items: end;
+  gap: 14px;
+  padding: 2px 16px 8px 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+.rec-col-head-pick {
+  grid-column: 1 / 4;
+  font-family: var(--font-stat);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.rec-col-deltas {
+  grid-column: 4;
+  display: flex;
+  gap: 16px;
+}
+.rec-col-sort {
+  flex: 1;
+  min-width: 72px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  border-left: 2px solid var(--border);
+  padding: 4px 0 4px 14px;
+  font-family: var(--font-stat);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.rec-col-sort:first-child { border-left-color: var(--ally); }
+.rec-col-sort:last-child  { border-left-color: var(--enemy); }
+.rec-col-sort:hover { color: var(--ink); }
+.rec-col-sort .sort-caret {
+  font-size: 9px;
+  opacity: 0.28;
+  transition: opacity 0.15s, transform 0.15s;
+  color: var(--gold-mid);
+}
+.rec-col-sort:hover .sort-caret { opacity: 0.5; }
+.rec-col-sort--active { color: var(--gold-bright); }
+.rec-col-sort--active.rec-col-sort:first-child { color: var(--gold-bright); }
+.rec-col-sort--active .sort-caret { opacity: 1; }
+.rec-col-head-wr {
+  grid-column: 5;
+  justify-self: end;
+  font-family: var(--font-stat);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  padding-bottom: 4px;
+}
+
+/* keep the underline accent under the value cell that's being sorted */
+.rec-grid--row .delta-cell--sorted .delta-label { color: var(--gold-mid); }
+/* The column header now labels each column, so drop the per-row labels on
+   desktop — leaving just the aligned numbers. (Restored on mobile below,
+   where the column-header row is hidden.) */
+.rec-grid--row .delta-label { display: none; }
+/* RecCard wrapper carries the card + inline breakdown without becoming a grid
+   item itself, so the row grid is unchanged. */
+.rec-row-wrap { display: contents; }
+
+@media (max-width: 700px) {
+  .rec-col-headers { display: none; }   /* cards reflow on mobile; headers don't apply */
+  .rec-grid--row .delta-label { display: block; }  /* per-row labels return */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4 · BUG FIX — in-pool indicator no longer a stray grid child.
+       It now renders INSIDE .card-champion-name (a flex item / grid cell),
+       so the 5-column row grid is never disturbed. Belt-and-braces: any
+       direct .pool-badge child of a row card-header is neutralised.
+   ───────────────────────────────────────────────────────────────────────── */
+.card-pool-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 1px;
+  color: var(--gold);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 5px rgba(200,155,60,0.55));
+}
+.card-pool-star svg { width: 16px; height: 16px; }
+.card-champion-name { gap: 6px; }
+
+/* In-pool Overall rows get a gold left accent bar + faint gold tint so a
+   champion you actually play jumps out of the top-10 at a glance. */
+.recommendation-card.in-pool {
+  background:
+    linear-gradient(90deg, rgba(200,155,60,0.11), rgba(200,155,60,0.02) 42%, transparent 68%),
+    var(--panel-inset);
+}
+.rec-grid--row .recommendation-card.in-pool::before {
+  background: var(--grad-gold-flat);
+  opacity: 0.95;
+  width: 3px;
+}
+.recommendation-card.in-pool .card-champion-name { color: #ffe9b8; }
+
+/* Pool-tab cards use a PoolBadge in place of the rank badge — pin it to the
+   rank column (col 1) so it lines up exactly like a numbered row. */
+.rec-grid--row .card-header > .pool-badge { order: 1; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5 · MY CHAMPIONS — role-first redesigns.
+       Shared: a segmented toggle to compare the two layouts in place.
+   ───────────────────────────────────────────────────────────────────────── */
+.pool-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pool-variant-toggle {
+  display: inline-flex;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 2px;
+  gap: 2px;
+}
+.pool-variant-toggle button {
+  background: none;
+  border: none;
+  border-radius: 3px;
+  font-family: var(--font-stat);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.pool-variant-toggle button:hover { color: var(--ink-2); }
+.pool-variant-toggle button.is-active {
+  background: rgba(200,155,60,0.20);
+  color: var(--gold-bright);
+  box-shadow: inset 0 0 0 1px var(--gold-deep);
+}
+.pool-total-count {
+  font-family: var(--font-stat);
+  font-size: 11px;
+  color: var(--ink-4);
+  letter-spacing: 0.4px;
+}
+
+/* shared champion search popover (used by both variants) */
+.poolx-search {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+}
+.poolx-search input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.poolx-search input:focus { border-color: var(--gold); }
+.poolx-search input::placeholder { color: var(--ink-4); }
+.poolx-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  z-index: 200;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-card);
+}
+.poolx-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.poolx-dd-item:hover,
+.poolx-dd-item.is-active { background: var(--panel-inset); color: var(--ink); }
+.poolx-dd-item img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.poolx-dd-roles { margin-left: auto; display: flex; gap: 3px; }
+.poolx-dd-role {
+  font-family: var(--font-stat);
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  color: var(--ink-4);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  padding: 1px 4px;
+}
+
+/* ---- Variant A · Role lanes (5 containers) ------------------------------ */
+.pool-lanes {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+.pool-lane {
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  min-height: 168px;
+  overflow: visible;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.pool-lane.is-droptarget {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold-deep), 0 0 14px rgba(200,155,60,0.12);
+}
+.pool-lane-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
+.pool-lane-head img { width: 16px; height: 16px; opacity: 0.85; }
+.pool-lane-title {
+  font-family: var(--font-stat);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gold-mid);
+}
+.pool-lane-n {
+  margin-left: auto;
+  font-family: var(--font-stat);
+  font-size: 10px;
+  color: var(--ink-4);
+}
+.pool-lane-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  flex: 1;
+}
+.pool-lane-empty {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--ink-4);
+  font-style: italic;
+  text-align: center;
+  margin: auto 0;
+  line-height: 1.5;
+  padding: 6px;
+}
+.pool-lane-card {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+  padding: 4px 5px;
+}
+.pool-lane-card img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.pool-lane-card-name {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.pool-lane-card-x {
+  background: none; border: none; color: var(--ink-4);
+  cursor: pointer; font-size: 11px; padding: 2px; line-height: 1;
+  flex-shrink: 0; transition: color 0.12s;
+}
+.pool-lane-card-x:hover { color: var(--neg); }
+.pool-lane-add {
+  border: none;
+  border-top: 1px dashed var(--border-soft);
+  background: none;
+  color: var(--ink-3);
+  font-family: var(--font-stat);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  padding: 7px;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.pool-lane-add:hover { color: var(--gold-bright); background: rgba(200,155,60,0.06); }
+.pool-lane-addrow { padding: 8px; border-top: 1px solid var(--hairline); }
+
+@media (max-width: 760px) {
+  .pool-lanes { grid-template-columns: 1fr; }
+  .pool-lane { min-height: 0; }
+}
+
+/* ---- Variant B · Role picker + filtered list ---------------------------- */
+.pool-byrole-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  margin-bottom: 14px;
+}
+.pool-rolepick {
+  display: inline-flex;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 2px;
+  gap: 2px;
+}
+.pool-rolepick button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  font-family: var(--font-stat);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.pool-rolepick button img { width: 15px; height: 15px; opacity: 0.7; }
+.pool-rolepick button:hover { color: var(--ink-2); }
+.pool-rolepick button.is-active { background: rgba(200,155,60,0.20); color: var(--gold-bright); box-shadow: inset 0 0 0 1px var(--gold-deep); }
+.pool-rolepick button.is-active img { opacity: 1; }
+.pool-rolepick-n {
+  font-size: 9px;
+  background: rgba(200,155,60,0.2);
+  color: var(--gold-mid);
+  border-radius: 8px;
+  padding: 0 5px;
+  min-width: 15px;
+  text-align: center;
+}
+.pool-byrole-context {
+  font-family: var(--font-stat);
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 0.3px;
+  margin-bottom: 12px;
+}
+.pool-byrole-context strong { color: var(--gold-mid); font-weight: 600; }
+.pool-byrole-list { display: flex; flex-direction: column; gap: 6px; }
+.pool-byrole-empty {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-4);
+  text-align: center;
+  padding: 28px 0 12px;
+  line-height: 1.6;
+  font-style: italic;
+}
+.pool-byrole-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 3px;
+}
+.pool-byrole-row img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.pool-byrole-row-name { font-family: var(--font-body); font-size: 13px; color: var(--ink-2); flex: 1; }
+.pool-byrole-flex {
+  display: flex;
+  gap: 4px;
+}
+.pool-byrole-flexrole {
+  font-family: var(--font-stat);
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  color: var(--ink-4);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  padding: 2px 5px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.pool-byrole-flexrole.is-on { color: var(--gold-bright); border-color: var(--gold-deep); background: rgba(200,155,60,0.1); }
+.pool-byrole-row-x {
+  background: none; border: none; color: var(--ink-4);
+  cursor: pointer; font-size: 12px; padding: 2px 4px; line-height: 1; transition: color 0.12s;
+}
+.pool-byrole-row-x:hover { color: var(--neg); }
+
+/* small note shared by both variants */
+.pool-variant-note {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-4);
+  line-height: 1.6;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}

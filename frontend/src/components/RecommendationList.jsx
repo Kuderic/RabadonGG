@@ -31,6 +31,16 @@ function PoolBadge() {
   )
 }
 
+function PoolStar() {
+  return (
+    <span className="card-pool-star" title="In your champion pool">
+      <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+        <path d="M7 1l1.6 3.3 3.6.5-2.6 2.5.6 3.6L7 9.3l-3.2 1.6.6-3.6L1.8 4.8l3.6-.5z"/>
+      </svg>
+    </span>
+  )
+}
+
 function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool }) {
   const lowN = hasLowN(rec, config)
   const { adjSyn, adjCtr, totalDelta, customOffset } = computeComponents(rec, config, playerRole, wrModifiers)
@@ -40,7 +50,7 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
   return (
     <Fragment>
       <div
-        className={`recommendation-card ${isPool ? 'pool-card' : ''} ${isSelected ? 'card-selected' : ''}`}
+        className={`recommendation-card ${isPool ? 'pool-card' : ''} ${!isPool && inPool ? 'in-pool' : ''} ${isSelected ? 'card-selected' : ''}`}
         onClick={onSelect}
         onMouseEnter={!isPool ? () => {
           const img = new Image()
@@ -49,7 +59,6 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
       >
         <div className="card-header">
           {isPool ? <PoolBadge /> : <RankBadge rank={rank} />}
-          {!isPool && inPool && <PoolBadge />}
           <img
             src={champIconUrl(rec.champion)}
             alt={rec.champion}
@@ -61,6 +70,7 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
           />
           <span className="card-champion-name">
             {rec.champion}
+            {!isPool && inPool && <PoolStar />}
             <ExternalLink champion={rec.champion} />
           </span>
           <div className="card-stats">
@@ -114,6 +124,29 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
         </div>
       )}
     </Fragment>
+  )
+}
+
+function SortHeaders({ sortMode, onSort }) {
+  return (
+    <div className="rec-col-headers" role="row">
+      <div className="rec-col-head-pick">Pick</div>
+      <div className="rec-col-deltas">
+        <button type="button"
+                className={`rec-col-sort ${sortMode === 'synergy' ? 'rec-col-sort--active' : ''}`}
+                onClick={() => onSort('synergy')}
+                title="Sort by synergy with your allies">
+          Synergy <span className="sort-caret">▼</span>
+        </button>
+        <button type="button"
+                className={`rec-col-sort ${sortMode === 'counter' ? 'rec-col-sort--active' : ''}`}
+                onClick={() => onSort('counter')}
+                title="Sort by counter vs. enemies">
+          Counter <span className="sort-caret">▼</span>
+        </button>
+      </div>
+      <div className="rec-col-head-wr">Win rate</div>
+    </div>
   )
 }
 
@@ -213,16 +246,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
           className={`sort-btn ${sortMode === 'delta' ? 'sort-btn--active' : ''}`}
           onClick={() => setSortMode('delta')}
         >Δ only</button>
-        <button
-          className={`sort-btn ${sortMode === 'synergy' ? 'sort-btn--active' : ''}`}
-          onClick={() => setSortMode('synergy')}
-        >Synergy</button>
-        <button
-          className={`sort-btn ${sortMode === 'counter' ? 'sort-btn--active' : ''}`}
-          onClick={() => setSortMode('counter')}
-        >Counter</button>
-
-        <div className="rec-toolbar-sep" />
+        <div className="rec-toolbar-spacer" />
 
         <label className="penalty-toggle" title="Weight matchups with fewer games than the threshold (configure in Settings)">
           <input
@@ -247,51 +271,57 @@ export default function RecommendationList({ recommendations, loading, refreshin
       </div>
 
       {recTab === 'overall' && (
-        <div className="rec-grid rec-grid--row">
-          {sorted.map(({ rec, origIdx }, rank) => (
-            <RecCard
-              key={origIdx}
-              rec={rec}
-              rank={rank + 1}
-              isSelected={selectedIndex === origIdx}
-              onSelect={() => {
-                if (selectedIndex !== origIdx) trackEvent('view_breakdown', { category: 'engagement', label: rec.champion })
-                onSelect(selectedIndex === origIdx ? null : origIdx)
-              }}
-              config={config}
-              playerRole={playerRole}
-              wrModifiers={wrModifiers}
-              sortMode={sortMode}
-              breakdownRef={selectedIndex === origIdx ? breakdownRef : null}
-              inPool={poolChampions.has(rec.champion.toLowerCase())}
-            />
-          ))}
-        </div>
-      )}
-
-      {recTab === 'pool' && (
-        <div className="rec-grid rec-grid--row">
-          {sortedPool.length === 0 ? (
-            <div className="pool-results-empty">
-              Add champions to your pool in Configuration → My Champions.
-            </div>
-          ) : (
-            sortedPool.map((rec, idx) => (
+        <>
+          <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(s => s === m ? 'rating' : m)} />
+          <div className="rec-grid rec-grid--row">
+            {sorted.map(({ rec, origIdx }, rank) => (
               <RecCard
-                key={rec.champion}
+                key={origIdx}
                 rec={rec}
-                rank="★"
-                isSelected={selectedPoolRec === idx}
-                onSelect={() => onSelectPoolRec(selectedPoolRec === idx ? null : idx)}
+                rank={rank + 1}
+                isSelected={selectedIndex === origIdx}
+                onSelect={() => {
+                  if (selectedIndex !== origIdx) trackEvent('view_breakdown', { category: 'engagement', label: rec.champion })
+                  onSelect(selectedIndex === origIdx ? null : origIdx)
+                }}
                 config={config}
                 playerRole={playerRole}
                 wrModifiers={wrModifiers}
                 sortMode={sortMode}
-                breakdownRef={selectedPoolRec === idx ? poolBreakdownRef : null}
+                breakdownRef={selectedIndex === origIdx ? breakdownRef : null}
+                inPool={poolChampions.has(rec.champion.toLowerCase())}
               />
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {recTab === 'pool' && (
+        <>
+          <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(s => s === m ? 'rating' : m)} />
+          <div className="rec-grid rec-grid--row">
+            {sortedPool.length === 0 ? (
+              <div className="pool-results-empty">
+                Add champions to your pool in Settings → My Champions.
+              </div>
+            ) : (
+              sortedPool.map((rec, idx) => (
+                <RecCard
+                  key={rec.champion}
+                  rec={rec}
+                  rank="★"
+                  isSelected={selectedPoolRec === idx}
+                  onSelect={() => onSelectPoolRec(selectedPoolRec === idx ? null : idx)}
+                  config={config}
+                  playerRole={playerRole}
+                  wrModifiers={wrModifiers}
+                  sortMode={sortMode}
+                  breakdownRef={selectedPoolRec === idx ? poolBreakdownRef : null}
+                />
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   )
