@@ -3,7 +3,7 @@ import DraftForm from './components/DraftForm'
 import TitleBar from './components/TitleBar'
 import { getRecommendations, getChampions, getPatches } from './api/client'
 import { useLCUSession } from './services/lcu'
-import { champPrimaryRole, champIconUrl } from './utils/champion'
+import { champPrimaryRole, champSecondaryRole, champIconUrl } from './utils/champion'
 
 const IS_DESKTOP = import.meta.env.VITE_DESKTOP === 'true'
 
@@ -358,6 +358,23 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false)
   const [updateInfo, setUpdateInfo] = useState(null)
   const [updateStatus, setUpdateStatus] = useState('idle')
+  const [championPool, setChampionPool] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('rabadon_champion_pool') || '[]')
+      // Migrate from old string[] format
+      if (stored.length > 0 && typeof stored[0] === 'string') {
+        return stored.map(champion => ({ champion, roles: [] }))
+      }
+      return stored
+    }
+    catch { return [] }
+  })
+  const [wrModifiers, setWrModifiers] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('rabadon_wr_modifiers') || '{}') }
+    catch { return {} }
+  })
+  const [poolResults, setPoolResults] = useState([])
+  const [selectedPoolRec, setSelectedPoolRec] = useState(null)
   const debounceRef = useRef(null)
 
   // Refs so handleSubmit can read current state without being in its dep array
@@ -365,6 +382,10 @@ export default function App() {
   recommendationsRef.current = recommendations
   const selectedRecRef = useRef(selectedRec)
   selectedRecRef.current = selectedRec
+  // Pool ref: lets handleSubmit read current pool without adding it to deps
+  // (pool changes should NOT trigger auto-resubmit)
+  const championPoolRef = useRef(championPool)
+  championPoolRef.current = championPool
 
   const { connected: lcuConnected, session: lcuSession } = useLCUSession()
 
@@ -385,7 +406,8 @@ export default function App() {
         return existing || slot
       }
       const match = lcuSession.allies.find(a => a.role === slot.role)
-      return match ? { ...slot, champion: match.champion } : slot
+      // Clear the slot when LCU has no data for it (handles new-session clear)
+      return { ...slot, champion: match?.champion || '' }
     }))
 
     const knownRoles = ['top','jungle','mid','adc','support']
@@ -403,19 +425,43 @@ export default function App() {
         if (primary && !filledSlots[primary]) {
           filledSlots[primary] = e.champion
         } else {
-          for (const r of knownRoles) {
-            if (!filledSlots[r]) { filledSlots[r] = e.champion; break }
+          // Try secondary (flex) role before falling back to first empty slot
+          const secondary = champSecondaryRole(e.champion)
+          if (secondary && !filledSlots[secondary]) {
+            filledSlots[secondary] = e.champion
+          } else {
+            for (const r of knownRoles) {
+              if (!filledSlots[r]) { filledSlots[r] = e.champion; break }
+            }
           }
         }
       }
     }
 
-    setEnemies(prev => prev.map(slot => {
-      if (manualOverrides.has(`enemy.${slot.role}`)) return slot
-      if (filledSlots[slot.role]) return { ...slot, champion: filledSlots[slot.role] }
-      return slot
-    }))
+    setEnemies(prev => {
+      // Champions the user has manually pinned to a specific slot — don't auto-fill these elsewhere
+      const pinnedChamps = new Set(
+        prev
+          .filter(s => manualOverrides.has(`enemy.${s.role}`) && s.champion.trim())
+          .map(s => s.champion.toLowerCase())
+      )
+      return prev.map(slot => {
+        if (manualOverrides.has(`enemy.${slot.role}`)) return slot
+        const champion = filledSlots[slot.role] || ''
+        // Suppress auto-fill if this champion was already manually placed in another slot
+        if (champion && pinnedChamps.has(champion.toLowerCase())) return { ...slot, champion: '' }
+        return { ...slot, champion }
+      })
+    })
   }, [lcuSession, lcuConnected]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    localStorage.setItem('rabadon_champion_pool', JSON.stringify(championPool))
+  }, [championPool])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon_wr_modifiers', JSON.stringify(wrModifiers))
+  }, [wrModifiers])
 
   useEffect(() => {
     getChampions().then(setChampions).catch(() => {})
@@ -444,33 +490,122 @@ export default function App() {
     return () => { cancelled = true }
   }, [])
 
+  const handlePoolAdd = useCallback((champion, roles = []) => {
+    setChampionPool(prev => {
+      if (prev.length >= 20) return prev
+      if (prev.some(p => p.champion.toLowerCase() === champion.toLowerCase())) return prev
+      return [...prev, { champion, roles }]
+    })
+  }, [])
+
+  const handlePoolRemove = useCallback((champion) => {
+    setChampionPool(prev => prev.filter(p => p.champion.toLowerCase() !== champion.toLowerCase()))
+    setWrModifiers(prev => {
+      const next = { ...prev }
+      delete next[champion]
+      return next
+    })
+  }, [])
+
+  const handlePoolRoleChange = useCallback((champion, roles) => {
+    setChampionPool(prev => prev.map(p =>
+      p.champion.toLowerCase() === champion.toLowerCase() ? { ...p, roles } : p
+    ))
+  }, [])
+
+  const handleEnemySwap = useCallback((fromIdx, toIdx) => {
+    setEnemies(prev => {
+      const next = [...prev]
+      const fromChamp = next[fromIdx].champion
+      const toChamp = next[toIdx].champion
+      next[fromIdx] = { ...next[fromIdx], champion: toChamp }
+      next[toIdx] = { ...next[toIdx], champion: fromChamp }
+      setManualOverrides(overrides => {
+        const nextOverrides = new Set(overrides)
+        if (toChamp.trim()) nextOverrides.add(`enemy.${next[fromIdx].role}`)
+        else nextOverrides.delete(`enemy.${next[fromIdx].role}`)
+        if (fromChamp.trim()) nextOverrides.add(`enemy.${next[toIdx].role}`)
+        else nextOverrides.delete(`enemy.${next[toIdx].role}`)
+        return nextOverrides
+      })
+      return next
+    })
+  }, [])
+
+  const handleModifierChange = useCallback((champion, value) => {
+    setWrModifiers(prev => {
+      const next = { ...prev }
+      if (value === 0) delete next[champion]
+      else next[champion] = value
+      return next
+    })
+  }, [])
+
   const handleRoleChange = (newRole) => {
     setRole(newRole)
     setAllies(makeAllies(ROLE_ALLY_SLOTS[newRole] || ROLE_ALLY_SLOTS['adc'], allies))
   }
 
   const handleAllyChange = (index, champion) => {
-    const updated = [...allies]
-    updated[index] = { ...updated[index], champion }
-    setAllies(updated)
+    const norm = s => s.trim().toLowerCase()
+    const champNorm = norm(champion)
+    // Clear this champion from any other ally or enemy slot that already has it
+    const updatedAllies = allies.map((a, i) => {
+      if (i === index) return { ...a, champion }
+      if (champNorm && norm(a.champion) === champNorm) return { ...a, champion: '' }
+      return a
+    })
+    const updatedEnemies = champNorm
+      ? enemies.map(e => norm(e.champion) === champNorm ? { ...e, champion: '' } : e)
+      : enemies
+    setAllies(updatedAllies)
+    setEnemies(updatedEnemies)
     setManualOverrides(prev => {
       const next = new Set(prev)
       const key = `ally.${allies[index].role}`
       if (champion.trim()) next.add(key)
       else next.delete(key)
+      // Drop override for any enemy slot we just cleared
+      if (champNorm) {
+        enemies.forEach(e => {
+          if (norm(e.champion) === champNorm) next.delete(`enemy.${e.role}`)
+        })
+        allies.forEach((a, i) => {
+          if (i !== index && norm(a.champion) === champNorm) next.delete(`ally.${a.role}`)
+        })
+      }
       return next
     })
   }
 
   const handleEnemyChange = (index, champion) => {
-    const updated = [...enemies]
-    updated[index] = { ...updated[index], champion }
-    setEnemies(updated)
+    const norm = s => s.trim().toLowerCase()
+    const champNorm = norm(champion)
+    // Clear this champion from any other enemy or ally slot that already has it
+    const updatedEnemies = enemies.map((e, i) => {
+      if (i === index) return { ...e, champion }
+      if (champNorm && norm(e.champion) === champNorm) return { ...e, champion: '' }
+      return e
+    })
+    const updatedAllies = champNorm
+      ? allies.map(a => norm(a.champion) === champNorm ? { ...a, champion: '' } : a)
+      : allies
+    setEnemies(updatedEnemies)
+    setAllies(updatedAllies)
     setManualOverrides(prev => {
       const next = new Set(prev)
       const key = `enemy.${enemies[index].role}`
       if (champion.trim()) next.add(key)
       else next.delete(key)
+      // Drop override for any ally slot we just cleared
+      if (champNorm) {
+        allies.forEach(a => {
+          if (norm(a.champion) === champNorm) next.delete(`ally.${a.role}`)
+        })
+        enemies.forEach((e, i) => {
+          if (i !== index && norm(e.champion) === champNorm) next.delete(`enemy.${e.role}`)
+        })
+      }
       return next
     })
   }
@@ -487,15 +622,21 @@ export default function App() {
     }
 
     try {
+      const poolForRole = championPoolRef.current
+        .filter(p => p.roles.length === 0 || p.roles.includes(role))
+        .map(p => p.champion)
       const result = await getRecommendations(
         role,
         allies.filter(a => a.champion.trim()),
         enemies.filter(e => e.champion.trim()),
         patch,
-        tier
+        tier,
+        poolForRole
       )
       const newRecs = result.recommendations || []
       setRecommendations(newRecs)
+      setPoolResults(result.pool_picks || [])
+      setSelectedPoolRec(null)
 
       // Restore the open breakdown to the same champion if it's still in the new list
       if (prevIdx !== null && prevRecs[prevIdx]) {
@@ -643,6 +784,7 @@ export default function App() {
               onRoleChange={handleRoleChange}
               onAllyChange={handleAllyChange}
               onEnemyChange={handleEnemyChange}
+              onEnemySwap={handleEnemySwap}
               onSubmit={handleSubmit}
               loading={loading}
               error={error}
@@ -662,10 +804,19 @@ export default function App() {
                     loading={loading}
                     refreshing={refreshing}
                     selectedIndex={selectedRec}
-                    onSelect={setSelectedRec}
+                    onSelect={(idx) => { setSelectedRec(idx); if (idx !== null) setSelectedPoolRec(null) }}
                     config={config}
                     playerRole={role}
                     onTogglePenalty={() => setConfig(c => ({ ...c, penalize: !c.penalize }))}
+                    poolResults={poolResults}
+                    selectedPoolRec={selectedPoolRec}
+                    onSelectPoolRec={(idx) => { setSelectedPoolRec(idx); if (idx !== null) setSelectedRec(null) }}
+                    wrModifiers={wrModifiers}
+                    poolChampions={new Set(
+                      championPool
+                        .filter(p => p.roles.length === 0 || p.roles.includes(role))
+                        .map(p => p.champion.toLowerCase())
+                    )}
                   />
                 </Suspense>
               </div>
@@ -687,6 +838,14 @@ export default function App() {
               onTierChange={setTier}
               lowDetail={lowDetail}
               onLowDetailChange={setLowDetail}
+              pool={championPool}
+              onPoolAdd={handlePoolAdd}
+              onPoolRemove={handlePoolRemove}
+              onPoolRoleChange={handlePoolRoleChange}
+              champions={champions}
+              playerRole={role}
+              wrModifiers={wrModifiers}
+              onModifierChange={handleModifierChange}
             />
           </Suspense>
         )}

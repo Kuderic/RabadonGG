@@ -13,14 +13,115 @@ function hasLowN(rec, config) {
   return all.some(b => b.n > 0 && b.n < config.penalizeThreshold)
 }
 
-function computeAdjustedScore(rec, sortMode, config, playerRole) {
-  const { totalDelta } = computeComponents(rec, config, playerRole)
-  return sortMode === 'delta' ? totalDelta : rec.win_rate + totalDelta
+function computeAdjustedScore(rec, sortMode, config, playerRole, modifiers) {
+  const { synContrib, ctrContrib, totalDelta } = computeComponents(rec, config, playerRole, modifiers)
+  if (sortMode === 'delta') return totalDelta
+  if (sortMode === 'synergy') return synContrib
+  if (sortMode === 'counter') return ctrContrib
+  return rec.win_rate + totalDelta
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, onTogglePenalty }) {
+function PoolBadge() {
+  return (
+    <span className="pool-badge" title="In your pool">
+      <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+        <path d="M7 1l1.6 3.3 3.6.5-2.6 2.5.6 3.6L7 9.3l-3.2 1.6.6-3.6L1.8 4.8l3.6-.5z"/>
+      </svg>
+    </span>
+  )
+}
+
+function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool }) {
+  const lowN = hasLowN(rec, config)
+  const { adjSyn, adjCtr, totalDelta, customOffset } = computeComponents(rec, config, playerRole, wrModifiers)
+  const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
+  const isPool = rank === '★'
+
+  return (
+    <Fragment>
+      <div
+        className={`recommendation-card ${isPool ? 'pool-card' : ''} ${isSelected ? 'card-selected' : ''}`}
+        onClick={onSelect}
+        onMouseEnter={!isPool ? () => {
+          const img = new Image()
+          img.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champDDragonKey(rec.champion)}_0.jpg`
+        } : undefined}
+      >
+        <div className="card-header">
+          {isPool ? <PoolBadge /> : <RankBadge rank={rank} />}
+          {!isPool && inPool && <PoolBadge />}
+          <img
+            src={champIconUrl(rec.champion)}
+            alt={rec.champion}
+            className="card-champ-icon"
+            onError={e => {
+              e.target.onerror = null
+              e.target.classList.add('card-champ-icon--error')
+            }}
+          />
+          <span className="card-champion-name">
+            {rec.champion}
+            <ExternalLink champion={rec.champion} />
+          </span>
+          <div className="card-stats">
+            <div className="card-wr-line">
+              <span className="card-win-rate">{rec.win_rate.toFixed(1)}%</span>
+              <span className={`card-wr-delta ${totalDelta >= 0 ? 'positive' : 'negative'}`}>
+                {fmt(totalDelta)}
+              </span>
+              {lowN && (
+                <span className="low-n-warning" title={`Some matchups have fewer than ${config?.penalizeThreshold} games — score is weighted down`}>⚠</span>
+              )}
+            </div>
+            {customOffset !== 0 && (
+              <div className="card-modifier-line">
+                <span className={`custom-modifier-badge ${customOffset > 0 ? 'positive' : 'negative'}`} title={`Custom WR modifier: ${customOffset > 0 ? '+' : ''}${customOffset}%`}>
+                  ✎ {customOffset > 0 ? '+' : ''}{customOffset}%
+                </span>
+              </div>
+            )}
+            {rec.total_games > 0 && (
+              <span className="card-total-games">{(rec.total_games / 1000).toFixed(0)}K games</span>
+            )}
+          </div>
+        </div>
+
+        <div className="card-deltas">
+          <div className={`delta-cell ${sortMode === 'synergy' ? 'delta-cell--sorted' : ''}`}>
+            <div className="delta-label">Synergy{sortMode === 'synergy' ? ' ↓' : ''}</div>
+            <div className={`delta-value ${adjSyn >= 0 ? 'positive' : 'negative'}`}>{fmt(adjSyn)}</div>
+          </div>
+          <div className={`delta-cell ${sortMode === 'counter' ? 'delta-cell--sorted' : ''}`}>
+            <div className="delta-label">Counter{sortMode === 'counter' ? ' ↓' : ''}</div>
+            <div className={`delta-value ${adjCtr >= 0 ? 'positive' : 'negative'}`}>{fmt(adjCtr)}</div>
+          </div>
+        </div>
+
+        <button className="card-details-toggle">
+          {isSelected ? '▲ collapse' : '▼ details'}
+        </button>
+      </div>
+      {isSelected && (
+        <div ref={breakdownRef} className="breakdown-inline">
+          <BreakdownPanel
+            rec={rec}
+            rank={rank}
+            onClose={onSelect}
+            settings={config}
+            playerRole={playerRole}
+            modifiers={wrModifiers}
+          />
+        </div>
+      )}
+    </Fragment>
+  )
+}
+
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set() }) {
   const [sortMode, setSortMode] = useState('rating')
+  const [recTab, setRecTab] = useState('overall')
   const breakdownRef = useRef(null)
+  const poolBreakdownRef = useRef(null)
 
   useEffect(() => {
     if (selectedIndex !== null && breakdownRef.current) {
@@ -44,12 +145,20 @@ export default function RecommendationList({ recommendations, loading, refreshin
     const sorted = [...recommendations]
       .map((rec, origIdx) => ({ rec, origIdx }))
       .sort((a, b) =>
-        computeAdjustedScore(b.rec, sortMode, config, playerRole) -
-        computeAdjustedScore(a.rec, sortMode, config, playerRole)
+        computeAdjustedScore(b.rec, sortMode, config, playerRole, wrModifiers) -
+        computeAdjustedScore(a.rec, sortMode, config, playerRole, wrModifiers)
       )
 
     return { sorted, penalizedCount }
-  }, [recommendations, sortMode, config, playerRole])
+  }, [recommendations, sortMode, config, playerRole, wrModifiers])
+
+  const sortedPool = useMemo(() => {
+    if (!poolResults.length) return []
+    return [...poolResults].sort((a, b) =>
+      computeAdjustedScore(b, sortMode, config, playerRole, wrModifiers) -
+      computeAdjustedScore(a, sortMode, config, playerRole, wrModifiers)
+    )
+  }, [poolResults, sortMode, config, playerRole, wrModifiers])
 
   if (loading) {
     return (
@@ -76,6 +185,24 @@ export default function RecommendationList({ recommendations, loading, refreshin
           <span className="rec-panel-role">{ROLE_LABEL[playerRole] || playerRole}</span>
         )}
       </div>
+
+      {/* Overall / My Champions tabs */}
+      <div className="rec-main-tabs">
+        <button
+          className={`rec-main-tab ${recTab === 'overall' ? 'rec-main-tab--active' : ''}`}
+          onClick={() => setRecTab('overall')}
+        >Overall</button>
+        <button
+          className={`rec-main-tab ${recTab === 'pool' ? 'rec-main-tab--active' : ''}`}
+          onClick={() => setRecTab('pool')}
+        >
+          My Champions
+          {poolResults.length > 0 && (
+            <span className="rec-tab-count">{poolResults.length}</span>
+          )}
+        </button>
+      </div>
+
       <div className="rec-toolbar">
         <span className="rec-toolbar-label">Sort by</span>
         <button
@@ -86,6 +213,14 @@ export default function RecommendationList({ recommendations, loading, refreshin
           className={`sort-btn ${sortMode === 'delta' ? 'sort-btn--active' : ''}`}
           onClick={() => setSortMode('delta')}
         >Δ only</button>
+        <button
+          className={`sort-btn ${sortMode === 'synergy' ? 'sort-btn--active' : ''}`}
+          onClick={() => setSortMode('synergy')}
+        >Synergy</button>
+        <button
+          className={`sort-btn ${sortMode === 'counter' ? 'sort-btn--active' : ''}`}
+          onClick={() => setSortMode('counter')}
+        >Counter</button>
 
         <div className="rec-toolbar-sep" />
 
@@ -111,90 +246,53 @@ export default function RecommendationList({ recommendations, loading, refreshin
         {refreshing && <span className="rec-refreshing">Updating…</span>}
       </div>
 
-      <div className="rec-grid rec-grid--row">
-        {sorted.map(({ rec, origIdx }, rank) => {
-          const isSelected = selectedIndex === origIdx
-          const lowN = hasLowN(rec, config)
-          const { adjSyn, adjCtr, totalDelta } = computeComponents(rec, config, playerRole)
-          const fmt = (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
-          return (
-            <Fragment key={origIdx}>
-              <div
-                className={`recommendation-card ${isSelected ? 'card-selected' : ''}`}
-                onClick={() => {
-                  if (!isSelected) trackEvent('view_breakdown', { category: 'engagement', label: rec.champion })
-                  onSelect(isSelected ? null : origIdx)
-                }}
-                onMouseEnter={() => {
-                  const img = new Image()
-                  img.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champDDragonKey(rec.champion)}_0.jpg`
-                }}
-              >
-                <div className="card-header">
-                  <RankBadge rank={rank + 1} />
-                  <img
-                    src={champIconUrl(rec.champion)}
-                    alt={rec.champion}
-                    className="card-champ-icon"
-                    onError={e => {
-                      e.target.onerror = null
-                      e.target.classList.add('card-champ-icon--error')
-                    }}
-                  />
-                  <span className="card-champion-name">
-                    {rec.champion}
-                    <ExternalLink champion={rec.champion} />
-                  </span>
-                  <div className="card-stats">
-                    <div className="card-wr-line">
-                      <span className="card-win-rate">{rec.win_rate.toFixed(1)}%</span>
-                      <span className={`card-wr-delta ${totalDelta >= 0 ? 'positive' : 'negative'}`}>
-                        {fmt(totalDelta)}
-                      </span>
-                      {lowN && (
-                        <span className="low-n-warning" title={`Some matchups have fewer than ${config.penalizeThreshold} games — score is weighted down`}>⚠</span>
-                      )}
-                    </div>
-                    {rec.total_games > 0 && (
-                      <span className="card-total-games">{(rec.total_games / 1000).toFixed(0)}K games</span>
-                    )}
-                  </div>
-                </div>
+      {recTab === 'overall' && (
+        <div className="rec-grid rec-grid--row">
+          {sorted.map(({ rec, origIdx }, rank) => (
+            <RecCard
+              key={origIdx}
+              rec={rec}
+              rank={rank + 1}
+              isSelected={selectedIndex === origIdx}
+              onSelect={() => {
+                if (selectedIndex !== origIdx) trackEvent('view_breakdown', { category: 'engagement', label: rec.champion })
+                onSelect(selectedIndex === origIdx ? null : origIdx)
+              }}
+              config={config}
+              playerRole={playerRole}
+              wrModifiers={wrModifiers}
+              sortMode={sortMode}
+              breakdownRef={selectedIndex === origIdx ? breakdownRef : null}
+              inPool={poolChampions.has(rec.champion.toLowerCase())}
+            />
+          ))}
+        </div>
+      )}
 
-                <div className="card-deltas">
-                  <div className="delta-cell">
-                    <div className="delta-label">Synergy</div>
-                    <div className={`delta-value ${adjSyn >= 0 ? 'positive' : 'negative'}`}>
-                      {fmt(adjSyn)}
-                    </div>
-                  </div>
-                  <div className="delta-cell">
-                    <div className="delta-label">Counter</div>
-                    <div className={`delta-value ${adjCtr >= 0 ? 'positive' : 'negative'}`}>
-                      {fmt(adjCtr)}
-                    </div>
-                  </div>
-                </div>
-
-                <button className="card-details-toggle">
-                  {isSelected ? '▲ collapse' : '▼ details'}
-                </button>
-              </div>
-              {isSelected && (
-                <div ref={breakdownRef} className="breakdown-inline">
-                  <BreakdownPanel
-                    rec={rec}
-                    rank={rank + 1}
-                    onClose={() => onSelect(null)}
-                    settings={config}
-                    playerRole={playerRole}
-                  />
-                </div>
-              )}
-            </Fragment>
-          )
-        })}
-      </div>
+      {recTab === 'pool' && (
+        <div className="rec-grid rec-grid--row">
+          {sortedPool.length === 0 ? (
+            <div className="pool-results-empty">
+              Add champions to your pool in Configuration → My Champions.
+            </div>
+          ) : (
+            sortedPool.map((rec, idx) => (
+              <RecCard
+                key={rec.champion}
+                rec={rec}
+                rank="★"
+                isSelected={selectedPoolRec === idx}
+                onSelect={() => onSelectPoolRec(selectedPoolRec === idx ? null : idx)}
+                config={config}
+                playerRole={playerRole}
+                wrModifiers={wrModifiers}
+                sortMode={sortMode}
+                breakdownRef={selectedPoolRec === idx ? poolBreakdownRef : null}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }

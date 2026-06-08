@@ -65,6 +65,9 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
             detail=f"Champion pool unavailable for role '{role}'. Try again shortly."
         )
 
+    drafted = {c["champion"].lower() for c in allies + enemies}
+    candidates = [c for c in candidates if c.lower() not in drafted]
+
     sem = asyncio.Semaphore(5)
 
     async def _score_candidate(candidate: str) -> tuple | None:
@@ -94,14 +97,29 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
                 logger.error(f"Error scoring {candidate}: {e}")
                 return None
 
-    results = await asyncio.gather(*[_score_candidate(c) for c in candidates])
-    scored = [(r, rec) for item in results if item is not None for r, rec in [item]]
+    # Parse pool: deduplicate, filter drafted champions, cap at 20
+    pool_names = list(dict.fromkeys(p.strip() for p in request.pool if p.strip()))
+    pool_names = [p for p in pool_names if p.lower() not in drafted][:20]
+
+    # Score candidates and pool in one gather so pool doesn't add latency
+    all_names = candidates + pool_names
+    all_results = await asyncio.gather(*[_score_candidate(c) for c in all_names])
+
+    candidate_results = all_results[:len(candidates)]
+    pool_results = all_results[len(candidates):]
+
+    scored = [(r, rec) for item in candidate_results if item is not None for r, rec in [item]]
     scored.sort(key=lambda x: x[0], reverse=True)
     top_recommendations = [rec for _, rec in scored[:10]]
 
-    logger.info(f"Generated {len(top_recommendations)} recommendations for role '{role}' (patch={patch}, tier={tier})")
+    pool_scored = [(r, rec) for item in pool_results if item is not None for r, rec in [item]]
+    pool_scored.sort(key=lambda x: x[0], reverse=True)
+    pool_picks = [rec for _, rec in pool_scored]
+
+    logger.info(f"Generated {len(top_recommendations)} recommendations + {len(pool_picks)} pool picks for role '{role}' (patch={patch}, tier={tier})")
     return RecommendResponse(
         patch=patch,
         tier=TIER_DISPLAY.get(tier, tier),
         recommendations=top_recommendations,
+        pool_picks=pool_picks,
     )

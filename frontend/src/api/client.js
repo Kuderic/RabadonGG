@@ -11,11 +11,11 @@ export async function getChampions() {
   return data.champions
 }
 
-export async function getRecommendations(role, allies, enemies, patch, tier) {
+export async function getRecommendations(role, allies, enemies, patch, tier, pool = []) {
   const res = await fetch(`${BASE_URL}/api/recommend`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role, allies, enemies, patch, tier })
+    body: JSON.stringify({ role, allies, enemies, patch, tier, pool })
   })
 
   if (!res.ok) {

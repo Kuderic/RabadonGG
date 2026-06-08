@@ -9,11 +9,9 @@ d2 = normalized synergy delta (adjust all champions to 50% baseline WR).
 Values are in percent (e.g. 2.78); divide by 100 for scorer's decimal format.
 Champion IDs match Riot Data Dragon IDs.
 
-File cache layout: data/lolalytics/{patch}/{lane}/
-  _pool.json          — champion pool for this lane (1-day TTL)
-  {champion}.json     — matchup data for this champion (1-day TTL)
-
-Files are refreshed when fetched_at date is more than 1 day old.
+Cache: SQLite at backend/data/rabadon_cache.db (1-day TTL, keyed by champion+patch+tier+lane).
+Counter entries include a 'query_vslane' tag so role-specific matchups are looked up correctly
+(e.g. Darius in jungle has different d2/n than Darius in top).
 """
 
 import asyncio
@@ -21,7 +19,6 @@ import datetime
 import json
 import logging
 import re
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import httpx
@@ -34,9 +31,6 @@ PATCH = "16.11"
 TIER = "emerald_plus"
 QUEUE = "ranked"
 REGION = "all"
-
-CACHE_DIR = Path(__file__).parent.parent / "data" / "lolalytics"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 ROLE_TO_LANE = {
     "top": "top",
@@ -92,7 +86,6 @@ def _tier_key(tier: str, days: int) -> str:
 
 
 
-
 # ---------------------------------------------------------------------------
 # Patch detection
 # ---------------------------------------------------------------------------
@@ -102,30 +95,13 @@ async def _get_patch() -> str:
     global _current_patch
     if _current_patch:
         return _current_patch
-
-    # Check disk cache (patch stored at root level)
-    patch_file = CACHE_DIR / "_patch.json"
-    if patch_file.exists():
-        try:
-            meta = json.loads(patch_file.read_text(encoding="utf-8"))
-            if not _is_stale(meta):
-                _current_patch = meta["patch"]
-                return _current_patch
-        except Exception:
-            pass
-
     async with httpx.AsyncClient(timeout=5) as client:
         resp = await client.get(DD_VERSIONS_URL)
         versions = resp.json()
-
     # versions[0] = "16.11.1" → "16.11"
     parts = versions[0].split(".")
-    patch = f"{parts[0]}.{parts[1]}"
-    _current_patch = patch
-    patch_file.write_text(
-        json.dumps({"patch": patch, "fetched_at": _today()}), encoding="utf-8"
-    )
-    return patch
+    _current_patch = f"{parts[0]}.{parts[1]}"
+    return _current_patch
 
 
 # ---------------------------------------------------------------------------
@@ -133,33 +109,14 @@ async def _get_patch() -> str:
 # ---------------------------------------------------------------------------
 
 async def _ensure_champion_map(patch: str) -> None:
-    """Load champion slug ↔ ID mapping from Data Dragon (once per process, disk-cached)."""
+    """Load champion slug ↔ ID mapping from Data Dragon (once per process)."""
     global _slug_to_id, _id_to_slug, _api_slug_map
     if _slug_to_id:
         return
-
-    # v2 cache adds api_slug_map; old _champ_map_{patch}.json files are ignored.
-    map_file = CACHE_DIR / f"_champ_map_{patch}_v2.json"
-    if map_file.exists():
-        try:
-            meta = json.loads(map_file.read_text(encoding="utf-8"))
-            if not _is_stale(meta):
-                for s, cid in meta["slug_to_id"].items():
-                    _slug_to_id[s] = int(cid)
-                for cid, name in meta["id_to_slug"].items():
-                    _id_to_slug[int(cid)] = name
-                for s, api_s in meta["api_slug_map"].items():
-                    _api_slug_map[s] = api_s
-                logger.debug(f"Champion map loaded from disk ({len(_slug_to_id)} champs)")
-                return
-        except Exception:
-            map_file.unlink(missing_ok=True)
-
     dd_url = f"https://ddragon.leagueoflegends.com/cdn/{patch}.1/data/en_US/champion.json"
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(dd_url)
         data = resp.json()
-
     for key, val in data["data"].items():
         cid = int(val["key"])
         key_s = _slug(key)           # DDragon key slug, e.g. "monkeyking", "nunu"
@@ -171,13 +128,6 @@ async def _ensure_champion_map(patch: str) -> None:
             # Alias so display-name lookups (ally/enemy matching) work too
             _slug_to_id[display_s] = cid
             _api_slug_map[display_s] = key_s
-
-    map_file.write_text(json.dumps({
-        "fetched_at": _today(),
-        "slug_to_id": {k: str(v) for k, v in _slug_to_id.items()},
-        "id_to_slug": {str(k): v for k, v in _id_to_slug.items()},
-        "api_slug_map": _api_slug_map,
-    }), encoding="utf-8")
     logger.info(f"Loaded {len(_slug_to_id)} champions from Data Dragon {patch}")
 
 
@@ -218,25 +168,32 @@ async def _fetch_counter_all_lanes(champ_slug: str, lane: str, patch: str, tier:
 
     The ep=counter endpoint is hard-capped at 40 results per call, but adding
     vslane={lane} filters to one opponent role and returns that role's full set.
-    Querying all 5 lanes in parallel and merging gives ~161 unique matchups.
-    When the same cid appears in multiple lane responses, keep the higher-n entry.
+    Querying all 5 lanes in parallel gives ~161+ matchups.
 
-    Returns (merged_counter_list, win_rate) — win_rate from first response's stats.
+    Each entry is tagged with 'query_vslane' so callers can select the role-specific
+    entry for each enemy champion (e.g. Darius in jungle has different n and d2
+    than Darius in top). A fallback index still keeps the highest-n entry per cid
+    for enemies whose role is unknown.
+
+    Returns (counter_list_with_vslane_tags, win_rate).
     """
     responses = await asyncio.gather(*[
         _fetch("counter", lane, champ_slug, patch, tier, days, extra={"vslane": vs})
         for vs in VS_LANES
     ])
-    by_cid: Dict[int, dict] = {}
+    all_entries: List[dict] = []
+    seen: set = set()  # (cid, vslane) dedup
     win_rate = 0.0
-    for resp in responses:
+    for vs, resp in zip(VS_LANES, responses):
         if not win_rate:
             win_rate = float(resp.get("stats", {}).get("wr", 0) or 0)
         for entry in resp.get("counters", []):
             cid = entry["cid"]
-            if cid not in by_cid or entry["n"] > by_cid[cid]["n"]:
-                by_cid[cid] = entry
-    return list(by_cid.values()), win_rate
+            key = (cid, vs)
+            if key not in seen:
+                seen.add(key)
+                all_entries.append({**entry, "query_vslane": vs})
+    return all_entries, win_rate
 
 
 # ---------------------------------------------------------------------------
@@ -256,9 +213,13 @@ async def warm_cache() -> None:
     rows = db.load_all_valid_matchups()
     for row in rows:
         if len(row.get("counters", "")) > 50:  # Minimal validation
+            counters = json.loads(row["counters"])
+            # Skip old-format entries that lack query_vslane tags
+            if not counters or not counters[0].get("query_vslane"):
+                continue
             mem_key = f"{row['tier']}:{row['patch']}:{row['champion']}:{row['lane']}"
             _matchup_mem_cache[mem_key] = {
-                "counters": json.loads(row["counters"]),
+                "counters": counters,
                 "team": json.loads(row["team"]),
                 "win_rate": row["win_rate"],
             }
@@ -373,13 +334,19 @@ async def get_matchup_data(
     tkey = _tier_key(tier, days)
 
     mem_key = f"{tkey}:{patch}:{cand_slug}:{lane}"
-    if mem_key in _matchup_mem_cache:
-        counter_list = _matchup_mem_cache[mem_key]["counters"]
-        team_map = _matchup_mem_cache[mem_key]["team"]
-        win_rate = _matchup_mem_cache[mem_key].get("win_rate", 0.0)
+    mem_data = _matchup_mem_cache.get(mem_key)
+    # Invalidate mem-cache entries from before vslane-tagging was added
+    if mem_data and mem_data.get("counters") and not mem_data["counters"][0].get("query_vslane"):
+        del _matchup_mem_cache[mem_key]
+        mem_data = None
+    if mem_data:
+        counter_list = mem_data["counters"]
+        team_map = mem_data["team"]
+        win_rate = mem_data.get("win_rate", 0.0)
     else:
         db_data = db.read_matchup(cand_slug, patch, tkey, lane)
-        if db_data and "win_rate" in db_data and len(db_data.get("counters", [])) > 50:
+        has_vslane = db_data and db_data.get("counters") and db_data["counters"][0].get("query_vslane")
+        if db_data and "win_rate" in db_data and len(db_data.get("counters", [])) > 50 and has_vslane:
             counter_list = db_data["counters"]
             team_map = db_data["team"]
             win_rate = db_data["win_rate"]
@@ -398,8 +365,19 @@ async def get_matchup_data(
                 return {}, {}, 0.0, 0, [f"{candidate}: data unavailable ({e})"]
         _matchup_mem_cache[mem_key] = {"counters": counter_list, "team": team_map, "win_rate": win_rate}
 
-    # Build O(1) lookup structures
-    counter_by_cid = {entry["cid"]: entry for entry in counter_list}
+    # Build O(1) lookup structures.
+    # Primary: (cid, query_vslane) → entry for role-specific matchup lookup.
+    # Fallback: cid → highest-n entry for enemies whose role is unknown.
+    counter_by_cid_lane: Dict[Tuple[int, str], dict] = {}
+    counter_by_cid: Dict[int, dict] = {}
+    for entry in counter_list:
+        cid = entry["cid"]
+        vslane = entry.get("query_vslane")
+        if vslane:
+            counter_by_cid_lane[(cid, vslane)] = entry
+        if cid not in counter_by_cid or entry["n"] > counter_by_cid[cid]["n"]:
+            counter_by_cid[cid] = entry
+
     team_d2: Dict[str, Dict[int, Tuple[float, int]]] = {}
     for lane_name, entries in team_map.items():
         team_d2[lane_name] = {}
@@ -416,7 +394,9 @@ async def get_matchup_data(
         enemy_cid = _slug_to_id.get(_slug(enemy["champion"]))
         if enemy_cid is None:
             continue
-        entry = counter_by_cid.get(enemy_cid)
+        # Use the role-specific entry when available (fixes same-CID different-role bug)
+        enemy_vslane = ROLE_TO_LANE.get(enemy.get("role", "").lower(), "")
+        entry = counter_by_cid_lane.get((enemy_cid, enemy_vslane)) or counter_by_cid.get(enemy_cid)
         if entry is None:
             continue
         matchup_data[(key_name, "enemy")] = entry["d2"] / 100.0

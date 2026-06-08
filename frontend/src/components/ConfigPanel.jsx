@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import TierSelector from './TierSelector'
+import ChampionPoolPanel from './ChampionPoolPanel'
+import CustomModifiersPanel from './CustomModifiersPanel'
 
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
@@ -28,7 +30,13 @@ function WeightSlider({ role, value, onChange }) {
   )
 }
 
-export default function ConfigPanel({ config, onChange, defaultConfig, patch, tier, availablePatches, onPatchChange, onTierChange, lowDetail, onLowDetailChange }) {
+export default function ConfigPanel({
+  config, onChange, defaultConfig,
+  patch, tier, availablePatches, onPatchChange, onTierChange,
+  lowDetail, onLowDetailChange,
+  pool = [], onPoolAdd, onPoolRemove, onPoolRoleChange, champions = [], playerRole,
+  wrModifiers = {}, onModifierChange,
+}) {
   const [viewRole, setViewRole] = useState('adc')
   const weights = config.roleWeights?.[viewRole] || {}
   const allySlots = ALLY_SLOTS[viewRole] || []
@@ -90,6 +98,23 @@ export default function ConfigPanel({ config, onChange, defaultConfig, patch, ti
           </div>
         </div>
       </div>
+
+      {/* ── My Champions ────────────────────────────────────── */}
+      <ChampionPoolPanel
+        pool={pool}
+        onAdd={onPoolAdd}
+        onRemove={onPoolRemove}
+        onRoleChange={onPoolRoleChange}
+        champions={champions}
+        playerRole={playerRole}
+      />
+
+      {/* ── Custom Modifiers ────────────────────────────────── */}
+      <CustomModifiersPanel
+        wrModifiers={wrModifiers}
+        onModifierChange={onModifierChange}
+        champions={champions}
+      />
 
       {/* ── Sample size penalty ─────────────────────────────── */}
       <div className="config-section">

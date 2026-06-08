@@ -44,14 +44,16 @@ function YouRow({ role }) {
   )
 }
 
-
-
-function ChampionRow({ role, value, onChange, disabled, side, champions, onEnterSubmit }) {
+function ChampionRow({ role, value, onChange, disabled, side, champions, onEnterSubmit, dragging = false }) {
   const [open, setOpen] = useState(false)
   const [filtered, setFiltered] = useState([])
-  const [cursor, setCursor] = useState(0)  // default to first item highlighted
+  const [cursor, setCursor] = useState(0)
   const wrapRef = useRef(null)
   const id = useRef(Math.random())
+
+  useEffect(() => {
+    if (dragging) setOpen(false)
+  }, [dragging])
 
   useEffect(() => {
     const closeHandler = e => { if (e.detail !== id.current) setOpen(false) }
@@ -67,6 +69,7 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
   }, [])
 
   const handleInput = (v) => {
+    if (dragging) return
     onChange(v)
     if (v.trim().length > 0 && champions.length > 0) {
       const matches = filterChampions(champions, v)
@@ -74,7 +77,7 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
         broadcastClose(id.current)
         setOpen(true)
         setFiltered(matches)
-        setCursor(0)  // always pre-highlight first match
+        setCursor(0)
       } else {
         setOpen(false)
         setFiltered([])
@@ -113,7 +116,6 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
     }
   }
 
-  // Show icon only when the entered value is an exact champion name match
   const hasChamp = value.trim().length > 0 &&
     champions.some(c => c.toLowerCase() === value.trim().toLowerCase())
 
@@ -136,6 +138,7 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
           onChange={e => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => {
+            if (dragging) return
             if (value.trim().length > 0 && filtered.length > 0) {
               broadcastClose(id.current)
               setOpen(true)
@@ -169,11 +172,108 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
   )
 }
 
+function EnemySection({ enemies, loading, champions, onEnemyChange, onEnemySwap, onEnterSubmit }) {
+  const [dragSrc, setDragSrc] = useState(null)
+  const [dragOver, setDragOver] = useState(null)
+
+  const handleDragStart = (e, idx) => {
+    setDragSrc(idx)
+    document.body.classList.add('is-dragging')
+    broadcastClose(null)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(idx))
+
+    // Ghost image: champion icon + name only, no role pill
+    const champion = enemies[idx].champion
+    const ghost = document.createElement('div')
+    ghost.style.cssText = [
+      'position:fixed', 'top:-400px', 'left:-400px',
+      'display:flex', 'align-items:center', 'gap:10px',
+      'background:#161b29', 'border:1px solid #c89b3c', 'border-radius:3px',
+      'padding:8px 14px', 'white-space:nowrap', 'z-index:9999',
+      'pointer-events:none', 'font-family:Barlow Semi Condensed,sans-serif',
+    ].join(';')
+    if (champion) {
+      const img = document.createElement('img')
+      img.src = champIconUrl(champion)
+      img.style.cssText = 'width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0'
+      ghost.appendChild(img)
+      const span = document.createElement('span')
+      span.textContent = champion
+      span.style.cssText = 'font-size:14px;font-weight:500;color:#f4f1e8'
+      ghost.appendChild(span)
+    } else {
+      const span = document.createElement('span')
+      span.textContent = `Move ${ROLE_LABEL[enemies[idx].role] || ''} slot`
+      span.style.cssText = 'font-size:12px;color:#5d6880'
+      ghost.appendChild(span)
+    }
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2)
+    setTimeout(() => ghost.remove(), 0)
+  }
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOver !== idx) setDragOver(idx)
+  }
+
+  const handleDrop = (e, idx) => {
+    e.preventDefault()
+    if (dragSrc !== null && dragSrc !== idx) {
+      onEnemySwap(dragSrc, idx)
+    }
+    setDragSrc(null)
+    setDragOver(null)
+    document.body.classList.remove('is-dragging')
+  }
+
+  const handleDragEnd = () => {
+    setDragSrc(null)
+    setDragOver(null)
+    document.body.classList.remove('is-dragging')
+  }
+
+  const isDragging = dragSrc !== null
+
+  return (
+    <div className="draft-team">
+      <div className="draft-team-title enemy-title">Enemy Team</div>
+      {enemies.map((enemy, i) => (
+        <div
+          key={`enemy-${enemy.role}`}
+          draggable={!loading}
+          onDragStart={e => handleDragStart(e, i)}
+          onDragOver={e => handleDragOver(e, i)}
+          onDrop={e => handleDrop(e, i)}
+          onDragEnd={handleDragEnd}
+          onDragLeave={e => {
+            if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(null)
+          }}
+          className={`enemy-drag-wrap${dragSrc === i ? ' drag-source' : ''}${dragOver === i && dragSrc !== i ? ' drag-over' : ''}`}
+        >
+          <ChampionRow
+            role={enemy.role}
+            value={enemy.champion}
+            onChange={val => onEnemyChange(i, val)}
+            disabled={loading}
+            side="enemy"
+            champions={champions}
+            onEnterSubmit={onEnterSubmit}
+            dragging={isDragging}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const ROLE_DISPLAY = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
 
 export default function DraftForm({
   role, allies, enemies, champions,
-  onRoleChange, onAllyChange, onEnemyChange,
+  onRoleChange, onAllyChange, onEnemyChange, onEnemySwap,
   onSubmit, loading, error,
   patch, tier,
   onShare, shareCopied,
@@ -241,21 +341,14 @@ export default function DraftForm({
 
         <div className="draft-team-divider" />
 
-        <div className="draft-team">
-          <div className="draft-team-title enemy-title">Enemy Team</div>
-          {enemies.map((enemy, i) => (
-            <ChampionRow
-              key={`enemy-${enemy.role}`}
-              role={enemy.role}
-              value={enemy.champion}
-              onChange={val => onEnemyChange(i, val)}
-              disabled={loading}
-              side="enemy"
-              champions={champions}
-              onEnterSubmit={!loading ? onSubmit : undefined}
-            />
-          ))}
-        </div>
+        <EnemySection
+          enemies={enemies}
+          loading={loading}
+          champions={champions}
+          onEnemyChange={onEnemyChange}
+          onEnemySwap={onEnemySwap}
+          onEnterSubmit={!loading ? onSubmit : undefined}
+        />
       </div>
 
       {loading && (

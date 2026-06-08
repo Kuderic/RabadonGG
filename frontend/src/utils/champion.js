@@ -77,6 +77,50 @@ export function champPrimaryRole(name) {
   return CHAMPION_PRIMARY_ROLE[key3] || null
 }
 
+// Most-played secondary (flex) roles for champions that commonly appear off-role.
+// Used to resolve slot conflicts when two enemies share the same primary role.
+const CHAMPION_SECONDARY_ROLE = {
+  // Top flexes
+  Camille:'jungle', Jayce:'mid', Vladimir:'mid', Gragas:'mid',
+  Kennen:'jungle', Poppy:'jungle', Pantheon:'support', Malphite:'support',
+  Garen:'support', Sion:'jungle', Cho_Gath:'mid', Volibear:'jungle',
+  Warwick:'support', Mordekaiser:'jungle', Urgot:'jungle',
+
+  // Jungle flexes
+  Diana:'mid', Ekko:'mid', Graves:'mid', Karthus:'mid',
+  Wukong:'top', Fiddlesticks:'support', Nocturne:'mid',
+  Shyvana:'top', Trundle:'top', Olaf:'top', Udyr:'top',
+
+  // Mid flexes
+  Akali:'top', Irelia:'top', Sylas:'jungle', Zed:'jungle',
+  LeBlanc:'support', TwistedFate:'support', Katarina:'jungle',
+  Annie:'support', Lissandra:'support', Galio:'support',
+  Neeko:'support', Hwei:'support', Taliyah:'jungle',
+
+  // ADC flexes
+  Lucian:'mid', Vayne:'top', Twitch:'jungle', Tristana:'mid',
+  Senna:'support', Sivir:'mid', Varus:'mid',
+
+  // Support flexes
+  Brand:'mid', Karma:'mid', Lux:'mid', Zyra:'mid',
+  Swain:'mid', Seraphine:'mid', Morgana:'mid',
+  Heimerdinger:'top', Vel_Koz:'mid', Thresh:'jungle',
+  Pyke:'mid', Milio:'mid',
+}
+
+function _roleKey(name) {
+  const key1 = name.replace(/[ '&]/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
+  if (CHAMPION_SECONDARY_ROLE[key1] !== undefined) return CHAMPION_SECONDARY_ROLE[key1]
+  const key2 = name.replace(/[^a-zA-Z0-9]/g, '')
+  if (CHAMPION_SECONDARY_ROLE[key2] !== undefined) return CHAMPION_SECONDARY_ROLE[key2]
+  const key3 = name.split(/\s/)[0]
+  return CHAMPION_SECONDARY_ROLE[key3] ?? null
+}
+
+export function champSecondaryRole(name) {
+  return _roleKey(name)
+}
+
 // Match champions by normalized name (handles "miss" → "Miss Fortune", "kogm" → "Kog'Maw")
 export function filterChampions(champions, query) {
   if (!query || query.length < 1) return []

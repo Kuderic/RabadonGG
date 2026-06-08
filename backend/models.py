@@ -16,6 +16,7 @@ class RecommendRequest(BaseModel):
     enemies: List[ChampionRole] = Field(..., description="Already-selected enemy champions")
     patch: str = Field(default="16.11", description="Patch version e.g. '16.11'")
     tier: str = Field(default="emerald_plus", description="Rank tier e.g. 'emerald_plus'")
+    pool: List[str] = Field(default_factory=list, description="Champion names in user's pool")
 
 
 class ChampionDelta(BaseModel):
@@ -44,3 +45,4 @@ class RecommendResponse(BaseModel):
     patch: str
     tier: str
     recommendations: List[Recommendation]
+    pool_picks: List[Recommendation] = Field(default_factory=list, description="Pool champion scoring results")

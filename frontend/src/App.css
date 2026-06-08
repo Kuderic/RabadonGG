@@ -638,12 +638,55 @@ body {
   padding: 2px 7px;
 }
 
+/* ── Overall / My Champions tabs ──────────────────────────────────────────── */
+.rec-main-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.rec-main-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-3);
+  font-family: var(--font-stat);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.rec-main-tab:hover { color: var(--ink-2); }
+.rec-main-tab--active {
+  color: var(--gold-bright);
+  border-bottom-color: var(--gold);
+}
+.rec-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(200,155,60,0.18);
+  color: var(--gold-mid);
+  font-size: 10px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  padding: 0 5px;
+}
+
 .rec-toolbar {
   display: flex;
   align-items: center;
   gap: 9px;
   flex-wrap: wrap;
-  padding-bottom: 16px;
+  padding: 10px 0 14px;
   border-bottom: 1px solid var(--border-soft);
 }
 .rec-toolbar-label {
@@ -812,6 +855,7 @@ body {
 
 .card-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .card-wr-line { display: flex; align-items: baseline; gap: 6px; }
+.card-modifier-line { display: flex; justify-content: flex-end; }
 .card-win-rate {
   font-family: var(--font-stat);
   font-size: 19px;
@@ -851,6 +895,9 @@ body {
 .delta-value { font-family: var(--font-stat); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
 .delta-value.positive { color: var(--pos); }
 .delta-value.negative { color: var(--neg); }
+.delta-cell--sorted { background: rgba(200,155,60,0.06); }
+.rec-grid--row .delta-cell--sorted { background: none; }
+.delta-cell--sorted .delta-label { color: var(--gold-mid); }
 
 .card-details-toggle {
   display: block;
@@ -2212,4 +2259,392 @@ html[data-desktop] .app-container::-webkit-scrollbar-thumb:hover {
 html[data-desktop] .app-container::-webkit-scrollbar-thumb:active {
   background: linear-gradient(180deg, #ffffff, #e2c98a 55%, #b58c3e);
   background-clip: padding-box;
+}
+
+/* ---------------------------------------------------------------------------
+   Champion Pool Panel
+   --------------------------------------------------------------------------- */
+.pool-panel { margin-top: 0; }
+
+.pool-description {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 0 0 18px;
+  line-height: 1.5;
+}
+
+.pool-search-wrap {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.pool-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 9px 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.pool-search-input:focus { border-color: var(--gold); }
+.pool-search-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.pool-search-input::placeholder { color: var(--ink-4); }
+
+.pool-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  z-index: 200;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-card);
+}
+.pool-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.pool-dropdown-item:hover,
+.pool-dropdown-item.pool-dd-active { background: var(--panel-inset); color: var(--ink); }
+.pool-dd-icon {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.pool-empty {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-4);
+  text-align: center;
+  padding: 28px 0 12px;
+  line-height: 1.6;
+}
+
+.pool-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pool-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  padding: 4px 10px 4px 5px;
+}
+.pool-pill-icon {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.pool-pill-name {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.pool-pill-remove {
+  background: none;
+  border: none;
+  color: var(--ink-4);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 0 0 4px;
+  line-height: 1;
+  transition: color 0.1s;
+}
+.pool-pill-remove:hover { color: var(--neg); }
+
+.pool-pill-modifier-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: auto;
+}
+.pool-modifier-input {
+  width: 46px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  color: var(--ink-3);
+  font-family: var(--font-stat);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 4px;
+  text-align: right;
+  outline: none;
+  -moz-appearance: textfield;
+  transition: border-color 0.15s, color 0.15s;
+}
+.pool-modifier-input::-webkit-inner-spin-button,
+.pool-modifier-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.pool-modifier-input:focus { border-color: var(--gold-deep); color: var(--ink); }
+.pool-modifier-input--active { color: var(--gold-bright); border-color: var(--gold-deep); font-weight: 600; }
+.pool-modifier-pct { font-family: var(--font-stat); font-size: 11px; color: var(--ink-4); }
+
+.custom-modifier-badge {
+  font-family: var(--font-stat);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.custom-modifier-badge.positive { color: var(--pos); background: rgba(60,180,100,0.10); }
+.custom-modifier-badge.negative { color: var(--neg); background: rgba(220,70,70,0.10); }
+
+.pool-count {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--ink-4);
+  text-align: right;
+}
+
+/* ---------------------------------------------------------------------------
+   Pool results section (inside RecommendationList)
+   --------------------------------------------------------------------------- */
+.pool-results-section { margin-top: 28px; }
+
+.pool-results-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 4px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 20px;
+  margin-bottom: 0;
+}
+.pool-results-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--gold-mid);
+}
+.pool-results-sub {
+  font-family: var(--font-stat);
+  font-size: 11px;
+  color: var(--ink-4);
+  letter-spacing: 0.5px;
+}
+
+.pool-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  flex-shrink: 0;
+  color: var(--gold-mid);
+  opacity: 0.85;
+}
+.pool-badge svg { width: 16px; height: 16px; }
+
+.pool-card { border-left: 2px solid var(--gold-deep); }
+
+.pool-results-empty {
+  grid-column: 1 / -1;
+  padding: 28px 0;
+  text-align: center;
+  color: var(--ink-4);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------------------
+   Custom Modifiers panel (inside ConfigPanel)
+   --------------------------------------------------------------------------- */
+.modifier-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.modifier-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  width: auto;
+}
+.modifier-row-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.modifier-row-name {
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.modifier-row-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Enemy drag-and-drop
+   --------------------------------------------------------------------------- */
+.enemy-drag-wrap {
+  position: relative;
+  width: 100%;
+  border-radius: 2px;
+  transition: opacity 0.12s, background 0.12s, outline 0.08s;
+  cursor: default;
+}
+/* Source slot: clearly faded so user sees it's being moved */
+.enemy-drag-wrap.drag-source { opacity: 0.18; }
+/* Drop target: prominent gold highlight */
+.enemy-drag-wrap.drag-over {
+  background: rgba(200,155,60,0.12);
+  outline: 2px dashed var(--gold);
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+/* Highlight role pill of the drop target */
+.enemy-drag-wrap.drag-over .role-pill {
+  background: rgba(200,155,60,0.22);
+  border-color: var(--gold);
+  color: var(--gold-bright, #f0d060);
+}
+/* Only the champion icon + input area signals draggability */
+.enemy-drag-wrap .champ-input-wrap { cursor: grab; }
+.enemy-drag-wrap input { cursor: grab; }
+.enemy-drag-wrap .role-pill { cursor: default; }
+/* Keep grabbing cursor across the whole page during a drag operation */
+body.is-dragging,
+body.is-dragging * { cursor: grabbing !important; }
+
+/* ---------------------------------------------------------------------------
+   Champion Pool panel — role-tied entries
+   --------------------------------------------------------------------------- */
+.pool-add-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.pool-role-select {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pool-role-select-label {
+  font-family: var(--font-stat);
+  font-size: 11px;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 2px;
+}
+.pool-role-btn {
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  padding: 3px 7px;
+  font-family: var(--font-stat);
+  font-size: 11px;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  line-height: 1;
+}
+.pool-role-btn:hover { border-color: var(--gold-deep); color: var(--ink-2); }
+.pool-role-btn--active {
+  background: rgba(200,155,60,0.12);
+  border-color: var(--gold-deep);
+  color: var(--gold-bright);
+}
+.pool-role-btn--sm { padding: 4px 8px; font-size: 11px; }
+.pool-role-btn--lg { padding: 5px 10px; font-size: 12px; }
+.pool-role-hint {
+  font-family: var(--font-stat);
+  font-size: 11px;
+  color: var(--ink-4);
+  margin-left: 4px;
+  font-style: italic;
+}
+
+.pool-add-btn {
+  background: rgba(200,155,60,0.08);
+  border: 1px solid var(--gold-deep);
+  border-radius: 2px;
+  padding: 3px 12px;
+  font-family: var(--font-stat);
+  font-size: 12px;
+  color: var(--gold-mid);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  margin-left: auto;
+}
+.pool-add-btn:hover { background: rgba(200,155,60,0.18); color: var(--gold-bright); }
+.pool-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.pool-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.pool-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+}
+.pool-entry-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.pool-entry-name {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-2);
+  min-width: 80px;
+}
+.pool-entry-roles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+.pool-entry-all-roles {
+  font-family: var(--font-stat);
+  font-size: 10px;
+  color: var(--ink-4);
+  font-style: italic;
 }

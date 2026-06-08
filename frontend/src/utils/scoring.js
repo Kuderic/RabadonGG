@@ -12,7 +12,7 @@ export function getMultiplier(n, config) {
  * Returns { adjSyn, adjCtr, synContrib, ctrContrib, totalDelta, blend }
  * where synContrib + ctrContrib === totalDelta (blend already applied).
  */
-export function computeComponents(rec, config, playerRole) {
+export function computeComponents(rec, config, playerRole, modifiers = {}) {
   const parseD = str => parseFloat(str) || 0
   const rw = config?.roleWeights?.[playerRole]
   const enemyW = rw?.enemy || {}
@@ -28,7 +28,8 @@ export function computeComponents(rec, config, playerRole) {
 
   const synContrib = blend.synergy * adjSyn
   const ctrContrib = blend.counter * adjCtr
-  const totalDelta = synContrib + ctrContrib
+  const customOffset = modifiers?.[rec.champion] ?? 0
+  const totalDelta = synContrib + ctrContrib + customOffset
 
-  return { adjSyn, adjCtr, synContrib, ctrContrib, totalDelta, blend }
+  return { adjSyn, adjCtr, synContrib, ctrContrib, totalDelta, customOffset, blend }
 }
