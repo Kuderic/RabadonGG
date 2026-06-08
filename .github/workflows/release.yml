@@ -84,7 +84,15 @@ jobs:
           Set-Content -Path $keyFile -Value $env:TAURI_SIGNING_PRIVATE_KEY -Encoding utf8
           # Clear the env var so the signer doesn't see both --private-key (implicit) and --private-key-path
           $env:TAURI_SIGNING_PRIVATE_KEY = ""
-          npx tauri signer sign --private-key-path $keyFile -p "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" $zip
+          # Build args as an array — PS 5.1 silently drops empty-string args to native commands,
+          # so if PASSWORD is unset, "-p $empty $zip" becomes "-p $zip" and <FILE> goes missing.
+          $signerArgs = @('tauri', 'signer', 'sign', '--private-key-path', $keyFile)
+          if ($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
+            $signerArgs += '--password'
+            $signerArgs += $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+          }
+          $signerArgs += $zip
+          npx @signerArgs
           Remove-Item $keyFile -ErrorAction SilentlyContinue
         working-directory: desktop
         env:
