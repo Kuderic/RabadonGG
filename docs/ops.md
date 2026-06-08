@@ -60,6 +60,36 @@ journalctl -u rabadon -n 50         # recent logs
 curl -sf http://localhost:8000/health   # {"status":"ok"}
 ```
 
+## Scheduled prefetch — `rabadon-prefetch.timer`
+
+The SQLite cache is warmed nightly by `backend/prefetch_all.py`, run by a
+**systemd timer** (there is **no cron daemon** on this host — `cronie` is not
+installed, so don't try to add a crontab; use the timer).
+
+- Installed units: `/etc/systemd/system/rabadon-prefetch.{service,timer}`;
+  version-controlled copies at [`deploy/rabadon-prefetch.service`](../deploy/rabadon-prefetch.service)
+  and [`deploy/rabadon-prefetch.timer`](../deploy/rabadon-prefetch.timer).
+- Schedule: `OnCalendar=*-*-* 01:00:00` (daily at 01:00 **UTC** — host TZ is UTC),
+  `Persistent=true` so a run missed while the box was down fires on next boot.
+- The `.service` is `Type=oneshot`, runs as `ec2-user` with
+  `WorkingDirectory=/srv/rabadon/backend`, and execs
+  `venv/bin/python prefetch_all.py`. It does **not** import `main`, so the
+  `rabadon.service` import guard does not apply here.
+- Logs: stdout/stderr append to `backend/logs/cron.log`; the script also writes
+  a per-run summary to `backend/logs/prefetch.log`. The run is long
+  (~12s/champion across all 5 roles), so expect it to take a while.
+
+### Common commands
+
+```bash
+systemctl list-timers rabadon-prefetch.timer   # next/last run, time left
+systemctl status rabadon-prefetch.timer        # timer state
+sudo systemctl start rabadon-prefetch.service  # run the prefetch now (ad hoc)
+journalctl -u rabadon-prefetch.service -f      # live logs of a running prefetch
+tail -f /srv/rabadon/backend/logs/cron.log     # same output, file form
+sudo systemctl disable --now rabadon-prefetch.timer   # stop scheduling it
+```
+
 ## Deploying
 
 Run these **on the box** from `/srv/rabadon`:
