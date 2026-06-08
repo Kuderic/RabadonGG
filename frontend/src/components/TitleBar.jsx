@@ -39,7 +39,7 @@ export default function TitleBar({ lcuConnected, lcuSession }) {
       </div>
       <div className="tb-spacer" />
       <div className="tb-controls">
-        <button className="tb-btn" title="Minimize" onClick={() => appWindow?.minimize()}>
+        <button className="tb-btn" title="Minimize to tray" onClick={() => appWindow?.hide()}>
           <svg viewBox="0 0 12 12"><rect x="1" y="5.4" width="10" height="1.2" fill="currentColor"/></svg>
         </button>
         <button className="tb-btn" title={maximized ? 'Restore' : 'Maximize'} onClick={() => appWindow?.toggleMaximize()}>
