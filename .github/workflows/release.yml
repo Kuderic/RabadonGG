@@ -86,8 +86,9 @@ jobs:
       - name: Read signature
         id: sig
         run: |
-          $sig_file = Get-ChildItem "desktop/src-tauri/target/release/bundle/nsis/*.sig" | Select-Object -First 1
-          $sig = (Get-Content $sig_file.FullName -Raw).Trim()
+          $ver      = "${{ steps.version.outputs.VERSION }}"
+          $sig_file = "desktop/src-tauri/target/release/bundle/nsis/Rabadon_${ver}_x64-setup.nsis.zip.sig"
+          $sig = (Get-Content $sig_file -Raw).Trim()
           echo "SIGNATURE=$sig" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
