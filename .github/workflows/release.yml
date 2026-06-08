@@ -154,7 +154,7 @@ jobs:
           name: "Rabadon.GG ${{ steps.version.outputs.TAG }}"
           draft: false
           prerelease: false
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
           files: |
             ${{ steps.artifacts.outputs.INSTALLER }}
             ${{ steps.artifacts.outputs.NSIS_ZIP }}
