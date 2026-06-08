@@ -1,5 +1,5 @@
 # Algorithm Design
-
+ 
 ## Champion Recommendation Score
 
 The core algorithm needs to:
