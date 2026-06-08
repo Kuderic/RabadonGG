@@ -82,7 +82,7 @@ jobs:
           # scrambles argument parsing and drops the <FILE> positional arg.
           $keyFile = [System.IO.Path]::GetTempFileName()
           Set-Content -Path $keyFile -Value $env:TAURI_SIGNING_PRIVATE_KEY -Encoding utf8
-          npx tauri signer sign --private-key-file $keyFile -p "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" $zip
+          npx tauri signer sign --private-key-path $keyFile -p "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" $zip
           Remove-Item $keyFile -ErrorAction SilentlyContinue
         working-directory: desktop
         env:
