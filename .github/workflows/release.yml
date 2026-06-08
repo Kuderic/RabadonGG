@@ -69,6 +69,22 @@ jobs:
           echo "TAG=$tag" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
+      # Create the updater zip explicitly — Tauri's createUpdaterArtifacts is
+      # unreliable when signing env vars are absent or in certain CLI versions.
+      - name: Package updater artifact
+        run: |
+          $ver      = "${{ steps.version.outputs.VERSION }}"
+          $bundleDir = "desktop/src-tauri/target/release/bundle/nsis"
+          $exe = "$bundleDir\Rabadon_${ver}_x64-setup.exe"
+          $zip = "$bundleDir\Rabadon_${ver}_x64-setup.nsis.zip"
+          Compress-Archive -Path $exe -DestinationPath $zip -Force
+          npx tauri signer sign -k "$env:TAURI_SIGNING_PRIVATE_KEY" -p "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" $zip
+        working-directory: desktop
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        shell: pwsh
+
       - name: Locate release artifacts
         id: artifacts
         run: |
