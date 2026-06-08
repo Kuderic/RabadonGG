@@ -69,17 +69,17 @@ jobs:
           echo "TAG=$tag" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
-      # Create the updater zip explicitly — Tauri's createUpdaterArtifacts is
-      # unreliable when signing env vars are absent or in certain CLI versions.
-      # Tauri's build step creates the .nsis.zip (createUpdaterArtifacts: true).
-      # We sign it here as a safety net in case auto-signing didn't fire.
-      # Compress-Archive was removed — it produced an incompatible compression
-      # method that Tauri's zip extractor rejects at install time.
-      - name: Sign updater artifact
+      # Compress-Archive can use Deflate64 (method 9) which Tauri's zip extractor
+      # doesn't support. 7-Zip with -mm=Deflate forces standard Deflate (method 8).
+      # createUpdaterArtifacts is unreliable across CLI versions, so we always
+      # create the zip here to guarantee a fresh, compatible file each run.
+      - name: Package and sign updater artifact
         run: |
           $ver       = "${{ steps.version.outputs.VERSION }}"
           $bundleDir = "src-tauri/target/release/bundle/nsis"
+          $exe = "$bundleDir\Rabadon_${ver}_x64-setup.exe"
           $zip = "$bundleDir\Rabadon_${ver}_x64-setup.nsis.zip"
+          7z a -tzip -mm=Deflate -mx=5 "$zip" "$exe"
           $keyBase64 = $env:TAURI_SIGNING_PRIVATE_KEY -replace '\s+', ''
           $env:TAURI_SIGNING_PRIVATE_KEY = ""
           $signerArgs = @('tauri', 'signer', 'sign', '--private-key', $keyBase64)
