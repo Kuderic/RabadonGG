@@ -78,22 +78,19 @@ jobs:
           $exe = "$bundleDir\Rabadon_${ver}_x64-setup.exe"
           $zip = "$bundleDir\Rabadon_${ver}_x64-setup.nsis.zip"
           Compress-Archive -Path $exe -DestinationPath $zip -Force
-          # Write key to a temp file — passing multiline key inline via -k
-          # scrambles argument parsing and drops the <FILE> positional arg.
-          $keyFile = [System.IO.Path]::GetTempFileName()
-          Set-Content -Path $keyFile -Value $env:TAURI_SIGNING_PRIVATE_KEY -Encoding utf8
-          # Clear the env var so the signer doesn't see both --private-key (implicit) and --private-key-path
+          # Strip whitespace so line-wrapped base64 (e.g. from GNU base64) becomes a single token.
+          # Pass via --private-key in an array element — splatting gives it a hard argument boundary
+          # so multiline/special-char content is safe (the original reason for the temp-file approach).
+          # Clearing the env var avoids the implicit --private-key conflict.
+          $keyBase64 = $env:TAURI_SIGNING_PRIVATE_KEY -replace '\s+', ''
           $env:TAURI_SIGNING_PRIVATE_KEY = ""
-          # Build args as an array — PS 5.1 silently drops empty-string args to native commands,
-          # so if PASSWORD is unset, "-p $empty $zip" becomes "-p $zip" and <FILE> goes missing.
-          $signerArgs = @('tauri', 'signer', 'sign', '--private-key-path', $keyFile)
+          $signerArgs = @('tauri', 'signer', 'sign', '--private-key', $keyBase64)
           if ($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
             $signerArgs += '--password'
             $signerArgs += $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD
           }
           $signerArgs += $zip
           npx @signerArgs
-          Remove-Item $keyFile -ErrorAction SilentlyContinue
         working-directory: desktop
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
