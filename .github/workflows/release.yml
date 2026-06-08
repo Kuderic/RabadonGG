@@ -72,11 +72,16 @@ jobs:
       - name: Locate release artifacts
         id: artifacts
         run: |
-          $ver      = "${{ steps.version.outputs.VERSION }}"
           $bundleDir = "desktop/src-tauri/target/release/bundle/nsis"
-          $nsis_zip  = "$bundleDir/Rabadon_${ver}_x64-setup.nsis.zip"
+          Write-Host "=== Bundle directory contents ==="
+          Get-ChildItem $bundleDir | Sort-Object LastWriteTime | Format-Table Name, LastWriteTime, Length -AutoSize
+          # Pick the most recently written file of each type — immune to stale cache leftovers
+          $nsis_zip  = Get-ChildItem "$bundleDir/*.nsis.zip"  | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
           $nsis_sig  = "$nsis_zip.sig"
-          $installer = "$bundleDir/Rabadon_${ver}_x64-setup.exe"
+          $installer = Get-ChildItem "$bundleDir/*-setup.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+          Write-Host "NSIS_ZIP:  $nsis_zip"
+          Write-Host "NSIS_SIG:  $nsis_sig"
+          Write-Host "INSTALLER: $installer"
           echo "NSIS_ZIP=$nsis_zip"   >> $env:GITHUB_OUTPUT
           echo "NSIS_SIG=$nsis_sig"   >> $env:GITHUB_OUTPUT
           echo "INSTALLER=$installer" >> $env:GITHUB_OUTPUT
@@ -86,8 +91,9 @@ jobs:
       - name: Read signature
         id: sig
         run: |
-          $ver      = "${{ steps.version.outputs.VERSION }}"
-          $sig_file = "desktop/src-tauri/target/release/bundle/nsis/Rabadon_${ver}_x64-setup.nsis.zip.sig"
+          # Derive sig path from the zip path resolved above — guaranteed to match
+          $sig_file = "${{ steps.artifacts.outputs.NSIS_ZIP }}.sig"
+          Write-Host "Reading signature from: $sig_file"
           $sig = (Get-Content $sig_file -Raw).Trim()
           echo "SIGNATURE=$sig" >> $env:GITHUB_OUTPUT
         shell: pwsh
