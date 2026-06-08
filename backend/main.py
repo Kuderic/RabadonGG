@@ -130,7 +130,7 @@ async def champion_icon(name: str) -> Response:
 
     from PIL import Image
     img = Image.open(BytesIO(resp.content)).convert("RGBA")
-    img = img.resize((80, 80), Image.LANCZOS)
+    img = img.resize((80, 80), Image.Resampling.LANCZOS)
     buf = BytesIO()
     img.save(buf, format="WEBP", quality=85)
     img_bytes = buf.getvalue()

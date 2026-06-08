@@ -9,10 +9,11 @@ Before tagging a new release, update the version number in ALL of these files:
 
 ## Steps
 
-1. Update both version files above to the new version
-2. Commit: `git commit -m "Bump desktop version to x.y.z"`
-3. Tag: `git tag vx.y.z`
-4. Push: `git push origin vx.y.z && git push origin main`
+1. Run pylint and fix all errors: `python -m pylint backend/ --errors-only`
+2. Update both version files above to the new version
+3. Commit everything: `git commit -m "Bump desktop version to x.y.z"`
+4. Tag: `git tag vx.y.z`
+5. Push: `git push origin vx.y.z && git push origin main`
 
 ## Notes
 
