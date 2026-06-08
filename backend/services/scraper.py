@@ -394,9 +394,15 @@ async def get_matchup_data(
         enemy_cid = _slug_to_id.get(_slug(enemy["champion"]))
         if enemy_cid is None:
             continue
-        # Use the role-specific entry when available (fixes same-CID different-role bug)
         enemy_vslane = ROLE_TO_LANE.get(enemy.get("role", "").lower(), "")
-        entry = counter_by_cid_lane.get((enemy_cid, enemy_vslane)) or counter_by_cid.get(enemy_cid)
+        # When the enemy role is known, only use the role-specific entry to avoid
+        # cross-role contamination (e.g. TF support picking up TF mid game counts
+        # for sparse matchups where lolalytics omits the low-sample vslane entry).
+        # Fall back to the highest-n entry only when role is genuinely unknown.
+        if enemy_vslane:
+            entry = counter_by_cid_lane.get((enemy_cid, enemy_vslane))
+        else:
+            entry = counter_by_cid.get(enemy_cid)
         if entry is None:
             continue
         matchup_data[(key_name, "enemy")] = entry["d2"] / 100.0
