@@ -1,3 +1,20 @@
+## What's new in 1.0.13
+
+### Overlay redesign (desktop only)
+- The overlay now shows a **matchup strip** — your role scored against the actual enemy draft, with ally synergy context
+- Delta (Δ) is the headline figure; synergy and counter contributions are shown as an **S / C split** below it
+- Low-sample matchups are flagged with a warning icon directly in the overlay
+- Rank diamonds for positions 4–5 are dimmed gold so top 3 picks stand out at a glance
+- Live patch indicator added to the overlay header
+- Tier label and status dot added to the overlay footer
+
+### Results improvements
+- Column sort headers now work correctly across all sort modes
+- Display polish in the recommendation list
+
+### Infrastructure
+- Release workflow now extracts only the current version's section from `RELEASE_NOTES.md` as the GitHub Release body
+
 ## What's new in 1.0.12
 
 ### Overlay improvements

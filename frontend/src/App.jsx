@@ -99,6 +99,7 @@ const IC = {
   target: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg>,
   data: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7"/><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>,
   sliders: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.4" fill="var(--panel)"/><circle cx="15" cy="16" r="2.4" fill="var(--panel)"/></svg>,
+  win: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
 }
 
 function AboutPanel() {
@@ -243,6 +244,53 @@ function AboutPanel() {
   )
 }
 
+function OverlayShowcase() {
+  const ROLE_ICON_ADC = 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-bottom.png';
+  const enemies = ['Darius', 'Lee Sin', 'Zed', 'Jinx', 'Leona'];
+  const picks = [
+    { c: 'Caitlyn', wr: 52.4, g: 184, d: 3.8, s: 1.2, cc: 2.6, low: false },
+    { c: 'Jhin',    wr: 51.6, g: 142, d: 2.9, s: 2.1, cc: 0.8, low: false },
+    { c: "Kai'Sa",  wr: 50.8, g: 97,  d: 1.7, s: 0.4, cc: 1.3, low: true },
+    { c: 'Ezreal',  wr: 49.9, g: 203, d: 0.6, s: 0.9, cc: -0.3, low: false },
+    { c: 'Samira',  wr: 50.2, g: 76,  d: -0.4, s: -0.6, cc: 0.2, low: true },
+  ];
+  const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`;
+  const onErr = e => { e.target.style.visibility = 'hidden'; };
+  return (
+    <div className="ovx-panel">
+      <div className="ovx-head">
+        <span className="ovx-logo" /><span className="ovx-word">RABADON.GG</span>
+        <span className="ovx-sp" /><span className="ovx-patch">16.11</span><span className="ovx-close">✕</span>
+      </div>
+      <div className="ovx-matchup">
+        <span className="ovx-myrole"><img src={ROLE_ICON_ADC} alt="" onError={onErr} /><span>ADC</span></span>
+        <span className="ovx-vs">VS</span>
+        <span className="ovx-enemies">
+          {enemies.map(c => <img key={c} className="ovx-enemy" src={champIconUrl(c)} alt={c} title={c} onError={onErr} />)}
+        </span>
+      </div>
+      <div className="ovx-picks-head"><span className="l">Top Picks</span><span className="r">Win% · Δ</span></div>
+      <div className="ovx-picks">
+        {picks.map((p, i) => (
+          <div className={i === 0 ? 'ovx-pick ovx-pick--best' : 'ovx-pick'} key={p.c}>
+            <span className={i < 3 ? 'ovx-rank' : 'ovx-rank ovx-rank--dim'}>{i + 1}</span>
+            <img className="ovx-icon" src={champIconUrl(p.c)} alt={p.c} onError={onErr} />
+            <div className="ovx-mid">
+              <span className="ovx-name">{p.c}</span>
+              <span className="ovx-sub"><span className="wr">{p.wr.toFixed(1)}%</span><span className="games">{p.g}K</span>{p.low && <span className="lown" title="Low sample">⚠</span>}</span>
+            </div>
+            <div className="ovx-right">
+              <span className={`ovx-delta ${p.d >= 0 ? 'pos' : 'neg'}`}>{fmt(p.d)}</span>
+              <span className="ovx-sc"><span className="s">S {fmt(p.s)}</span><span className="c">C {fmt(p.cc)}</span></span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="ovx-foot"><span className="dot" /><span>Champion select</span><span className="tier">Emerald+</span></div>
+    </div>
+  );
+}
+
 function DownloadPanel() {
   const allySlots = [
     { r: 'TOP', c: 'Aatrox', cls: 'ally' },
@@ -305,6 +353,36 @@ function DownloadPanel() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="overlay-showcase hx-panel hx-ticks">
+        <div className="overlay-showcase-copy">
+          <div className="download-platform">{IC.eye} Always-on-top · In game</div>
+          <h2>The in-game overlay</h2>
+          <p>A compact, draggable panel that floats over League during champion select. Your top picks — and the math behind them — stay one glance away while you draft, no alt-tab required.</p>
+          <div className="overlay-showcase-points">
+            <div className="overlay-showcase-point">
+              <span className="m">{IC.target}</span>
+              <div><h4>Reads the live draft</h4><p>The matchup strip shows your role against the enemy team as picks lock in.</p></div>
+            </div>
+            <div className="overlay-showcase-point">
+              <span className="m">{IC.win}</span>
+              <div><h4>The edge, front and center</h4><p>Each pick leads with its draft-adjusted Δ, then the synergy and counter split behind it.</p></div>
+            </div>
+            <div className="overlay-showcase-point">
+              <span className="m">{IC.sliders}</span>
+              <div><h4>Stays out of your way</h4><p>Drag it anywhere; it remembers the spot. Click ✕ to tuck it away, hotkey to bring it back.</p></div>
+            </div>
+          </div>
+        </div>
+        <div className="overlay-stage">
+          <div className="overlay-stage-hud">
+            <i style={{ top: '8%', left: '6%', width: '24%', height: '12%' }} />
+            <i style={{ top: '8%', right: '6%', width: '24%', height: '12%' }} />
+            <i style={{ bottom: '10%', left: '12%', width: '76%', height: '9%' }} />
+          </div>
+          <OverlayShowcase />
         </div>
       </section>
 

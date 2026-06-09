@@ -3499,3 +3499,168 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
   .rec-role-btn-label { display: none; }
   .rec-role-you-dot { position: absolute; top: -5px; right: -3px; background: var(--panel-deep); }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   7 · DOWNLOAD — in-game overlay showcase. A live render of the redesigned
+       always-on-top overlay sitting on a faux champion-select backdrop.
+   ───────────────────────────────────────────────────────────────────────── */
+.overlay-showcase {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 0;
+  align-items: stretch;
+  overflow: hidden;
+  padding: 0;
+}
+.overlay-showcase-copy {
+  padding: 30px 30px 30px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.overlay-showcase-copy .download-platform { margin-bottom: 14px; }
+.overlay-showcase-copy h2 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 400;
+  color: var(--gold-bright);
+  margin: 0 0 12px;
+  line-height: 1.12;
+}
+.overlay-showcase-copy > p {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+.overlay-showcase-points { display: flex; flex-direction: column; gap: 12px; }
+.overlay-showcase-point { display: flex; gap: 11px; align-items: flex-start; }
+.overlay-showcase-point .m {
+  flex-shrink: 0;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gold-mid);
+  border: 1px solid var(--gold-deep);
+  border-radius: 3px;
+  background: rgba(200,155,60,0.07);
+}
+.overlay-showcase-point .m svg { width: 14px; height: 14px; }
+.overlay-showcase-point h4 {
+  font-family: var(--font-stat);
+  font-size: 13px; font-weight: 700; letter-spacing: 0.3px;
+  color: var(--ink); margin: 1px 0 2px;
+}
+.overlay-showcase-point p {
+  font-family: var(--font-body);
+  font-size: 12.5px; color: var(--ink-3); line-height: 1.5; margin: 0;
+}
+
+.overlay-stage {
+  position: relative;
+  border-left: 1px solid var(--hairline);
+  background:
+    radial-gradient(620px 280px at 70% 8%, rgba(43,67,110,0.55) 0%, transparent 62%),
+    radial-gradient(520px 360px at 110% 120%, rgba(60,32,52,0.6) 0%, transparent 60%),
+    linear-gradient(160deg, #0a0e16, #0f141f 60%, #080b12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 24px;
+  min-height: 400px;
+  overflow: hidden;
+}
+.overlay-stage::before {
+  content: "IN GAME";
+  position: absolute; top: 12px; left: 14px;
+  font-family: var(--font-stat); font-size: 9px; font-weight: 700;
+  letter-spacing: 2px; color: rgba(143,226,245,0.30);
+}
+.overlay-stage-hud { position: absolute; inset: 0; pointer-events: none; opacity: 0.5; }
+.overlay-stage-hud i {
+  position: absolute; border-radius: 2px;
+  background: linear-gradient(180deg, rgba(120,90,40,0.18), rgba(120,90,40,0.04));
+  border: 1px solid rgba(200,155,60,0.10);
+}
+
+.ovx-panel {
+  position: relative;
+  width: 300px;
+  background: linear-gradient(180deg, rgba(11,15,24,0.96), rgba(8,11,20,0.96));
+  border: 1px solid rgba(200,155,60,0.50);
+  border-radius: 3px;
+  box-shadow: 0 14px 46px rgba(0,0,0,0.7), 0 0 0 1px rgba(200,155,60,0.10);
+  overflow: hidden;
+  font-family: var(--font-stat);
+  z-index: 1;
+}
+.ovx-panel::before, .ovx-panel::after { content: ""; position: absolute; width: 8px; height: 8px; opacity: 0.7; }
+.ovx-panel::before { top: 5px; left: 5px; border-top: 1.5px solid var(--gold); border-left: 1.5px solid var(--gold); }
+.ovx-panel::after  { bottom: 5px; right: 5px; border-bottom: 1.5px solid var(--gold); border-right: 1.5px solid var(--gold); }
+
+.ovx-head {
+  display: flex; align-items: center; gap: 7px; height: 27px; padding: 0 7px 0 10px;
+  background: rgba(0,0,0,0.30); border-bottom: 1px solid rgba(200,155,60,0.18);
+}
+.ovx-logo { width: 10px; height: 10px; background: var(--grad-gold); clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%); flex-shrink: 0; }
+.ovx-word { font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--gold-mid); }
+.ovx-sp { flex: 1; }
+.ovx-patch { font-size: 9px; letter-spacing: 0.5px; color: var(--ink-3); border: 1px solid var(--border-soft); border-radius: 2px; padding: 2px 6px; }
+.ovx-close { width: 16px; height: 16px; color: var(--ink-4); font-size: 10px; display: flex; align-items: center; justify-content: center; }
+
+.ovx-matchup {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  background: rgba(0,0,0,0.16); border-bottom: 1px solid rgba(26,35,54,0.80);
+}
+.ovx-myrole { display: flex; align-items: center; gap: 5px; }
+.ovx-myrole img { width: 17px; height: 17px; object-fit: contain; }
+.ovx-myrole span { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--gold-bright); }
+.ovx-vs { font-size: 8px; letter-spacing: 1.5px; color: var(--ink-4); }
+.ovx-enemies { display: flex; gap: 3px; margin-left: auto; }
+.ovx-enemy { width: 21px; height: 21px; border-radius: 2px; border: 1px solid rgba(229,72,92,0.45); object-fit: cover; }
+
+.ovx-picks-head { display: flex; align-items: baseline; justify-content: space-between; padding: 7px 12px 3px; }
+.ovx-picks-head .l { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-mid); }
+.ovx-picks-head .r { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-4); }
+
+.ovx-picks { padding: 0 8px 8px; display: flex; flex-direction: column; gap: 4px; }
+.ovx-pick {
+  display: grid; grid-template-columns: 20px 28px minmax(0,1fr) max-content;
+  align-items: center; gap: 8px; padding: 6px 8px; border-radius: 2px;
+  background: rgba(15,20,34,0.5); border: 1px solid rgba(42,63,95,0.42);
+}
+.ovx-pick--best { border-color: rgba(200,155,60,0.52); background: linear-gradient(90deg, rgba(200,155,60,0.13), rgba(200,155,60,0.03) 70%); }
+.ovx-rank {
+  width: 19px; height: 19px; clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%);
+  background: var(--grad-gold); color: var(--bg);
+  font-family: var(--font-display); font-size: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ovx-rank--dim { background: var(--panel-raised); color: var(--gold-mid); box-shadow: inset 0 0 0 1px var(--gold-deep); }
+.ovx-icon { width: 28px; height: 28px; border-radius: 2px; border: 1px solid rgba(200,155,60,0.35); object-fit: cover; }
+.ovx-mid { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ovx-name { font-family: var(--font-display); font-size: 12.5px; line-height: 1.05; color: var(--gold-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ovx-sub { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.ovx-sub .wr { color: var(--ink-2); font-weight: 700; }
+.ovx-sub .games { color: var(--ink-4); }
+.ovx-sub .lown { color: var(--warn); font-weight: 700; }
+.ovx-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.ovx-delta { font-size: 14px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.ovx-delta.pos { color: var(--pos); }
+.ovx-delta.neg { color: var(--neg); }
+.ovx-sc { display: flex; gap: 7px; font-size: 9px; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+.ovx-sc .s { color: var(--ally-bright); }
+.ovx-sc .c { color: var(--enemy-bright); }
+
+.ovx-foot {
+  display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+  border-top: 1px solid rgba(26,35,54,0.80);
+  font-size: 9px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--ink-4);
+}
+.ovx-foot .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 5px var(--pos); }
+.ovx-foot .tier { margin-left: auto; letter-spacing: 0.4px; text-transform: none; color: var(--ink-3); }
+
+@media (max-width: 720px) {
+  .overlay-showcase { grid-template-columns: 1fr; }
+  .overlay-stage { border-left: none; border-top: 1px solid var(--hairline); min-height: 320px; }
+}
