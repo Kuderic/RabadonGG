@@ -1179,7 +1179,35 @@ body {
 
 .config-row { display: flex; align-items: center; gap: 18px; margin-bottom: 10px; flex-wrap: wrap; }
 .config-row--disabled { opacity: 0.4; pointer-events: none; }
+.config-row--spaced { justify-content: space-between; }
 .config-check-label { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+
+.hotkey-capture {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  min-width: 160px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-family: var(--font-stat);
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s;
+}
+.hotkey-capture:focus,
+.hotkey-capture:hover { border-color: var(--gold-deep); outline: none; }
+.hotkey-capture--recording {
+  border-color: var(--gold);
+  color: var(--gold-mid);
+  animation: hotkey-pulse 1s ease-in-out infinite;
+}
+@keyframes hotkey-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
 .config-check-label input[type="checkbox"] { cursor: pointer; accent-color: var(--gold); width: 15px; height: 15px; }
 .config-inline-label { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); }
 .config-number {

@@ -5,6 +5,46 @@ import CustomModifiersPanel from './CustomModifiersPanel'
 
 const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
 
+function formatHotkey(e) {
+  const parts = []
+  if (e.ctrlKey) parts.push('Ctrl')
+  if (e.altKey) parts.push('Alt')
+  if (e.shiftKey) parts.push('Shift')
+  if (e.metaKey) parts.push('Super')
+  const skip = new Set(['Control', 'Alt', 'Shift', 'Meta'])
+  if (!skip.has(e.key)) {
+    // Normalize single letters to uppercase; leave named keys (ArrowDown, F1…) as-is
+    parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key)
+  }
+  return parts.length > 1 ? parts.join('+') : ''
+}
+
+function HotkeyCapture({ value, onChange }) {
+  const [recording, setRecording] = useState(false)
+
+  const handleKeyDown = e => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.key === 'Escape') { setRecording(false); return }
+    const combo = formatHotkey(e)
+    if (combo) { onChange(combo); setRecording(false) }
+  }
+
+  return (
+    <div
+      className={`hotkey-capture ${recording ? 'hotkey-capture--recording' : ''}`}
+      tabIndex={0}
+      role="button"
+      aria-label="Click to record hotkey"
+      onClick={() => setRecording(true)}
+      onBlur={() => setRecording(false)}
+      onKeyDown={recording ? handleKeyDown : undefined}
+    >
+      {recording ? 'Press a key combination…' : (value || 'None')}
+    </div>
+  )
+}
+
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
 const ROLE_LABEL_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP' }
@@ -37,6 +77,7 @@ export default function ConfigPanel({
   patch, tier, availablePatches, onPatchChange, onTierChange,
   lowDetail, onLowDetailChange,
   overlayEnabled, onOverlayEnabledChange,
+  overlayHotkey, onOverlayHotkeyChange,
   pool = [], onPoolAdd, onPoolRemove, onPoolRoleChange,
   poolVariant, onPoolVariantChange, onAddRole, onRemoveRole, onToggleRole,
   champions = [], playerRole,
@@ -250,16 +291,23 @@ export default function ConfigPanel({
           </label>
         </div>
         {IS_TAURI && (
-          <div className="config-row">
-            <label className="config-check-label">
-              <input
-                type="checkbox"
-                checked={!!overlayEnabled}
-                onChange={e => onOverlayEnabledChange(e.target.checked)}
-              />
-              Show overlay during champion select
-            </label>
-          </div>
+          <>
+            <div className="config-row">
+              <label className="config-check-label">
+                <input
+                  type="checkbox"
+                  checked={!!overlayEnabled}
+                  onChange={e => onOverlayEnabledChange(e.target.checked)}
+                />
+                Show overlay during champion select
+              </label>
+            </div>
+            <div className="config-row config-row--spaced">
+              <span className="config-field-label">Overlay hotkey</span>
+              <HotkeyCapture value={overlayHotkey} onChange={onOverlayHotkeyChange} />
+            </div>
+            <span className="config-hint">Default: Ctrl+ArrowDown — press this combo to show/hide the overlay at any time</span>
+          </>
         )}
       </div>
 

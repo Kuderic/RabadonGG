@@ -10,6 +10,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
+use std::sync::Mutex as StdMutex;
 use base64::Engine as _;
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
@@ -18,6 +19,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 // ---------------------------------------------------------------------------
 // App state — champion id→name map cached for the process lifetime
@@ -25,6 +27,7 @@ use tauri::{
 
 struct AppState {
     champion_map: Mutex<Option<HashMap<u64, String>>>,
+    overlay_shortcut: StdMutex<Option<String>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -293,15 +296,27 @@ async fn control_overlay(app: tauri::AppHandle, action: String) -> Result<(), St
     Ok(())
 }
 
-/// Emit a named event to the overlay window so the React overlay UI can
-/// receive recommendation data without making its own backend calls.
+/// Register (or re-register) the global shortcut that toggles the overlay.
+/// Called from the frontend on startup and whenever the user changes the hotkey.
 #[tauri::command]
-async fn emit_to_overlay(app: tauri::AppHandle, event: String, payload: Value) -> Result<(), String> {
-    let _ = app.emit_to(
-        tauri::EventTarget::webview_window("overlay"),
-        &event,
-        payload,
-    );
+fn set_overlay_shortcut(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    shortcut: String,
+) -> Result<(), String> {
+    let mut current = state.overlay_shortcut.lock().unwrap();
+    // Unregister previous shortcut if one was set
+    if let Some(old) = current.as_deref() {
+        let _ = app.global_shortcut().unregister(old);
+    }
+    if shortcut.is_empty() {
+        *current = None;
+        return Ok(());
+    }
+    app.global_shortcut()
+        .register(shortcut.as_str())
+        .map_err(|e| e.to_string())?;
+    *current = Some(shortcut);
     Ok(())
 }
 
@@ -439,9 +454,26 @@ async fn main() {
     tauri::Builder::default()
         .manage(AppState {
             champion_map: Mutex::new(None),
+            overlay_shortcut: StdMutex::new(None),
         })
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state() == ShortcutState::Pressed {
+                        if let Some(overlay) = app.get_webview_window("overlay") {
+                            if overlay.is_visible().unwrap_or(false) {
+                                let _ = overlay.hide();
+                            } else {
+                                let _ = overlay.show();
+                                let _ = overlay.set_always_on_top(true);
+                            }
+                        }
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             let show = MenuItem::with_id(app, "show", "Open Rabadon.GG", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -478,7 +510,7 @@ async fn main() {
                 .build(app)?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url, control_overlay, emit_to_overlay])
+        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url, control_overlay, set_overlay_shortcut])
         .run(tauri::generate_context!())
         .expect("error while running Rabadon desktop");
 }

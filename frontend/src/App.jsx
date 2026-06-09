@@ -365,6 +365,9 @@ export default function App() {
   const [overlayEnabled, setOverlayEnabled] = useState(
     () => localStorage.getItem('rabadon_overlay_enabled') !== 'false'
   )
+  const [overlayHotkey, setOverlayHotkey] = useState(
+    () => localStorage.getItem('rabadon_overlay_hotkey') || 'Ctrl+ArrowDown'
+  )
   const [shareCopied, setShareCopied] = useState(false)
   const [manualOverrides, setManualOverrides] = useState(() => new Set())
   const [refreshing, setRefreshing] = useState(false)
@@ -497,11 +500,17 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('rabadon_overlay_enabled', String(overlayEnabled))
-    // If disabled while the overlay is visible, hide it immediately.
     if (!overlayEnabled && IS_TAURI) {
       window.__TAURI__.core.invoke('control_overlay', { action: 'hide' }).catch(() => {})
     }
   }, [overlayEnabled])
+
+  // Register the overlay hotkey with Tauri on startup and whenever it changes.
+  useEffect(() => {
+    localStorage.setItem('rabadon_overlay_hotkey', overlayHotkey)
+    if (!IS_TAURI) return
+    window.__TAURI__.core.invoke('set_overlay_shortcut', { shortcut: overlayHotkey }).catch(() => {})
+  }, [overlayHotkey])
 
   useEffect(() => {
     getChampions().then(setChampions).catch(() => {})
@@ -713,12 +722,6 @@ export default function App() {
       )
       const newRecs = result.recommendations || []
       setRecommendations(newRecs)
-      if (IS_TAURI && newRecs.length > 0) {
-        window.__TAURI__.core.invoke('emit_to_overlay', {
-          event: 'overlay-recs',
-          payload: { recommendations: newRecs, role },
-        }).catch(() => {})
-      }
       setPoolResults(result.pool_picks || [])
       setSelectedPoolRec(null)
 
@@ -934,6 +937,8 @@ export default function App() {
               onLowDetailChange={setLowDetail}
               overlayEnabled={overlayEnabled}
               onOverlayEnabledChange={setOverlayEnabled}
+              overlayHotkey={overlayHotkey}
+              onOverlayHotkeyChange={setOverlayHotkey}
               pool={championPool}
               onPoolAdd={handlePoolAdd}
               onPoolRemove={handlePoolRemove}
