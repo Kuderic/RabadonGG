@@ -1,3 +1,8 @@
+## What's new in 1.1.6
+
+### Bug fixes
+- Fixed manually typed enemy (and ally) champions persisting into the next champion select — all manual entries are now cleared when a new champion select session starts
+
 ## What's new in 1.1.5
 
 ### Bug fixes
