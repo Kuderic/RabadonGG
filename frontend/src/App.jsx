@@ -663,6 +663,7 @@ export default function App() {
         enemies,
         patch,
         tier,
+        pool: championPool,
       }))
     } catch (_) {}
   }, [role, allies, enemies, patch, tier, lcuSession?.phase])

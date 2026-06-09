@@ -91,6 +91,8 @@ export function readDraft() {
 
 export default function OverlayApp() {
   const [recommendations, setRecommendations] = useState([])
+  const [poolPicks, setPoolPicks] = useState([])
+  const [tab, setTab] = useState('overall')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
@@ -128,7 +130,7 @@ export default function OverlayApp() {
 
   const handleClose = () => { getTauriWindow()?.hide() }
 
-  const fetchRecs = useCallback(async (role, allies, enemies, patch, tier) => {
+  const fetchRecs = useCallback(async (role, allies, enemies, patch, tier, pool) => {
     if (!role || role === 'fill') return
     const filteredAllies = (allies || []).filter(a => a.champion)
     const filteredEnemies = (enemies || [])
@@ -139,11 +141,16 @@ export default function OverlayApp() {
       }))
     if (filteredAllies.length === 0 && filteredEnemies.length === 0) return
 
+    const poolForRole = (pool || [])
+      .filter(p => p.roles.length === 0 || p.roles.includes(role))
+      .map(p => p.champion)
+
     setLoading(true)
     setError(null)
     try {
-      const result = await getRecommendations(role, filteredAllies, filteredEnemies, patch, tier)
+      const result = await getRecommendations(role, filteredAllies, filteredEnemies, patch, tier, poolForRole)
       setRecommendations((result.recommendations || []).slice(0, 5))
+      setPoolPicks((result.pool_picks || []).slice(0, 5))
     } catch {
       setError('No data')
     } finally {
@@ -162,7 +169,7 @@ export default function OverlayApp() {
     prevDraftKeyRef.current = key
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(
-      () => fetchRecs(draft.role, draft.allies, draft.enemies, draft.patch ?? '16.11', draft.tier ?? TIER),
+      () => fetchRecs(draft.role, draft.allies, draft.enemies, draft.patch ?? '16.11', draft.tier ?? TIER, draft.pool),
       600
     )
   }, [draft, fetchRecs])
@@ -203,11 +210,16 @@ export default function OverlayApp() {
         ) : (
           <>
             <div className="overlay-picks-head">
-              <span className="l">Top Picks</span>
+              <div className="overlay-tabs">
+                <button className={`overlay-tab ${tab === 'overall' ? 'overlay-tab--active' : ''}`} onClick={() => setTab('overall')}>Top Picks</button>
+                {poolPicks.length > 0 && (
+                  <button className={`overlay-tab ${tab === 'pool' ? 'overlay-tab--active' : ''}`} onClick={() => setTab('pool')}>My Pool</button>
+                )}
+              </div>
               <span className="r">Win% · Δ</span>
             </div>
             <div className="overlay-picks">
-              {recommendations.map((rec, i) => (
+              {(tab === 'pool' ? poolPicks : recommendations).map((rec, i) => (
                 <PickRow key={rec.champion} rec={rec} rank={i + 1} role={role} />
               ))}
             </div>

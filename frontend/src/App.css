@@ -3384,6 +3384,10 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 }
 .overlay-picks-head .l { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-mid); white-space: nowrap; }
 .overlay-picks-head .r { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-4); white-space: nowrap; }
+.overlay-tabs { display: flex; gap: 6px; align-items: baseline; }
+.overlay-tab { background: none; border: none; padding: 0; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-4); cursor: pointer; }
+.overlay-tab--active { color: var(--gold-mid); }
+.overlay-tab:hover:not(.overlay-tab--active) { color: var(--ink-2); }
 
 /* ── Pick rows ──────────────────────────────────────────────────────────── */
 .overlay-picks { padding: 0 8px 7px; display: flex; flex-direction: column; gap: 4px; }

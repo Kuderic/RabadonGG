@@ -1,3 +1,9 @@
+## What's new in 1.1.0
+
+### My Pool tab in the overlay (desktop)
+- The overlay now has a **My Pool** tab alongside Top Picks — switch between the overall best picks and picks from your personal champion pool without leaving the overlay
+- The tab only appears when you have pool champions that match your current role
+
 ## What's new in 1.0.17
 
 ### More champion recommendations
