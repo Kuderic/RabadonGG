@@ -97,6 +97,7 @@ export default function OverlayApp() {
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
   const prevDraftKeyRef = useRef(null)
+  const prevPhaseRef = useRef(null)
 
   // Connection status only — draft content comes from the shared localStorage state.
   const { connected: lcuConnected } = useLCUSession()
@@ -139,7 +140,11 @@ export default function OverlayApp() {
         champion: e.champion,
         role: e.role && e.role !== 'fill' ? e.role : (champPrimaryRole(e.champion) || 'fill'),
       }))
-    if (filteredAllies.length === 0 && filteredEnemies.length === 0) return
+    if (filteredAllies.length === 0 && filteredEnemies.length === 0) {
+      setRecommendations([])
+      setPoolPicks([])
+      return
+    }
 
     const poolForRole = (pool || [])
       .filter(p => p.roles.length === 0 || p.roles.includes(role))
@@ -157,6 +162,17 @@ export default function OverlayApp() {
       setLoading(false)
     }
   }, [])
+
+  // Clear stale results immediately when a new champion select phase begins
+  useEffect(() => {
+    const phase = draft?.phase ?? null
+    if (phase !== prevPhaseRef.current) {
+      setRecommendations([])
+      setPoolPicks([])
+      prevDraftKeyRef.current = null
+      prevPhaseRef.current = phase
+    }
+  }, [draft?.phase])
 
   useEffect(() => {
     if (!draft?.role || draft.role === 'fill') return

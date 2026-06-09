@@ -1,3 +1,8 @@
+## What's new in 1.1.4
+
+### Bug fixes
+- Overlay no longer shows recommendations from your previous game when entering a new champion select with no champions picked yet
+
 ## What's new in 1.1.3
 
 ### Bug fixes & improvements
