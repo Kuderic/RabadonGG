@@ -1,3 +1,13 @@
+## What's new in 1.0.15
+
+### Version display and changelog
+- The titlebar now shows the current version (`v1.0.15`) in muted text — click it to open the **What's new** panel
+- The **What's new** panel shows the full release history (bundled at build time from `RELEASE_NOTES.md`) with a minimal hextech-styled renderer
+- Escape or clicking the backdrop closes the panel
+
+### Update checking
+- The app now re-checks for updates every **30 minutes** in the background, not just once on launch — the update banner will appear as soon as a new version is available
+
 ## What's new in 1.0.14
 
 ### Download page

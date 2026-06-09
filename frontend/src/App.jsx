@@ -4,6 +4,7 @@ import TitleBar from './components/TitleBar'
 import { getRecommendations, getChampions, getPatches } from './api/client'
 import { useLCUSession } from './services/lcu'
 import { champPrimaryRole, champSecondaryRole, champIconUrl } from './utils/champion'
+import releaseNotesRaw from '../../RELEASE_NOTES.md?raw'
 
 const IS_DESKTOP = import.meta.env.VITE_DESKTOP === 'true'
 const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
@@ -423,6 +424,54 @@ function DownloadPanel() {
   )
 }
 
+function parseMarkdown(md) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const inline = s => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  const lines = md.split('\n')
+  let html = ''
+  let inList = false
+  for (const raw of lines) {
+    const line = raw.trimEnd()
+    if (line.startsWith('## ')) {
+      if (inList) { html += '</ul>'; inList = false }
+      html += `<h2 class="cl-h2">${inline(esc(line.slice(3)))}</h2>`
+    } else if (line.startsWith('### ')) {
+      if (inList) { html += '</ul>'; inList = false }
+      html += `<h3 class="cl-h3">${inline(esc(line.slice(4)))}</h3>`
+    } else if (line.startsWith('- ')) {
+      if (!inList) { html += '<ul class="cl-list">'; inList = true }
+      html += `<li>${inline(esc(line.slice(2)))}</li>`
+    } else if (line === '') {
+      if (inList) { html += '</ul>'; inList = false }
+    } else {
+      if (inList) { html += '</ul>'; inList = false }
+      if (line) html += `<p class="cl-p">${inline(esc(line))}</p>`
+    }
+  }
+  if (inList) html += '</ul>'
+  return html
+}
+
+function ChangelogModal({ onClose }) {
+  const html = useMemo(() => parseMarkdown(releaseNotesRaw), [])
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div className="changelog-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="changelog-panel hx-panel">
+        <div className="changelog-header">
+          <span className="changelog-title">What&apos;s new</span>
+          <button className="changelog-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="changelog-body" dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('draft')
   const [role, setRole] = useState(_url?.role ?? 'adc')
@@ -457,6 +506,7 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false)
   const [updateInfo, setUpdateInfo] = useState(null)
   const [updateStatus, setUpdateStatus] = useState('idle')
+  const [showChangelog, setShowChangelog] = useState(false)
   const [championPool, setChampionPool] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('rabadon_champion_pool') || '[]')
@@ -662,7 +712,8 @@ export default function App() {
       }
     }
     checkForUpdate()
-    return () => { cancelled = true }
+    const interval = setInterval(checkForUpdate, 30 * 60 * 1000)
+    return () => { cancelled = true; clearInterval(interval) }
   }, [])
 
   const handlePoolAdd = useCallback((champion, roles = []) => {
@@ -940,7 +991,7 @@ export default function App() {
 
   return (
     <>
-      {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} />}
+      {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} version={__APP_VERSION__} onShowChangelog={() => setShowChangelog(true)} />}
       <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
       {updateInfo && (
         <div className="update-banner" role="status" aria-live="polite">
@@ -1115,6 +1166,7 @@ export default function App() {
         <p>Rabadon.GG isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
       </footer>
     </div>
+    {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
     </>
   )
 }

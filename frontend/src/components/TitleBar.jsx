@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export default function TitleBar({ lcuConnected, lcuSession }) {
+export default function TitleBar({ lcuConnected, lcuSession, version, onShowChangelog }) {
   const appWindow = window.__TAURI__?.window?.getCurrentWindow?.() ?? null
   const [maximized, setMaximized] = useState(false)
 
@@ -38,6 +38,11 @@ export default function TitleBar({ lcuConnected, lcuSession }) {
         </span>
       </div>
       <div className="tb-spacer" />
+      {version && (
+        <button className="tb-whats-new" onClick={onShowChangelog} title="What's new">
+          v{version}
+        </button>
+      )}
       <div className="tb-controls">
         <button className="tb-btn" title="Minimize to tray" onClick={() => appWindow?.hide()}>
           <svg viewBox="0 0 12 12"><rect x="1" y="5.4" width="10" height="1.2" fill="currentColor"/></svg>
