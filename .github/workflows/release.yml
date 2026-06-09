@@ -152,6 +152,18 @@ jobs:
         shell: pwsh
 
       # ── Publish GitHub Release ─────────────────────────────────────────────
+      - name: Extract release notes for this version
+        run: |
+          $ver = "${{ steps.version.outputs.VERSION }}"
+          $content = Get-Content RELEASE_NOTES.md -Raw
+          if ($content -match "(?s)(## What's new in $([regex]::Escape($ver)).*?)(?=\r?\n## What's new in |\z)") {
+            $section = $Matches[1].Trim()
+          } else {
+            $section = "See RELEASE_NOTES.md for details."
+          }
+          Set-Content -Path "release_body.md" -Value $section -Encoding utf8
+        shell: pwsh
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -159,7 +171,7 @@ jobs:
           name: "Rabadon.GG ${{ steps.version.outputs.TAG }}"
           draft: false
           prerelease: false
-          body_path: RELEASE_NOTES.md
+          body_path: release_body.md
           files: |
             ${{ steps.artifacts.outputs.INSTALLER }}
             ${{ steps.artifacts.outputs.NSIS_ZIP }}

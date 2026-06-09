@@ -19,6 +19,8 @@ function handleExternalLink(e) {
 const RecommendationList = lazy(() => import('./components/RecommendationList'))
 const ConfigPanel = lazy(() => import('./components/ConfigPanel'))
 
+const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
+
 const ROLE_ALLY_SLOTS = {
   top:     ['jungle', 'mid', 'adc', 'support'],
   jungle:  ['top', 'mid', 'adc', 'support'],
@@ -346,6 +348,7 @@ function DownloadPanel() {
 export default function App() {
   const [activeTab, setActiveTab] = useState('draft')
   const [role, setRole] = useState(_url?.role ?? 'adc')
+  const [viewRole, setViewRole] = useState(_url?.role ?? 'adc')
   const [allies, setAllies] = useState(() => _url
     ? ROLE_ALLY_SLOTS[_url.role].map(s => ({ role: s, champion: _url.params.get(`a.${s}`) ?? '' }))
     : makeAllies(ROLE_ALLY_SLOTS['adc']))
@@ -367,6 +370,9 @@ export default function App() {
   )
   const [overlayHotkey, setOverlayHotkey] = useState(
     () => localStorage.getItem('rabadon_overlay_hotkey') || 'Ctrl+ArrowDown'
+  )
+  const [zoomLevel, setZoomLevel] = useState(
+    () => parseFloat(localStorage.getItem('rabadon_zoom') || '1')
   )
   const [shareCopied, setShareCopied] = useState(false)
   const [manualOverrides, setManualOverrides] = useState(() => new Set())
@@ -513,6 +519,31 @@ export default function App() {
   }, [overlayHotkey])
 
   useEffect(() => {
+    if (!IS_TAURI) return
+    localStorage.setItem('rabadon_zoom', String(zoomLevel))
+    document.documentElement.style.zoom = zoomLevel
+  }, [zoomLevel])
+
+  useEffect(() => {
+    if (!IS_TAURI) return
+    const onKey = e => {
+      if (!e.ctrlKey) return
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault()
+        setZoomLevel(z => Math.min(2, Math.round((z + 0.1) * 10) / 10))
+      } else if (e.key === '-') {
+        e.preventDefault()
+        setZoomLevel(z => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))
+      } else if (e.key === '0') {
+        e.preventDefault()
+        setZoomLevel(1)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  useEffect(() => {
     getChampions().then(setChampions).catch(() => {})
     getPatches().then(patches => {
       setAvailablePatches(patches)
@@ -630,8 +661,17 @@ export default function App() {
 
   const handleRoleChange = (newRole) => {
     setRole(newRole)
+    setViewRole(newRole)
     setAllies(makeAllies(ROLE_ALLY_SLOTS[newRole] || ROLE_ALLY_SLOTS['adc'], allies))
+    setSelectedRec(null)
+    setSelectedPoolRec(null)
   }
+
+  const handleViewRoleChange = useCallback((r) => {
+    setViewRole(r)
+    setSelectedRec(null)
+    setSelectedPoolRec(null)
+  }, [])
 
   const handleAllyChange = (index, champion) => {
     const norm = s => s.trim().toLowerCase()
@@ -709,12 +749,21 @@ export default function App() {
     }
 
     try {
+      // Build allies as seen from viewRole: all roles except viewRole, carrying
+      // whatever champion is known (including your own role slot, left empty).
+      const allAllies = {}
+      allies.forEach(a => { allAllies[a.role] = a.champion })
+      allAllies[role] = allAllies[role] ?? ''
+      const alliesForView = ROLES
+        .filter(r => r !== viewRole)
+        .map(r => ({ role: r, champion: allAllies[r] || '' }))
+
       const poolForRole = championPoolRef.current
-        .filter(p => p.roles.length === 0 || p.roles.includes(role))
+        .filter(p => p.roles.length === 0 || p.roles.includes(viewRole))
         .map(p => p.champion)
       const result = await getRecommendations(
-        role,
-        allies.filter(a => a.champion.trim()),
+        viewRole,
+        alliesForView.filter(a => a.champion.trim()),
         enemies.filter(e => e.champion.trim()),
         patch,
         tier,
@@ -738,7 +787,7 @@ export default function App() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [role, allies, enemies, patch, tier])
+  }, [role, viewRole, allies, enemies, patch, tier])
 
   // Check if at least one entered value matches a known champion name
   const hasValidChampion = useMemo(() => {
@@ -903,7 +952,9 @@ export default function App() {
                     selectedIndex={selectedRec}
                     onSelect={(idx) => { setSelectedRec(idx); if (idx !== null) setSelectedPoolRec(null) }}
                     config={config}
-                    playerRole={role}
+                    playerRole={viewRole}
+                    youRole={role}
+                    onViewRoleChange={handleViewRoleChange}
                     onTogglePenalty={() => setConfig(c => ({ ...c, penalize: !c.penalize }))}
                     poolResults={poolResults}
                     selectedPoolRec={selectedPoolRec}
@@ -911,7 +962,7 @@ export default function App() {
                     wrModifiers={wrModifiers}
                     poolChampions={new Set(
                       championPool
-                        .filter(p => p.roles.length === 0 || p.roles.includes(role))
+                        .filter(p => p.roles.length === 0 || p.roles.includes(viewRole))
                         .map(p => p.champion.toLowerCase())
                     )}
                   />

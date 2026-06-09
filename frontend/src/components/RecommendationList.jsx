@@ -5,7 +5,16 @@ import { RankBadge, ExternalLink } from './ChampionShared'
 import BreakdownPanel from './BreakdownPanel'
 import { trackEvent } from '../utils/analytics'
 
+const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
+const ROLE_LABEL_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP' }
+const ROLE_ICON = {
+  top:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-top.png',
+  jungle:  'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-jungle.png',
+  mid:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-middle.png',
+  adc:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-bottom.png',
+  support: 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-utility.png',
+}
 
 function hasLowN(rec, config) {
   if (!config?.penalize) return false
@@ -150,7 +159,7 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set() }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set() }) {
   const [sortMode, setSortMode] = useState('rating')
   const [recTab, setRecTab] = useState('overall')
   const breakdownRef = useRef(null)
@@ -214,10 +223,37 @@ export default function RecommendationList({ recommendations, loading, refreshin
     <div className="recommendations-list">
       <div className="rec-panel-heading">
         <span className="rec-panel-title">Recommended Picks</span>
-        {playerRole && (
-          <span className="rec-panel-role">{ROLE_LABEL[playerRole] || playerRole}</span>
-        )}
+        <div className="rec-role-switch" role="tablist" aria-label="View top picks for a role">
+          {ROLES.map(r => (
+            <button
+              key={r}
+              role="tab"
+              aria-selected={playerRole === r}
+              className={`rec-role-btn ${playerRole === r ? 'rec-role-btn--active' : ''}`}
+              onClick={() => onViewRoleChange && onViewRoleChange(r)}
+              title={youRole === r ? `${ROLE_LABEL[r]} — your role` : `See top ${ROLE_LABEL[r]} picks for this draft`}
+            >
+              <img
+                src={ROLE_ICON[r]}
+                alt=""
+                className="rec-role-btn-icon"
+                onError={e => { e.target.style.visibility = 'hidden' }}
+              />
+              <span className="rec-role-btn-label">{ROLE_LABEL_SHORT[r]}</span>
+              {youRole === r && <span className="rec-role-you-dot">YOU</span>}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {playerRole !== youRole && youRole && (
+        <div className="rec-advising-banner">
+          <span>Showing top <strong>{ROLE_LABEL[playerRole]}</strong> picks for this draft — advising, not your role.</span>
+          <button onClick={() => onViewRoleChange && onViewRoleChange(youRole)}>
+            ↩ Back to your role · {ROLE_LABEL[youRole]}
+          </button>
+        </div>
+      )}
 
       {/* Overall / My Champions tabs */}
       <div className="rec-main-tabs">
