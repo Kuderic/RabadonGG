@@ -1,3 +1,10 @@
+## What's new in 1.1.3
+
+### Bug fixes & improvements
+- Champion lookup now shows the full stats breakdown immediately — no click to expand
+- Population settings (patch window and tier) are saved and restored when you reopen the app
+- Desktop app defaults to 30-day data instead of the latest specific patch
+
 ## What's new in 1.1.2
 
 ### Bug fixes
