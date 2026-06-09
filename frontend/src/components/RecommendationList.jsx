@@ -176,7 +176,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
 
   useEffect(() => {
     setVisibleCount(10)
-  }, [recommendations, playerRole])
+  }, [playerRole])
 
   const { sorted, penalizedCount } = useMemo(() => {
     if (!recommendations.length) return { sorted: [], penalizedCount: 0 }

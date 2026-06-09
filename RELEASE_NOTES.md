@@ -1,3 +1,12 @@
+## What's new in 1.0.17
+
+### More champion recommendations
+- Fixed a bug where only champions whose *primary* role matched the requested lane were included in the pool — off-meta picks (e.g. Seraphine, Swain, Heimerdinger bot) were silently excluded
+- All roles now return the full set of champions lolalytics tracks for that lane (~2× more candidates for some roles)
+
+### Show more persistence
+- Expanding the recommendation list to 20 or 30 picks now persists when the draft is updated — previously clicking "Show more" would reset back to 10 on every re-fetch
+
 ## What's new in 1.0.16
 
 ### More recommendations

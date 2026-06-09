@@ -254,7 +254,6 @@ async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
         entries = [
             (int(cid), info)
             for cid, info in data.get("cid", {}).items()
-            if info.get("defaultLane") == lane
         ]
         names = [_id_to_slug[cid] for cid, _ in entries if cid in _id_to_slug]
         games_by_slug = {
