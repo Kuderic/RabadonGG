@@ -86,6 +86,7 @@ function parseUrlDraft() {
 }
 
 const _url = parseUrlDraft()
+const _initialRole = _url?.role ?? localStorage.getItem('rabadon_role') ?? 'adc'
 
 const _onImgErr = e => { e.target.style.visibility = 'hidden' }
 
@@ -474,11 +475,11 @@ function ChangelogModal({ onClose }) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('draft')
-  const [role, setRole] = useState(_url?.role ?? localStorage.getItem('rabadon_role') ?? 'adc')
-  const [viewRole, setViewRole] = useState(_url?.role ?? localStorage.getItem('rabadon_role') ?? 'adc')
+  const [role, setRole] = useState(_initialRole)
+  const [viewRole, setViewRole] = useState(_initialRole)
   const [allies, setAllies] = useState(() => _url
     ? ROLE_ALLY_SLOTS[_url.role].map(s => ({ role: s, champion: _url.params.get(`a.${s}`) ?? '' }))
-    : makeAllies(ROLE_ALLY_SLOTS['adc']))
+    : makeAllies(ROLE_ALLY_SLOTS[_initialRole] ?? ROLE_ALLY_SLOTS['adc']))
   const [enemies, setEnemies] = useState(() => _url
     ? ENEMY_SLOTS.map(s => ({ role: s, champion: _url.params.get(`e.${s}`) ?? '' }))
     : makeEnemies())

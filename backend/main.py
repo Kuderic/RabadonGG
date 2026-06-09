@@ -58,9 +58,25 @@ app.include_router(recommend_router, prefix="/api", tags=["recommendations"])
 app.include_router(lcu_router, prefix="/api", tags=["lcu"])
 
 
+async def _patch_has_lolalytics_data(patch: str, client: httpx.AsyncClient) -> bool:
+    """Return True if lolalytics has live data for this patch (≥10 ranked champions)."""
+    try:
+        resp = await client.get(
+            "https://a1.lolalytics.com/mega/",
+            params={"ep": "list", "v": "1", "lane": "middle",
+                    "tier": "emerald_plus", "patch": patch, "queue": "420", "region": "all"},
+            timeout=4,
+        )
+        data = resp.json()
+        ranked = sum(1 for info in data.get("cid", {}).values() if int(info.get("tier", 0)) > 0)
+        return ranked >= 10
+    except Exception:
+        return False
+
+
 @app.get("/api/patches")
 async def get_patches() -> dict:
-    """Fetch the 5 most recent LoL patch versions from Data Dragon."""
+    """Fetch the 5 most recent LoL patch versions, validated against lolalytics."""
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get("https://ddragon.leagueoflegends.com/api/versions.json")
@@ -68,17 +84,23 @@ async def get_patches() -> dict:
 
         # versions[0] = "16.11.1" → extract "16.11"
         seen = set()
-        patches = []
+        candidates = []
         for v in versions:
             parts = v.split(".")
             major_minor = f"{parts[0]}.{parts[1]}"
             if major_minor not in seen:
                 seen.add(major_minor)
-                patches.append(major_minor)
-                if len(patches) >= 5:
+                candidates.append(major_minor)
+                if len(candidates) >= 6:
                     break
 
-        return {"patches": patches}
+        # Drop any leading candidates that DDragon listed before lolalytics has data
+        async with httpx.AsyncClient(timeout=5) as client:
+            while len(candidates) > 1 and not await _patch_has_lolalytics_data(candidates[0], client):
+                logger.info(f"Patch {candidates[0]} not yet live on lolalytics — skipping")
+                candidates.pop(0)
+
+        return {"patches": candidates[:5]}
     except Exception as e:
         logger.error(f"Failed to fetch patches from Data Dragon: {e}")
         return {"patches": ["16.11", "16.10", "16.9", "16.8", "16.7"]}
