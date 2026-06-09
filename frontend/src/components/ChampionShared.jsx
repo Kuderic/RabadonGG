@@ -7,10 +7,14 @@ export function RankBadge({ rank }) {
   return <span className={cls}><span className="rank-num">{rank}</span></span>
 }
 
-export function ExternalLink({ champion }) {
+export function ExternalLink({ champion, tier, patch }) {
+  const params = new URLSearchParams()
+  if (tier) params.set('tier', tier)
+  if (patch) params.set('patch', patch)
+  const qs = params.toString()
   return (
     <a
-      href={`https://lolalytics.com/lol/${champSlug(champion)}/build/`}
+      href={`https://lolalytics.com/lol/${champSlug(champion)}/build/${qs ? `?${qs}` : ''}`}
       target="_blank"
       rel="noopener noreferrer"
       className="lola-link bp-lola-link"

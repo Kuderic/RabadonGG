@@ -1,3 +1,11 @@
+## What's new in 1.1.1
+
+### Champion lookup
+- New **Look up a champion** search bar in the recommendations panel — type any champion name to see their synergy and counter breakdown against your current draft, even if they don't appear in the top 30
+- Useful for checking off-meta picks or champions not ranked in your role
+- The lookup card appears above the main list with a distinct blue accent and magnifying glass badge
+- Click the card to expand the full breakdown panel; clear with ✕
+
 ## What's new in 1.1.0
 
 ### My Pool tab in the overlay (desktop)

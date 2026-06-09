@@ -16,12 +16,12 @@ describe('getMultiplier', () => {
     expect(getMultiplier(1000, { penalize: true, penalizeThreshold: 1000 })).toBe(1)
   })
 
-  it('penalize:true, n=500, threshold=1000 returns 0.5', () => {
-    expect(getMultiplier(500, { penalize: true, penalizeThreshold: 1000 })).toBe(0.5)
+  it('penalize:true, n=500, threshold=1000 returns sqrt(0.5)', () => {
+    expect(getMultiplier(500, { penalize: true, penalizeThreshold: 1000 })).toBeCloseTo(Math.sqrt(0.5))
   })
 
-  it('penalize:true, n=100, threshold=1000 returns 0.1', () => {
-    expect(getMultiplier(100, { penalize: true, penalizeThreshold: 1000 })).toBeCloseTo(0.1)
+  it('penalize:true, n=100, threshold=1000 returns sqrt(0.1)', () => {
+    expect(getMultiplier(100, { penalize: true, penalizeThreshold: 1000 })).toBeCloseTo(Math.sqrt(0.1))
   })
 
   it('penalize:true, n=0 returns 0', () => {
@@ -107,9 +107,9 @@ describe('computeComponents — with penalty', () => {
     counter_breakdown: [],
   }
 
-  it('adjSyn ≈ 0.4 (2.0 × (200/1000))', () => {
+  it('adjSyn ≈ 2.0 × sqrt(200/1000)', () => {
     const { adjSyn } = computeComponents(lowNRec, penalizeConfig, 'adc')
-    expect(adjSyn).toBeCloseTo(0.4)
+    expect(adjSyn).toBeCloseTo(2.0 * Math.sqrt(200 / 1000))
   })
 })
 

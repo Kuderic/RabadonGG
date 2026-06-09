@@ -44,7 +44,7 @@ function BreakdownRow({ champion, role, delta, n, missing, settings, isEmpty }) 
   )
 }
 
-export default function BreakdownPanel({ rec, rank, onClose, settings, playerRole, modifiers = {} }) {
+export default function BreakdownPanel({ rec, rank, onClose, settings, playerRole, modifiers = {}, tier, patch }) {
   const { synContrib, ctrContrib, totalDelta, customOffset, blend } = computeComponents(rec, settings, playerRole, modifiers)
   const adjRating = rec.win_rate + customOffset + totalDelta
 
@@ -86,7 +86,7 @@ export default function BreakdownPanel({ rec, rank, onClose, settings, playerRol
           {rec.total_games > 0 && (
             <span className="bp-games">{(rec.total_games / 1000).toFixed(0)}K games</span>
           )}
-          <ExternalLink champion={rec.champion} />
+          <ExternalLink champion={rec.champion} tier={tier} patch={patch} />
         </div>
         <button className="bp-close" onClick={onClose}>✕</button>
       </div>

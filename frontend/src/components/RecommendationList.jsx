@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from 'react'
-import { champIconUrl, champDDragonKey } from '../utils/champion'
+import { champIconUrl, champDDragonKey, filterChampions } from '../utils/champion'
 import { computeComponents } from '../utils/scoring'
 import { RankBadge, ExternalLink } from './ChampionShared'
 import BreakdownPanel from './BreakdownPanel'
@@ -50,16 +50,103 @@ function PoolStar() {
   )
 }
 
-function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool }) {
+function LookupBadge() {
+  return (
+    <span className="lookup-badge" title="Champion lookup">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="5.5" cy="5.5" r="3.5"/>
+        <line x1="8.5" y1="8.5" x2="12" y2="12"/>
+      </svg>
+    </span>
+  )
+}
+
+function LookupInput({ lookupChampion, champions, onLookupChange }) {
+  const [query, setQuery] = useState(lookupChampion || '')
+  const [open, setOpen] = useState(false)
+  const [filtered, setFiltered] = useState([])
+  const [cursor, setCursor] = useState(0)
+  const wrapRef = useRef(null)
+
+  useEffect(() => { setQuery(lookupChampion || '') }, [lookupChampion])
+
+  useEffect(() => {
+    const handler = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleInput = v => {
+    setQuery(v)
+    if (v.trim().length === 0) { setOpen(false); setFiltered([]); if (lookupChampion) onLookupChange(null); return }
+    const exact = champions.find(c => c.toLowerCase() === v.trim().toLowerCase())
+    if (exact) { onLookupChange(exact); setOpen(false); setFiltered([]); return }
+    const matches = filterChampions(champions, v)
+    setFiltered(matches)
+    setOpen(matches.length > 0)
+    setCursor(0)
+  }
+
+  const select = name => { setQuery(name); setOpen(false); setCursor(0); onLookupChange(name) }
+
+  const handleKeyDown = e => {
+    if (e.key === 'Escape') { setOpen(false); return }
+    if (e.key === 'Backspace' && lookupChampion && query === lookupChampion) { e.preventDefault(); setQuery(''); onLookupChange(null); return }
+    if (e.key === 'Enter' && open && filtered.length > 0) { e.preventDefault(); select(filtered[Math.max(0, cursor)]); return }
+    if (!open) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c + 1, filtered.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setCursor(c => Math.max(c - 1, 0)) }
+  }
+
+  const matchedChamp = champions.find(c => c.toLowerCase() === query.trim().toLowerCase()) ?? null
+
+  return (
+    <div className="lookup-input-wrap" ref={wrapRef}>
+      {matchedChamp && (
+        <img className="lookup-champ-icon" src={champIconUrl(matchedChamp)} alt="" onError={e => { e.target.style.display = 'none' }} />
+      )}
+      <input
+        type="text"
+        className="lookup-input"
+        placeholder="Look up a champion…"
+        value={query}
+        onChange={e => handleInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        autoComplete="off"
+      />
+      {lookupChampion && (
+        <button className="lookup-clear" onClick={() => { setQuery(''); onLookupChange(null) }} title="Clear lookup">✕</button>
+      )}
+      {open && (
+        <div className="champ-autocomplete">
+          {filtered.map((name, i) => (
+            <div
+              key={name}
+              className={`champ-ac-item ${i === cursor ? 'champ-ac-item--active' : ''}`}
+              onMouseDown={() => select(name)}
+              onMouseEnter={() => setCursor(i)}
+            >
+              <img src={champIconUrl(name)} alt="" className="champ-ac-icon" onError={e => { e.target.style.display = 'none' }} />
+              <span>{name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool, tier, patch }) {
   const lowN = hasLowN(rec, config)
   const { adjSyn, adjCtr, totalDelta, customOffset } = computeComponents(rec, config, playerRole, wrModifiers)
   const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
   const isPool = rank === '★'
+  const isLookup = rank === '?'
 
   return (
     <Fragment>
       <div
-        className={`recommendation-card ${isPool ? 'pool-card' : ''} ${!isPool && inPool ? 'in-pool' : ''} ${isSelected ? 'card-selected' : ''}`}
+        className={`recommendation-card ${isPool ? 'pool-card' : ''} ${isLookup ? 'lookup-card' : ''} ${!isPool && !isLookup && inPool ? 'in-pool' : ''} ${isSelected ? 'card-selected' : ''}`}
         onClick={onSelect}
         onMouseEnter={!isPool ? () => {
           const img = new Image()
@@ -67,7 +154,7 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
         } : undefined}
       >
         <div className="card-header">
-          {isPool ? <PoolBadge /> : <RankBadge rank={rank} />}
+          {isPool ? <PoolBadge /> : isLookup ? <LookupBadge /> : <RankBadge rank={rank} />}
           <img
             src={champIconUrl(rec.champion)}
             alt={rec.champion}
@@ -80,7 +167,7 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
           <span className="card-champion-name">
             {rec.champion}
             {!isPool && inPool && <PoolStar />}
-            <ExternalLink champion={rec.champion} />
+            <ExternalLink champion={rec.champion} tier={tier} patch={patch} />
           </span>
           <div className="card-stats">
             <div className="card-wr-line">
@@ -129,6 +216,8 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
             settings={config}
             playerRole={playerRole}
             modifiers={wrModifiers}
+            tier={tier}
+            patch={patch}
           />
         </div>
       )}
@@ -159,12 +248,14 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set() }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange }) {
   const [sortMode, setSortMode] = useState('rating')
   const [recTab, setRecTab] = useState('overall')
   const [visibleCount, setVisibleCount] = useState(10)
+  const [selectedLookup, setSelectedLookup] = useState(false)
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
+  const lookupBreakdownRef = useRef(null)
 
   useEffect(() => {
     if (selectedIndex !== null && breakdownRef.current) {
@@ -177,6 +268,10 @@ export default function RecommendationList({ recommendations, loading, refreshin
   useEffect(() => {
     setVisibleCount(10)
   }, [playerRole])
+
+  useEffect(() => {
+    setSelectedLookup(false)
+  }, [lookupChampion])
 
   const { sorted, penalizedCount } = useMemo(() => {
     if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
@@ -308,8 +403,40 @@ export default function RecommendationList({ recommendations, loading, refreshin
           </span>
         )}
 
-        {refreshing && <span className="rec-refreshing">Updating…</span>}
       </div>
+
+      {refreshing && (
+        <div className="rec-analyzing-banner">
+          <span className="spinner" />
+          Analyzing draft…
+        </div>
+      )}
+
+      <div className="lookup-row">
+        <LookupInput lookupChampion={lookupChampion} champions={champions} onLookupChange={onLookupChange} />
+      </div>
+
+      {lookupChampion && (
+        <div className="lookup-result-section">
+          {lookupResult ? (
+            <RecCard
+              rec={lookupResult}
+              rank="?"
+              isSelected={selectedLookup}
+              onSelect={() => setSelectedLookup(s => !s)}
+              config={config}
+              playerRole={playerRole}
+              wrModifiers={wrModifiers}
+              sortMode={sortMode}
+              breakdownRef={selectedLookup ? lookupBreakdownRef : null}
+              tier={tier}
+              patch={patch}
+            />
+          ) : !refreshing && (
+            <div className="lookup-no-data">{lookupChampion} has no data for this role — they may not be played here.</div>
+          )}
+        </div>
+      )}
 
       {recTab === 'overall' && (
         <>
@@ -331,6 +458,8 @@ export default function RecommendationList({ recommendations, loading, refreshin
                 sortMode={sortMode}
                 breakdownRef={selectedIndex === origIdx ? breakdownRef : null}
                 inPool={poolChampions.has(rec.champion.toLowerCase())}
+                tier={tier}
+                patch={patch}
               />
             ))}
           </div>
@@ -366,6 +495,8 @@ export default function RecommendationList({ recommendations, loading, refreshin
                   wrModifiers={wrModifiers}
                   sortMode={sortMode}
                   breakdownRef={selectedPoolRec === idx ? poolBreakdownRef : null}
+                tier={tier}
+                patch={patch}
                 />
               ))
             )}

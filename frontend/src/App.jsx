@@ -486,7 +486,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [champions, setChampions] = useState([])
-  const [patch, setPatch] = useState(_url?.params.get('patch') ?? '16.11')
+  const [patch, setPatch] = useState(_url?.params.get('patch') ?? '30')
   const [tier, setTier] = useState(_url?.params.get('tier') ?? 'emerald_plus')
   const [availablePatches, setAvailablePatches] = useState(['16.11'])
   const [selectedRec, setSelectedRec] = useState(null)
@@ -504,6 +504,8 @@ export default function App() {
   const [shareCopied, setShareCopied] = useState(false)
   const [manualOverrides, setManualOverrides] = useState(() => new Set())
   const [refreshing, setRefreshing] = useState(false)
+  const [lookupChampion, setLookupChampion] = useState(null)
+  const [lookupResult, setLookupResult] = useState(null)
   const [updateInfo, setUpdateInfo] = useState(null)
   const [updateStatus, setUpdateStatus] = useState('idle')
   const [showChangelog, setShowChangelog] = useState(false)
@@ -536,6 +538,8 @@ export default function App() {
   // (pool changes should NOT trigger auto-resubmit)
   const championPoolRef = useRef(championPool)
   championPoolRef.current = championPool
+  const lookupChampionRef = useRef(lookupChampion)
+  lookupChampionRef.current = lookupChampion
 
   const { connected: lcuConnected, session: lcuSession } = useLCUSession()
   const prevLcuPhaseRef = useRef(null)
@@ -912,6 +916,10 @@ export default function App() {
       const poolForRole = championPoolRef.current
         .filter(p => p.roles.length === 0 || p.roles.includes(viewRole))
         .map(p => p.champion)
+      const currentLookup = lookupChampionRef.current
+      if (currentLookup && !poolForRole.some(c => c.toLowerCase() === currentLookup.toLowerCase())) {
+        poolForRole.push(currentLookup)
+      }
       const result = await getRecommendations(
         viewRole,
         alliesForView.filter(a => a.champion.trim()),
@@ -922,7 +930,16 @@ export default function App() {
       )
       const newRecs = result.recommendations || []
       setRecommendations(newRecs)
-      setPoolResults(result.pool_picks || [])
+      const allPoolPicks = result.pool_picks || []
+      const currentLookupName = lookupChampionRef.current
+      if (currentLookupName) {
+        const lr = allPoolPicks.find(p => p.champion.toLowerCase() === currentLookupName.toLowerCase())
+        setLookupResult(lr ?? null)
+        setPoolResults(allPoolPicks.filter(p => p.champion.toLowerCase() !== currentLookupName.toLowerCase()))
+      } else {
+        setLookupResult(null)
+        setPoolResults(allPoolPicks)
+      }
       setSelectedPoolRec(null)
 
       // Restore the open breakdown to the same champion if it's still in the new list
@@ -953,7 +970,7 @@ export default function App() {
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(handleSubmit, 600)
     return () => clearTimeout(debounceRef.current)
-  }, [handleSubmit, hasValidChampion])
+  }, [handleSubmit, hasValidChampion, lookupChampion])
 
   // Keep URL in sync with draft state so any URL can be shared
   useEffect(() => {
@@ -1116,6 +1133,12 @@ export default function App() {
                         .filter(p => p.roles.length === 0 || p.roles.includes(viewRole))
                         .map(p => p.champion.toLowerCase())
                     )}
+                    tier={tier}
+                    patch={patch}
+                    champions={champions}
+                    lookupChampion={lookupChampion}
+                    lookupResult={lookupResult}
+                    onLookupChange={setLookupChampion}
                   />
                 </Suspense>
               </div>

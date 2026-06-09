@@ -68,6 +68,11 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
     }
   }, [])
 
+  const matchedChamp = value.trim().length > 0
+    ? champions.find(c => c.toLowerCase() === value.trim().toLowerCase()) ?? null
+    : null
+  const hasChamp = matchedChamp !== null
+
   const handleInput = (v) => {
     if (dragging) return
     onChange(v)
@@ -100,6 +105,11 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
   }
 
   const handleKeyDown = (e) => {
+    if (e.key === 'Backspace' && hasChamp) {
+      e.preventDefault()
+      onChange('')
+      return
+    }
     if (e.key === 'Enter') {
       if (open && filtered.length > 0) {
         e.preventDefault()
@@ -122,9 +132,6 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
     }
   }
 
-  const hasChamp = value.trim().length > 0 &&
-    champions.some(c => c.toLowerCase() === value.trim().toLowerCase())
-
   return (
     <div className={`champ-row champ-row--${side}`} ref={wrapRef}>
       {dragHandle}
@@ -133,7 +140,7 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
         {hasChamp && (
           <img
             className="champ-row-icon"
-            src={champIconUrl(value)}
+            src={champIconUrl(matchedChamp)}
             alt=""
             onError={e => { e.target.style.display = 'none' }}
           />
