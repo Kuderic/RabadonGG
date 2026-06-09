@@ -487,8 +487,12 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [champions, setChampions] = useState([])
-  const [patch, setPatch] = useState(_url?.params.get('patch') ?? '30')
-  const [tier, setTier] = useState(_url?.params.get('tier') ?? 'emerald_plus')
+  const [patch, setPatch] = useState(
+    _url?.params.get('patch') ?? localStorage.getItem('rabadon_patch') ?? '30'
+  )
+  const [tier, setTier] = useState(
+    _url?.params.get('tier') ?? localStorage.getItem('rabadon_tier') ?? 'emerald_plus'
+  )
   const [availablePatches, setAvailablePatches] = useState(['16.11'])
   const [selectedRec, setSelectedRec] = useState(null)
   const [config, setConfig] = useState(DEFAULT_CONFIG)
@@ -642,6 +646,14 @@ export default function App() {
   }, [role])
 
   useEffect(() => {
+    localStorage.setItem('rabadon_patch', patch)
+  }, [patch])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon_tier', tier)
+  }, [tier])
+
+  useEffect(() => {
     localStorage.setItem('rabadon_overlay_enabled', String(overlayEnabled))
     if (!overlayEnabled && IS_TAURI) {
       window.__TAURI__.core.invoke('control_overlay', { action: 'hide' }).catch(() => {})
@@ -702,7 +714,11 @@ export default function App() {
     getChampions().then(setChampions).catch(() => {})
     getPatches().then(patches => {
       setAvailablePatches(patches)
-      if (patches.length > 0) setPatch(patches[0])
+      // Auto-select latest patch only for first-time web users (no saved pref, no URL param)
+      const noPreference = !_url?.params.get('patch') && !localStorage.getItem('rabadon_patch')
+      if (patches.length > 0 && !IS_DESKTOP && noPreference) {
+        setPatch(patches[0])
+      }
     }).catch(() => {})
   }, [])
 
