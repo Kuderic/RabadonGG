@@ -1,3 +1,11 @@
+## What's new in 1.0.12
+
+### Overlay improvements
+- Fixed overlay staying in "Waiting for draft" state — it now polls the League client and scores champions independently without relying on the main window
+- Fixed the close (✕) button not being clickable
+- Added a global hotkey to show/hide the overlay from anywhere (default: **Ctrl+ArrowDown**)
+- Hotkey is configurable under Settings → Display — click the box and press any key combination
+
 ## What's new in 1.0.11
 
 ### Champion-select overlay (desktop only)
