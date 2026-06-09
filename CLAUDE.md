@@ -12,7 +12,7 @@ Shipped and live at **www.rabadon.gg**. The app is a champion-select assistant: 
 - **Caching**: SQLite at `backend/data/rabadon_cache.db` (1-day TTL, keyed by champion+patch+tier+lane) + process-memory dict warm-loaded at startup. Redis is **not used**.
 - **Champion ID mapping**: lolalytics CIDs match Riot Data Dragon IDs exactly. Display names from `val["name"]` (e.g. "Miss Fortune"), DDragon key from `val` JSON key (e.g. "MissFortune").
 - **Scoring**: `backend/services/scorer.py` — `compute_rating()` sums d2 deltas for all ally/enemy matchups, adds to base win rate. No ML. Frontend re-scores with role weights + sample-size penalty for live sorting (`src/utils/scoring.js`).
-- **Frontend scoring**: `computeComponents(rec, config, playerRole)` in `src/utils/scoring.js` — applies per-role enemy/ally weights, penalty multiplier (n/threshold), and blend multipliers to produce adjusted synergy+counter contributions. This is the single source of truth for both RecommendationList sorting and BreakdownPanel display.
+- **Frontend scoring**: `computeComponents(rec, config, playerRole)` in `src/utils/scoring.js` — applies per-role enemy/ally weights, penalty multiplier (sqrt(n/threshold)), and blend multipliers to produce adjusted synergy+counter contributions. This is the single source of truth for both RecommendationList sorting and BreakdownPanel display.
 - **Frontend**: React + Vite at `localhost:5173`. Champion icons from DDragon CDN. Calls `POST /api/recommend`.
 - **No `/build` endpoint** — planned for a future iteration.
 - **CORS**: Controlled by `ALLOWED_ORIGINS` env var. Unset = localhost dev defaults. Production: `ALLOWED_ORIGINS=https://rabadon.gg,https://www.rabadon.gg`.

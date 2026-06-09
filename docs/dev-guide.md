@@ -3,33 +3,119 @@
 ## Git Workflow
 
 - `main` is always deployable.
-- Branch naming: `feature/lcu-api`, `fix/winrate-calc`, `chore/db-migrations`
-- PR → review by other person → merge. Keep branches short-lived (merge within 1–2 days).
-- No `develop` or `release` branches — overkill for a two-person team.
-- Log all non-obvious decisions in `DECISIONS.md` with a one-liner rationale.
+- Branch naming: `feature/overlay-sync`, `fix/sample-penalty`, `chore/update-deps`
+- Keep branches short-lived (merge within 1–2 days).
+- No `develop` or `release` branches — overkill for a small team.
+
+---
+
+## Local Setup
+
+### Backend
+
+Requires Python 3.11+.
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # Mac/Linux
+pip install -r requirements.txt
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+The backend starts at `http://127.0.0.1:8000`. The SQLite cache (`data/rabadon_cache.db`) is created automatically on first run.
+
+#### Backend tests
+
+```bash
+cd backend
+python -m pytest
+# or just for lint:
+python -m ruff check --select F .
+```
+
+### Frontend
+
+Requires Node 18+.
+
+```bash
+cd frontend
+npm install
+npm run dev        # → http://localhost:5173
+npm run test       # Vitest unit tests
+npm run build      # production build to frontend/dist/
+```
+
+The frontend dev server proxies `/api/` requests to `localhost:8000` automatically.
+
+### Desktop (Windows)
+
+Requires:
+- [Visual Studio 2022 Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload
+- [Rust](https://www.rust-lang.org/tools/install) (stable toolchain)
+
+```powershell
+cd desktop
+npm install
+npm run dev        # starts Tauri dev window (hot-reloads frontend from localhost:5173)
+npm run build      # produces installer at desktop/src-tauri/target/release/bundle/nsis/
+```
+
+The Tauri dev command expects the frontend dev server to already be running at `localhost:5173`.
 
 ---
 
 ## Environment Variables
 
-Never commit these.
+### Backend
+
+Only `ALLOWED_ORIGINS` is used in production:
 
 ```
-# Backend (.env)
-ANTHROPIC_API_KEY=
-SUPABASE_URL=
-SUPABASE_KEY=
-REDIS_URL=
-RIOT_API_KEY=          # for future own-stat pipeline
+# backend/.env
+ALLOWED_ORIGINS=https://rabadon.gg,https://www.rabadon.gg
 ```
+
+If `ALLOWED_ORIGINS` is unset, the backend allows all localhost dev origins (`5173`, `5174`, `3000`).
+
+`RABADON_DESKTOP=1` can be set to enable the LCU watcher service (used internally by the desktop Tauri shell).
+
+No API keys are required. The lolalytics data source and Riot Data Dragon are both public.
+
+### Frontend
+
+```
+# frontend/.env or set in CI
+VITE_DESKTOP=true      # enables the desktop-only UI (custom titlebar, overlay, etc.)
+```
+
+`__APP_VERSION__` is injected at build time by Vite `define` from `desktop/package.json`. No manual configuration needed.
 
 ---
 
-## Notes for Claude Code
+## Releasing
 
-- When writing backend code, prefer **async FastAPI** patterns throughout — the data pipeline involves concurrent scraping + LLM calls.
-- All LLM calls go through a single service module in the backend. Do not scatter Anthropic API calls across routes.
-- The scraping layer and the stat calculation layer should be cleanly separated so the scraping module can be swapped for a Riot API pipeline later without touching the algorithm logic.
-- When suggesting database schemas, account for caching conditional stat lookups keyed by `(champion, role, ally_set, enemy_set, patch_version)`.
-- Champion recommendation scoring logic should be unit-testable in isolation — keep it pure (no I/O inside the scoring function).
-- Flag any suggestion that would expose the Anthropic API key to the client — that is a hard constraint.
+See [`.claude/release.md`](../.claude/release.md) for the full checklist. Summary:
+
+1. Bump `version` in `desktop/src-tauri/Cargo.toml` and `desktop/package.json`
+2. Add a `## What's new in x.y.z` section at the **top** of `RELEASE_NOTES.md`
+3. Commit: `git commit -m "Bump version to x.y.z"`
+4. Tag: `git tag vx.y.z`
+5. Push: `git push origin main && git push origin vx.y.z`
+
+CI builds the installer and publishes the GitHub Release automatically. The `RELEASE_NOTES.md` section for the new version is used as the release body.
+
+---
+
+## Deploying to Production
+
+See [`docs/ops.md`](ops.md) for the full production runbook. Short version:
+
+```bash
+# On the EC2 box, from /srv/rabadon:
+./scripts/deploy-frontend.sh   # rebuilds frontend/dist (nginx serves immediately)
+./scripts/deploy-backend.sh    # installs deps, pre-flight import check, restarts systemd unit
+```
+
+Both scripts accept `--no-pull` to build the current checkout without pulling from origin.

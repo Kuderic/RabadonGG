@@ -110,7 +110,7 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
 
     scored = [(r, rec) for item in candidate_results if item is not None for r, rec in [item]]
     scored.sort(key=lambda x: x[0], reverse=True)
-    top_recommendations = [rec for _, rec in scored[:10]]
+    top_recommendations = [rec for _, rec in scored[:30]]
 
     pool_scored = [(r, rec) for item in pool_results if item is not None for r, rec in [item]]
     pool_scored.sort(key=lambda x: x[0], reverse=True)

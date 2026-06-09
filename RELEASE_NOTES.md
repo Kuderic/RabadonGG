@@ -1,3 +1,18 @@
+## What's new in 1.0.16
+
+### More recommendations
+- The backend now ranks up to **30 champions** instead of 10
+- Results are shown 10 at a time — click **Show more** at the bottom to load picks 11–20, then 21–30
+
+### Improved sample size penalty
+- The penalty weighting is now a **square root curve** instead of linear — better reflects how statistical confidence actually scales with sample size (√n)
+- A matchup at half the threshold (e.g. 500 games at the default 1000) now carries ~71% weight instead of 50%
+- The Configuration panel explains the formula and reasoning inline
+
+### Configuration panel improvements
+- Role Weighting section now includes a recommendation to leave weights at 1.0, with a note on when to reduce other-role weights
+- "Bot" replaces "ADC" in all role labels across the UI for consistency with in-game terminology
+
 ## What's new in 1.0.15
 
 ### Version display and changelog

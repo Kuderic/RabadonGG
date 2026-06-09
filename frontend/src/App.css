@@ -944,6 +944,26 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+.show-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--ink-4);
+  font-family: var(--font-stat);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.show-more-btn:hover {
+  border-color: var(--gold-deep);
+  color: var(--ink-2);
+}
+
 /* empty / loading states */
 .recommendations-empty {
   text-align: center;

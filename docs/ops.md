@@ -114,7 +114,7 @@ push to `main`:
 - **backend**: `ruff check --select F .` (catches undefined names F821 +
   unused imports F401 — i.e. the exact bug from the incident), `python -c
   "import main"` smoke test, and pytest if tests exist.
-- **frontend**: `npm ci && npm run build`.
+- **frontend**: `npm ci` → `npm run test` (Vitest unit tests) → `npm run build`.
 
 This enforces the docs' "`main` is always deployable" invariant.
 

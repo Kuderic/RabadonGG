@@ -5,7 +5,7 @@ import { TierDisplay } from './TierSelector'
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 
 const ROLE_LABEL = {
-  top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP',
+  top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP',
 }
 
 const ROLE_ICON = {
@@ -329,7 +329,7 @@ function EnemySection({ enemies, loading, champions, onEnemyChange, onEnemySwap,
   )
 }
 
-const ROLE_DISPLAY = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
+const ROLE_DISPLAY = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'Bot', support: 'Support' }
 
 export default function DraftForm({
   role, allies, enemies, champions,

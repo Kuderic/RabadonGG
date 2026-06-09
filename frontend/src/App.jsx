@@ -142,7 +142,7 @@ function AboutPanel() {
         </div>
         <div className="creator-body">
           <div className="about-eyebrow">Who built this</div>
-          <h2 className="about-heading">Made by Kuderic — a Challenger ADC main</h2>
+          <h2 className="about-heading">Made by Kuderic — a Challenger Bot main</h2>
           <p>Kuderic climbed from <strong>Master to Challenger</strong> by trusting the data: every game, he and his support picked the champion with the best win rate <em>into the specific draft</em> — not the one sitting on top of a tier list. With a degree in <strong>Applied Statistics</strong>, he knew the edge was real, measurable, and repeatable.</p>
           <p>Rabadon.GG is that method, automated. The same draft-aware scoring he used to reach the top of the ladder is now in front of you, every champion select — so you can climb the same way.</p>
           <div className="creator-badges">
@@ -161,7 +161,7 @@ function AboutPanel() {
         <div className="about-versus">
           <div className="versus-col tier">
             <div className="versus-tag">A tier list says</div>
-            <div className="versus-line">"Pick the S-tier ADC."</div>
+            <div className="versus-line">"Pick the S-tier Bot."</div>
             <div className="versus-note">The same answer in every lobby — blind to who you're actually drafting against.</div>
           </div>
           <div className="versus-arrow">→</div>
@@ -189,7 +189,7 @@ function AboutPanel() {
       <section className="about-block hx-panel hx-ticks">
         <div className="about-block-head">
           <h2 className="about-heading">How the score is built</h2>
-          <p className="about-subheading">Every rating starts from the champion's base win rate, then adds two draft-aware adjustments. Here's a real example for an <strong>ADC</strong> pick:</p>
+          <p className="about-subheading">Every rating starts from the champion's base win rate, then adds two draft-aware adjustments. Here's a real example for a <strong>Bot</strong> pick:</p>
         </div>
         <div className="about-example">
           <div className="about-eq">
@@ -197,7 +197,7 @@ function AboutPanel() {
               <img src={champIconUrl('Ezreal')} alt="" onError={_onImgErr} />
               <div>
                 <div className="about-eq-name">Ezreal</div>
-                <div className="about-eq-role">ADC · 50.2% base WR</div>
+                <div className="about-eq-role">Bot · 50.2% base WR</div>
               </div>
             </div>
             <div className="about-eq-tiles">
@@ -264,7 +264,7 @@ function OverlayShowcase() {
         <span className="ovx-sp" /><span className="ovx-patch">16.11</span><span className="ovx-close">✕</span>
       </div>
       <div className="ovx-matchup">
-        <span className="ovx-myrole"><img src={ROLE_ICON_ADC} alt="" onError={onErr} /><span>ADC</span></span>
+        <span className="ovx-myrole"><img src={ROLE_ICON_ADC} alt="" onError={onErr} /><span>BOT</span></span>
         <span className="ovx-vs">VS</span>
         <span className="ovx-enemies">
           {enemies.map(c => <img key={c} className="ovx-enemy" src={champIconUrl(c)} alt={c} title={c} onError={onErr} />)}
@@ -297,12 +297,12 @@ function DownloadPanel() {
     { r: 'TOP', c: 'Aatrox', cls: 'ally' },
     { r: 'JG', c: 'Vi', cls: 'ally' },
     { r: 'MID', c: 'Ahri', cls: 'ally' },
-    { r: 'ADC', c: null, cls: 'you' },
+    { r: 'BOT', c: null, cls: 'you' },
     { r: 'SUP', c: 'Thresh', cls: 'ally' },
   ]
   const enemySlots = [
     { r: 'TOP', c: 'Darius' }, { r: 'JG', c: 'Lee Sin' }, { r: 'MID', c: 'Zed' },
-    { r: 'ADC', c: 'Caitlyn' }, { r: 'SUP', c: 'Leona' },
+    { r: 'BOT', c: 'Caitlyn' }, { r: 'SUP', c: 'Leona' },
   ]
   return (
     <div className="download-panel">
@@ -474,8 +474,8 @@ function ChangelogModal({ onClose }) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('draft')
-  const [role, setRole] = useState(_url?.role ?? 'adc')
-  const [viewRole, setViewRole] = useState(_url?.role ?? 'adc')
+  const [role, setRole] = useState(_url?.role ?? localStorage.getItem('rabadon_role') ?? 'adc')
+  const [viewRole, setViewRole] = useState(_url?.role ?? localStorage.getItem('rabadon_role') ?? 'adc')
   const [allies, setAllies] = useState(() => _url
     ? ROLE_ALLY_SLOTS[_url.role].map(s => ({ role: s, champion: _url.params.get(`a.${s}`) ?? '' }))
     : makeAllies(ROLE_ALLY_SLOTS['adc']))
@@ -631,6 +631,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('rabadon_wr_modifiers', JSON.stringify(wrModifiers))
   }, [wrModifiers])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon_role', role)
+  }, [role])
 
   useEffect(() => {
     localStorage.setItem('rabadon_overlay_enabled', String(overlayEnabled))

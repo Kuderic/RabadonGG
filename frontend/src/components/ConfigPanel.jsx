@@ -46,8 +46,8 @@ function HotkeyCapture({ value, onChange }) {
 }
 
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
-const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
-const ROLE_LABEL_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP' }
+const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'Bot', support: 'Support' }
+const ROLE_LABEL_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP' }
 const ALLY_SLOTS = {
   top:     ['jungle', 'mid', 'adc', 'support'],
   jungle:  ['top', 'mid', 'adc', 'support'],
@@ -168,8 +168,9 @@ export default function ConfigPanel({
         <div className="config-section-title">Sample Size Penalty</div>
         <p className="config-desc">
           Matchups with fewer games than the threshold are less statistically reliable.
-          The penalty linearly scales each matchup's contribution from 0 (no data) up to
-          full weight at the threshold.
+          Each matchup's contribution is scaled by √(n / threshold) — square root rather
+          than linear, because statistical confidence scales with √n. A matchup at half
+          the threshold retains ~71% weight instead of 50%.
         </p>
         <div className="config-row">
           <label className="config-check-label">
@@ -195,7 +196,7 @@ export default function ConfigPanel({
             games
           </label>
           <span className="config-hint">
-            e.g. at threshold {config.penalizeThreshold.toLocaleString()}: n=500 games → ×{(500 / config.penalizeThreshold).toFixed(2)} weight
+            e.g. at threshold {config.penalizeThreshold.toLocaleString()}: n=500 games → ×{Math.sqrt(500 / config.penalizeThreshold).toFixed(2)} weight
           </span>
         </div>
       </div>
@@ -208,6 +209,13 @@ export default function ConfigPanel({
             How much each opposing/allied role's matchup data contributes to the final score
           </span>
         </div>
+
+        <p className="config-desc">
+          Leave all weights at 1.0 for a balanced score. If you care more about winning
+          your own lane than teamfighting or synergizing with allies, reduce the weights
+          for roles you interact with less — this shifts the score toward matchups that
+          directly affect you.
+        </p>
 
         <div className="config-role-tabs">
           {ROLES.map(r => (

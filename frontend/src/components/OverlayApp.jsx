@@ -11,7 +11,7 @@ const TIER = 'emerald_plus'
 const TIER_LABEL = 'Emerald+'
 
 const ROLE_ORDER = ['top', 'jungle', 'mid', 'adc', 'support']
-const ROLE_LABEL = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP' }
+const ROLE_LABEL = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP' }
 const ROLE_ICON = {
   top:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-top.png',
   jungle:  'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-jungle.png',

@@ -6,8 +6,8 @@ import BreakdownPanel from './BreakdownPanel'
 import { trackEvent } from '../utils/analytics'
 
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
-const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
-const ROLE_LABEL_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP' }
+const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'Bot', support: 'Support' }
+const ROLE_LABEL_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP' }
 const ROLE_ICON = {
   top:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-top.png',
   jungle:  'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-jungle.png',
@@ -162,6 +162,7 @@ function SortHeaders({ sortMode, onSort }) {
 export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set() }) {
   const [sortMode, setSortMode] = useState('rating')
   const [recTab, setRecTab] = useState('overall')
+  const [visibleCount, setVisibleCount] = useState(10)
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
 
@@ -172,6 +173,10 @@ export default function RecommendationList({ recommendations, loading, refreshin
       })
     }
   }, [selectedIndex])
+
+  useEffect(() => {
+    setVisibleCount(10)
+  }, [recommendations, playerRole])
 
   const { sorted, penalizedCount } = useMemo(() => {
     if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
@@ -310,7 +315,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
         <>
           <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(s => s === m ? 'rating' : m)} />
           <div className="rec-grid rec-grid--row">
-            {sorted.map(({ rec, origIdx }, rank) => (
+            {sorted.slice(0, visibleCount).map(({ rec, origIdx }, rank) => (
               <RecCard
                 key={origIdx}
                 rec={rec}
@@ -329,6 +334,14 @@ export default function RecommendationList({ recommendations, loading, refreshin
               />
             ))}
           </div>
+          {visibleCount < sorted.length && (
+            <button
+              className="show-more-btn"
+              onClick={() => setVisibleCount(v => Math.min(v + 10, 30))}
+            >
+              Show more · {Math.min(sorted.length - visibleCount, 10)} more picks
+            </button>
+          )}
         </>
       )}
 

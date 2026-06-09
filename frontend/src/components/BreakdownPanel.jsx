@@ -2,7 +2,7 @@ import { champIconUrl, champDDragonKey } from '../utils/champion'
 import { getMultiplier, computeComponents } from '../utils/scoring'
 import { RankBadge, ExternalLink } from './ChampionShared'
 
-const ROLE_LABEL = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP' }
+const ROLE_LABEL = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP' }
 
 function BreakdownRow({ champion, role, delta, n, missing, settings, isEmpty }) {
   if (isEmpty) return <div className="bd-row bd-row--empty" />
