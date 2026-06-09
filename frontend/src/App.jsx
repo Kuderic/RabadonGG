@@ -548,12 +548,22 @@ export default function App() {
 
   const { connected: lcuConnected, session: lcuSession } = useLCUSession()
   const prevLcuPhaseRef = useRef(null)
+  const prevLcuSessionPhaseRef = useRef(null)
 
   // Auto-fill draft form when the LCU session changes.
   // Role must be applied first so ally slots are rebuilt for the correct role
   // before champions are filled in — otherwise role-based slot matching fails.
   useEffect(() => {
-    if (!lcuConnected || !lcuSession) return
+    if (!lcuConnected || !lcuSession) {
+      prevLcuSessionPhaseRef.current = null
+      return
+    }
+
+    // Detect new champion select session (null → truthy phase transition).
+    // On a new session, manual overrides from the previous game must not block
+    // the fresh LCU data from clearing old champions out of the slots.
+    const isNewSession = !!lcuSession.phase && !prevLcuSessionPhaseRef.current
+    prevLcuSessionPhaseRef.current = lcuSession.phase ?? null
 
     const knownRole = lcuSession.my_role && lcuSession.my_role !== 'fill' ? lcuSession.my_role : null
     const detectedRole = knownRole || role
@@ -565,12 +575,11 @@ export default function App() {
     }
 
     setAllies(makeAllies(slots).map(slot => {
-      if (manualOverrides.has(`ally.${slot.role}`)) {
+      if (!isNewSession && manualOverrides.has(`ally.${slot.role}`)) {
         const existing = allies.find(a => a.role === slot.role)
         return existing || slot
       }
       const match = lcuSession.allies.find(a => a.role === slot.role)
-      // Clear the slot when LCU has no data for it (handles new-session clear)
       return { ...slot, champion: match?.champion || '' }
     }))
 
@@ -603,6 +612,10 @@ export default function App() {
     }
 
     setEnemies(prev => {
+      if (isNewSession) {
+        // New session — fill from LCU only, ignoring any leftover manual overrides
+        return prev.map(slot => ({ ...slot, champion: filledSlots[slot.role] || '' }))
+      }
       // Champions the user has manually pinned to a specific slot — don't auto-fill these elsewhere
       const pinnedChamps = new Set(
         prev
@@ -617,6 +630,8 @@ export default function App() {
         return { ...slot, champion }
       })
     })
+
+    if (isNewSession) setManualOverrides(new Set())
   }, [lcuSession, lcuConnected]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show the overlay when champion select starts; hide it when it ends.
