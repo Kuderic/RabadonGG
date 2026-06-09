@@ -99,13 +99,13 @@ const CHAMPION_SECONDARY_ROLE = {
 
   // ADC flexes
   Lucian:'mid', Vayne:'top', Twitch:'jungle', Tristana:'mid',
-  Senna:'support', Sivir:'mid', Varus:'mid',
+  Sivir:'mid', Varus:'mid',
 
   // Support flexes
   Brand:'mid', Karma:'mid', Lux:'mid', Zyra:'mid',
   Swain:'mid', Seraphine:'mid', Morgana:'mid',
   Heimerdinger:'top', Vel_Koz:'mid', Thresh:'jungle',
-  Pyke:'mid', Milio:'mid',
+  Pyke:'mid', Milio:'mid', Senna:'adc',
 }
 
 function _roleKey(name) {

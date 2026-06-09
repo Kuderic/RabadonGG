@@ -555,10 +555,14 @@ export default function App() {
   useEffect(() => {
     if (!lcuConnected || !lcuSession) return
 
-    const detectedRole = lcuSession.my_role || role
+    const knownRole = lcuSession.my_role && lcuSession.my_role !== 'fill' ? lcuSession.my_role : null
+    const detectedRole = knownRole || role
     const slots = ROLE_ALLY_SLOTS[detectedRole] || ROLE_ALLY_SLOTS['adc']
 
-    if (lcuSession.my_role) setRole(lcuSession.my_role)
+    if (knownRole) {
+      setRole(knownRole)
+      setViewRole(knownRole)
+    }
 
     setAllies(makeAllies(slots).map(slot => {
       if (manualOverrides.has(`ally.${slot.role}`)) {

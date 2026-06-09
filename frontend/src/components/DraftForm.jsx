@@ -77,8 +77,9 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
     if (dragging) return
     onChange(v)
     if (v.trim().length > 0 && champions.length > 0) {
-      const exact = champions.some(c => c.toLowerCase() === v.trim().toLowerCase())
-      if (exact) {
+      const exactMatch = champions.find(c => c.toLowerCase() === v.trim().toLowerCase())
+      if (exactMatch) {
+        if (exactMatch !== v) onChange(exactMatch)
         setOpen(false)
         setFiltered([])
         return

@@ -1,3 +1,10 @@
+## What's new in 1.1.5
+
+### Bug fixes
+- Champion name inputs now auto-correct capitalization when an exact match is typed — "jax" becomes "Jax", "kaisa" becomes "Kai'Sa", etc.
+- Fixed Senna being assigned to a random lane slot when the support slot is already filled — she now correctly lands in the bot slot as her second-most-played role
+- Recommended Picks role picker now snaps to your assigned role when champion select opens (desktop) instead of staying on the previously stored role
+
 ## What's new in 1.1.4
 
 ### Bug fixes
