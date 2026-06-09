@@ -359,8 +359,8 @@ function DownloadPanel() {
       <section className="overlay-showcase hx-panel hx-ticks">
         <div className="overlay-showcase-copy">
           <div className="download-platform">{IC.eye} Always-on-top · In game</div>
-          <h2>The in-game overlay</h2>
-          <p>A compact, draggable panel that floats over League during champion select. Your top picks — and the math behind them — stay one glance away while you draft, no alt-tab required.</p>
+          <h2>The in-client overlay</h2>
+          <p>A compact, draggable panel that floats over the client during champion select. Your top picks — and the math behind them — stay one glance away while you draft, no alt-tab required.</p>
           <div className="overlay-showcase-points">
             <div className="overlay-showcase-point">
               <span className="m">{IC.target}</span>
@@ -595,6 +595,23 @@ export default function App() {
     if (!IS_TAURI) return
     window.__TAURI__.core.invoke('set_overlay_shortcut', { shortcut: overlayHotkey }).catch(() => {})
   }, [overlayHotkey])
+
+  // Publish the resolved draft to localStorage so the overlay window can read it.
+  // The overlay reads this instead of doing its own LCU role-resolution, so manual
+  // enemy slot corrections in the main app are always reflected in the overlay.
+  useEffect(() => {
+    if (!IS_DESKTOP) return
+    try {
+      localStorage.setItem('rabadon-overlay-draft', JSON.stringify({
+        phase: lcuSession?.phase ?? null,
+        role,
+        allies,
+        enemies,
+        patch,
+        tier,
+      }))
+    } catch (_) {}
+  }, [role, allies, enemies, patch, tier, lcuSession?.phase])
 
   useEffect(() => {
     if (!IS_TAURI) return

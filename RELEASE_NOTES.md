@@ -1,3 +1,15 @@
+## What's new in 1.0.14
+
+### Download page
+- Added an **in-game overlay showcase** section to the Download page — a two-column band with marketing copy and a live static render of the overlay floating on a faux champion-select backdrop
+
+### Overlay improvements (desktop only)
+- The overlay now uses the **main app as the source of truth** for the draft — enemy role assignments and manual corrections made in the main window are reflected in the overlay immediately via a shared localStorage channel, instead of the overlay re-deriving them independently from the LCU
+
+### Testing
+- Added unit tests for overlay pure functions: `hasLowSample` (9 cases including the `n=0` no-data guard and n=1000 boundary), `readDraft` localStorage parsing (4 cases), `fmt` formatter (7 cases), and `MatchupStrip` byRole construction logic (10 cases)
+- Added `happy-dom` as a dev dependency to support localStorage in the Vitest environment
+
 ## What's new in 1.0.13
 
 ### Overlay redesign (desktop only)

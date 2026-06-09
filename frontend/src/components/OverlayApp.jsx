@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { champIconUrl, champPrimaryRole } from '../utils/champion'
 import { computeComponents } from '../utils/scoring'
-import { getRecommendations, getPatches } from '../api/client'
+import { getRecommendations } from '../api/client'
 import { useLCUSession } from '../services/lcu'
 import { DEFAULT_CONFIG } from '../App'
 
@@ -24,11 +24,10 @@ function getTauriWindow() {
   return IS_TAURI ? window.__TAURI__?.window?.getCurrentWindow?.() : null
 }
 
-const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`
+export const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`
 const hideImg = e => { e.target.style.visibility = 'hidden' }
 
-// A pick rests on thin data if any matchup has fewer games than the penalty threshold.
-function hasLowSample(rec) {
+export function hasLowSample(rec) {
   const thr = DEFAULT_CONFIG.penalizeThreshold
   return [...(rec.synergy_breakdown || []), ...(rec.counter_breakdown || [])]
     .some(b => b.n > 0 && b.n < thr)
@@ -63,16 +62,10 @@ function PickRow({ rec, rank, role }) {
 }
 
 function MatchupStrip({ role, enemies }) {
-  // Group enemies into role slots (fall back to a champion's primary role).
+  // enemies is already role-resolved by the main app; index by role directly.
   const byRole = {}
   for (const e of enemies || []) {
-    if (!e.champion) continue
-    const r = e.role && e.role !== 'fill' ? e.role : (champPrimaryRole(e.champion) || null)
-    if (r && !byRole[r]) byRole[r] = e.champion
-    else if (!r) { // no role — drop into first open slot
-      const open = ROLE_ORDER.find(o => !byRole[o])
-      if (open) byRole[open] = e.champion
-    }
+    if (e.champion && e.role) byRole[e.role] = e.champion
   }
   return (
     <div className="overlay-matchup">
@@ -91,17 +84,33 @@ function MatchupStrip({ role, enemies }) {
   )
 }
 
+export function readDraft() {
+  try { return JSON.parse(localStorage.getItem('rabadon-overlay-draft') || 'null') }
+  catch { return null }
+}
+
 export default function OverlayApp() {
   const [recommendations, setRecommendations] = useState([])
-  const [patch, setPatch] = useState('16.11')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
-  const prevSessionKeyRef = useRef(null)
+  const prevDraftKeyRef = useRef(null)
 
-  const { connected: lcuConnected, session: lcuSession } = useLCUSession()
+  // Connection status only — draft content comes from the shared localStorage state.
+  const { connected: lcuConnected } = useLCUSession()
 
-  // Restore saved position on mount + persist on drag
+  // Draft state written by the main window on every relevant change.
+  const [draft, setDraft] = useState(readDraft)
+  useEffect(() => {
+    const handler = e => {
+      if (e.key !== 'rabadon-overlay-draft') return
+      try { setDraft(JSON.parse(e.newValue || 'null')) } catch {}
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
+
+  // Restore saved position on mount + persist on drag.
   useEffect(() => {
     const appWindow = getTauriWindow()
     if (!appWindow) return
@@ -117,29 +126,25 @@ export default function OverlayApp() {
     })
   }, [])
 
-  useEffect(() => {
-    getPatches().then(patches => { if (patches?.length) setPatch(patches[0]) }).catch(() => {})
-  }, [])
-
   const handleClose = () => { getTauriWindow()?.hide() }
 
-  const fetchRecs = useCallback(async (session, currentPatch) => {
-    if (!session?.my_role || session.my_role === 'fill') return
-    const allies = (session.allies || []).filter(a => a.champion)
-    const enemies = (session.enemies || [])
+  const fetchRecs = useCallback(async (role, allies, enemies, patch, tier) => {
+    if (!role || role === 'fill') return
+    const filteredAllies = (allies || []).filter(a => a.champion)
+    const filteredEnemies = (enemies || [])
       .filter(e => e.champion)
       .map(e => ({
         champion: e.champion,
         role: e.role && e.role !== 'fill' ? e.role : (champPrimaryRole(e.champion) || 'fill'),
       }))
-    if (allies.length === 0 && enemies.length === 0) return
+    if (filteredAllies.length === 0 && filteredEnemies.length === 0) return
 
     setLoading(true)
     setError(null)
     try {
-      const result = await getRecommendations(session.my_role, allies, enemies, currentPatch, TIER)
+      const result = await getRecommendations(role, filteredAllies, filteredEnemies, patch, tier)
       setRecommendations((result.recommendations || []).slice(0, 5))
-    } catch (err) {
+    } catch {
       setError('No data')
     } finally {
       setLoading(false)
@@ -147,23 +152,27 @@ export default function OverlayApp() {
   }, [])
 
   useEffect(() => {
-    if (!lcuSession?.my_role) return
+    if (!draft?.role || draft.role === 'fill') return
     const key = JSON.stringify({
-      role: lcuSession.my_role,
-      allies: lcuSession.allies?.map(a => a.champion).join(','),
-      enemies: lcuSession.enemies?.map(e => e.champion).join(','),
+      role: draft.role,
+      allies: (draft.allies || []).map(a => a.champion).join(','),
+      enemies: (draft.enemies || []).map(e => e.champion).join(','),
     })
-    if (key === prevSessionKeyRef.current) return
-    prevSessionKeyRef.current = key
+    if (key === prevDraftKeyRef.current) return
+    prevDraftKeyRef.current = key
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => fetchRecs(lcuSession, patch), 600)
-  }, [lcuSession, patch, fetchRecs])
+    debounceRef.current = setTimeout(
+      () => fetchRecs(draft.role, draft.allies, draft.enemies, draft.patch ?? '16.11', draft.tier ?? TIER),
+      600
+    )
+  }, [draft, fetchRecs])
 
   useEffect(() => () => clearTimeout(debounceRef.current), [])
 
-  const hasSession = !!lcuSession?.my_role
-  const role = lcuSession?.my_role || 'adc'
-  const enemies = lcuSession?.enemies || []
+  const hasSession = !!(draft?.phase && draft?.role && draft.role !== 'fill')
+  const role = draft?.role || 'adc'
+  const enemies = draft?.enemies || []
+  const patch = draft?.patch ?? '16.11'
 
   const statusText = !lcuConnected ? 'Waiting for League client'
     : !hasSession ? 'League client connected'
