@@ -24,7 +24,7 @@ EnvironmentFile=/srv/rabadon/backend/.env
 # which runs the same check BEFORE restarting so broken code never causes downtime.
 ExecStartPre=/srv/rabadon/backend/venv/bin/python -c "import main"
 
-ExecStart=/srv/rabadon/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
+ExecStart=/srv/rabadon/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 1
 Restart=always
 RestartSec=3
 

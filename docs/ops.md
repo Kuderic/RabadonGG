@@ -40,7 +40,7 @@ duplicate created by mistake during the 2026-06-05 incident and has been removed
 - Installed at `/etc/systemd/system/rabadon.service`; version-controlled copy at
   [`deploy/rabadon.service`](../deploy/rabadon.service).
 - Key properties:
-  - `ExecStart=… venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2`
+  - `ExecStart=… venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 1`
   - `EnvironmentFile=/srv/rabadon/backend/.env` — **loads `ALLOWED_ORIGINS` etc.**
     Any replacement unit MUST keep this or CORS breaks in production.
   - `Restart=always`, `RestartSec=3` — the service self-heals; it also means a

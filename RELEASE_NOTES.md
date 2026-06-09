@@ -1,3 +1,9 @@
+## What's new in 1.1.2
+
+### Bug fixes
+- Fixed a missing ally slot on first load when your last role was saved as something other than Bot — the allied team would silently drop one row (e.g. loading as Support showed no Bot slot)
+- Patch selector no longer shows patches that Riot has tagged in Data Dragon but haven't gone live on lolalytics yet (e.g. 16.12 appearing before it launched)
+
 ## What's new in 1.1.1
 
 ### Champion lookup

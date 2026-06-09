@@ -59,7 +59,7 @@ else
   echo "   Install the unit for auto-restart + real logs: see deploy/rabadon.service"
   pkill -f "uvicorn main:app" || true
   sleep 1
-  ( cd "$BACKEND_DIR" && setsid "$UVICORN" main:app --host 127.0.0.1 --port 8000 --workers 2 \
+  ( cd "$BACKEND_DIR" && setsid "$UVICORN" main:app --host 127.0.0.1 --port 8000 --workers 1 \
       >/dev/null 2>&1 < /dev/null & )
 fi
 
