@@ -46,7 +46,7 @@ function BreakdownRow({ champion, role, delta, n, missing, settings, isEmpty }) 
 
 export default function BreakdownPanel({ rec, rank, onClose, settings, playerRole, modifiers = {} }) {
   const { synContrib, ctrContrib, totalDelta, customOffset, blend } = computeComponents(rec, settings, playerRole, modifiers)
-  const adjRating = rec.win_rate + totalDelta
+  const adjRating = rec.win_rate + customOffset + totalDelta
 
   const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
 
@@ -101,6 +101,12 @@ export default function BreakdownPanel({ rec, rank, onClose, settings, playerRol
           <span className="bp-summary-label">Base WR</span>
           <span className="bp-summary-value neutral-value">{rec.win_rate.toFixed(1)}%</span>
         </div>
+        {customOffset !== 0 && (
+          <div className="bp-summary-item">
+            <span className="bp-summary-label bp-offset-label">✎ Offset</span>
+            <span className="bp-summary-value bp-offset-value">{customOffset > 0 ? '+' : ''}{customOffset}%</span>
+          </div>
+        )}
         <div className="bp-summary-plus">+</div>
         <div className={`bp-summary-item ${synContrib >= 0 ? 'positive' : 'negative'}`}>
           <span className="bp-summary-label">
@@ -121,15 +127,6 @@ export default function BreakdownPanel({ rec, rank, onClose, settings, playerRol
           </span>
           <span className="bp-summary-value">{fmt(ctrContrib)}</span>
         </div>
-        {customOffset !== 0 && (
-          <>
-            <div className="bp-summary-plus">+</div>
-            <div className={`bp-summary-item ${customOffset > 0 ? 'positive' : 'negative'}`}>
-              <span className="bp-summary-label">Custom ✎</span>
-              <span className="bp-summary-value">{fmt(customOffset)}</span>
-            </div>
-          </>
-        )}
         <div className="bp-summary-divider" />
         <div className={`bp-summary-item ${totalDelta >= 0 ? 'positive' : 'negative'}`}>
           <span className="bp-summary-label">Total Δ</span>
@@ -138,7 +135,7 @@ export default function BreakdownPanel({ rec, rank, onClose, settings, playerRol
         <div className="bp-summary-note">
           Rating = WR + (counter_mult × Σctr Δ × role_wt) + (synergy_mult × Σsyn Δ × role_wt)
           {settings?.penalize ? ` · n<${settings.penalizeThreshold.toLocaleString()} penalized` : ''}
-          {customOffset !== 0 ? ' · custom modifier applied' : ''}
+          {customOffset !== 0 ? ' · personal WR offset applied to base' : ''}
         </div>
       </div>
 

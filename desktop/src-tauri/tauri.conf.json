@@ -21,6 +21,22 @@
         "visible": true,
         "decorations": false,
         "center": true
+      },
+      {
+        "label": "overlay",
+        "title": "",
+        "url": "index.html?mode=overlay",
+        "width": 320,
+        "height": 460,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "x": 1580,
+        "y": 120,
+        "shadow": false,
+        "resizable": false
       }
     ],
     "security": {

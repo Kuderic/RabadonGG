@@ -3,6 +3,8 @@ import TierSelector from './TierSelector'
 import ChampionPoolPanel from './ChampionPoolPanel'
 import CustomModifiersPanel from './CustomModifiersPanel'
 
+const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
+
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 const ROLE_LABEL = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'ADC', support: 'Support' }
 const ROLE_LABEL_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'ADC', support: 'SUP' }
@@ -34,6 +36,7 @@ export default function ConfigPanel({
   config, onChange, defaultConfig,
   patch, tier, availablePatches, onPatchChange, onTierChange,
   lowDetail, onLowDetailChange,
+  overlayEnabled, onOverlayEnabledChange,
   pool = [], onPoolAdd, onPoolRemove, onPoolRoleChange,
   poolVariant, onPoolVariantChange, onAddRole, onRemoveRole, onToggleRole,
   champions = [], playerRole,
@@ -246,6 +249,18 @@ export default function ConfigPanel({
             Low detail mode
           </label>
         </div>
+        {IS_TAURI && (
+          <div className="config-row">
+            <label className="config-check-label">
+              <input
+                type="checkbox"
+                checked={!!overlayEnabled}
+                onChange={e => onOverlayEnabledChange(e.target.checked)}
+              />
+              Show overlay during champion select
+            </label>
+          </div>
+        )}
       </div>
 
       <div className="config-footer">

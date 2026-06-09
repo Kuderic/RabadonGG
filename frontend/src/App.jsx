@@ -362,6 +362,9 @@ export default function App() {
   const [selectedRec, setSelectedRec] = useState(null)
   const [config, setConfig] = useState(DEFAULT_CONFIG)
   const [lowDetail, setLowDetail] = useState(false)
+  const [overlayEnabled, setOverlayEnabled] = useState(
+    () => localStorage.getItem('rabadon_overlay_enabled') !== 'false'
+  )
   const [shareCopied, setShareCopied] = useState(false)
   const [manualOverrides, setManualOverrides] = useState(() => new Set())
   const [refreshing, setRefreshing] = useState(false)
@@ -398,6 +401,7 @@ export default function App() {
   championPoolRef.current = championPool
 
   const { connected: lcuConnected, session: lcuSession } = useLCUSession()
+  const prevLcuPhaseRef = useRef(null)
 
   // Auto-fill draft form when the LCU session changes.
   // Role must be applied first so ally slots are rebuilt for the correct role
@@ -465,6 +469,20 @@ export default function App() {
     })
   }, [lcuSession, lcuConnected]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Show the overlay when champion select starts; hide it when it ends.
+  useEffect(() => {
+    if (!IS_TAURI) return
+    const phase = lcuSession?.phase ?? null
+    if (phase !== prevLcuPhaseRef.current) {
+      if (phase && overlayEnabled) {
+        window.__TAURI__.core.invoke('control_overlay', { action: 'show' }).catch(() => {})
+      } else if (prevLcuPhaseRef.current) {
+        window.__TAURI__.core.invoke('control_overlay', { action: 'hide' }).catch(() => {})
+      }
+      prevLcuPhaseRef.current = phase
+    }
+  }, [lcuSession?.phase]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     localStorage.setItem('rabadon_champion_pool', JSON.stringify(championPool))
   }, [championPool])
@@ -476,6 +494,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('rabadon_wr_modifiers', JSON.stringify(wrModifiers))
   }, [wrModifiers])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon_overlay_enabled', String(overlayEnabled))
+    // If disabled while the overlay is visible, hide it immediately.
+    if (!overlayEnabled && IS_TAURI) {
+      window.__TAURI__.core.invoke('control_overlay', { action: 'hide' }).catch(() => {})
+    }
+  }, [overlayEnabled])
 
   useEffect(() => {
     getChampions().then(setChampions).catch(() => {})
@@ -687,6 +713,12 @@ export default function App() {
       )
       const newRecs = result.recommendations || []
       setRecommendations(newRecs)
+      if (IS_TAURI && newRecs.length > 0) {
+        window.__TAURI__.core.invoke('emit_to_overlay', {
+          event: 'overlay-recs',
+          payload: { recommendations: newRecs, role },
+        }).catch(() => {})
+      }
       setPoolResults(result.pool_picks || [])
       setSelectedPoolRec(null)
 
@@ -900,6 +932,8 @@ export default function App() {
               onTierChange={setTier}
               lowDetail={lowDetail}
               onLowDetailChange={setLowDetail}
+              overlayEnabled={overlayEnabled}
+              onOverlayEnabledChange={setOverlayEnabled}
               pool={championPool}
               onPoolAdd={handlePoolAdd}
               onPoolRemove={handlePoolRemove}

@@ -274,6 +274,37 @@ async fn get_lcu_session(
     }))
 }
 
+/// Show or hide the overlay window.
+#[tauri::command]
+async fn control_overlay(app: tauri::AppHandle, action: String) -> Result<(), String> {
+    let Some(overlay) = app.get_webview_window("overlay") else {
+        return Err("overlay window not found".into());
+    };
+    match action.as_str() {
+        "show" => {
+            let _ = overlay.show();
+            let _ = overlay.set_always_on_top(true);
+        }
+        "hide" => {
+            let _ = overlay.hide();
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+/// Emit a named event to the overlay window so the React overlay UI can
+/// receive recommendation data without making its own backend calls.
+#[tauri::command]
+async fn emit_to_overlay(app: tauri::AppHandle, event: String, payload: Value) -> Result<(), String> {
+    let _ = app.emit_to(
+        tauri::EventTarget::webview_window("overlay"),
+        &event,
+        payload,
+    );
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -447,7 +478,7 @@ async fn main() {
                 .build(app)?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url])
+        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url, control_overlay, emit_to_overlay])
         .run(tauri::generate_context!())
         .expect("error while running Rabadon desktop");
 }

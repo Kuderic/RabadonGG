@@ -29,7 +29,7 @@ export function computeComponents(rec, config, playerRole, modifiers = {}) {
   const synContrib = blend.synergy * adjSyn
   const ctrContrib = blend.counter * adjCtr
   const customOffset = modifiers?.[rec.champion] ?? 0
-  const totalDelta = synContrib + ctrContrib + customOffset
+  const totalDelta = synContrib + ctrContrib
 
   return { adjSyn, adjCtr, synContrib, ctrContrib, totalDelta, customOffset, blend }
 }

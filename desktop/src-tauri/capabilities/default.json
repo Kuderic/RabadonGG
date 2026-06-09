@@ -1,17 +1,24 @@
 {
   "identifier": "default",
   "description": "Default capabilities for Rabadon desktop",
-  "windows": ["main"],
+  "windows": ["main", "overlay"],
   "permissions": [
     "core:default",
     "updater:default",
     "process:default",
     "core:window:allow-hide",
+    "core:window:allow-show",
     "core:window:allow-maximize",
     "core:window:allow-unmaximize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-start-dragging",
-    "core:window:allow-is-maximized"
+    "core:window:allow-is-maximized",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:event:allow-listen",
+    "core:event:allow-emit"
   ]
 }

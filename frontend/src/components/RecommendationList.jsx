@@ -14,11 +14,11 @@ function hasLowN(rec, config) {
 }
 
 function computeAdjustedScore(rec, sortMode, config, playerRole, modifiers) {
-  const { synContrib, ctrContrib, totalDelta } = computeComponents(rec, config, playerRole, modifiers)
+  const { synContrib, ctrContrib, totalDelta, customOffset } = computeComponents(rec, config, playerRole, modifiers)
   if (sortMode === 'delta') return totalDelta
   if (sortMode === 'synergy') return synContrib
   if (sortMode === 'counter') return ctrContrib
-  return rec.win_rate + totalDelta
+  return rec.win_rate + customOffset + totalDelta
 }
 
 function PoolBadge() {
@@ -85,7 +85,7 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
             </div>
             {customOffset !== 0 && (
               <div className="card-modifier-line">
-                <span className={`custom-modifier-badge ${customOffset > 0 ? 'positive' : 'negative'}`} title={`Custom WR modifier: ${customOffset > 0 ? '+' : ''}${customOffset}%`}>
+                <span className="custom-modifier-badge" title={`Personal WR offset: ${customOffset > 0 ? '+' : ''}${customOffset}%`}>
                   ✎ {customOffset > 0 ? '+' : ''}{customOffset}%
                 </span>
               </div>
