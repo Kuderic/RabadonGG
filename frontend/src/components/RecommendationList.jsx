@@ -252,10 +252,8 @@ export default function RecommendationList({ recommendations, loading, refreshin
   const [sortMode, setSortMode] = useState('rating')
   const [recTab, setRecTab] = useState('overall')
   const [visibleCount, setVisibleCount] = useState(10)
-  const [selectedLookup, setSelectedLookup] = useState(false)
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
-  const lookupBreakdownRef = useRef(null)
 
   useEffect(() => {
     if (selectedIndex !== null && breakdownRef.current) {
@@ -268,10 +266,6 @@ export default function RecommendationList({ recommendations, loading, refreshin
   useEffect(() => {
     setVisibleCount(10)
   }, [playerRole])
-
-  useEffect(() => {
-    setSelectedLookup(false)
-  }, [lookupChampion])
 
   const { sorted, penalizedCount } = useMemo(() => {
     if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
@@ -419,16 +413,13 @@ export default function RecommendationList({ recommendations, loading, refreshin
       {lookupChampion && (
         <div className="lookup-result-section">
           {lookupResult ? (
-            <RecCard
+            <BreakdownPanel
               rec={lookupResult}
               rank="?"
-              isSelected={selectedLookup}
-              onSelect={() => setSelectedLookup(s => !s)}
-              config={config}
+              onClose={() => onLookupChange(null)}
+              settings={config}
               playerRole={playerRole}
-              wrModifiers={wrModifiers}
-              sortMode={sortMode}
-              breakdownRef={selectedLookup ? lookupBreakdownRef : null}
+              modifiers={wrModifiers}
               tier={tier}
               patch={patch}
             />
