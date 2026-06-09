@@ -254,6 +254,11 @@ async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
         entries = [
             (int(cid), info)
             for cid, info in data.get("cid", {}).items()
+            # Only champions lolalytics actually ranks in this lane (tier > 0).
+            # Without this, the pool is every champ with any games in the lane
+            # (~172), flooding recs with off-role noise; with it we match the
+            # site's displayed tier list (e.g. ~52 bottom).
+            if int(info.get("tier", 0)) > 0
         ]
         names = [_id_to_slug[cid] for cid, _ in entries if cid in _id_to_slug]
         games_by_slug = {
