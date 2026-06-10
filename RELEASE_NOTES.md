@@ -1,3 +1,14 @@
+## What's new in 1.1.9
+
+### Bug fixes
+- Fixed the zoom scroll bug (Ctrl +/−): `overflow: clip` is now applied to `body` and `#root` in addition to the root `html` element — `overflow: hidden` still allowed `scrollIntoView` to scroll those ancestors and push the titlebar off-screen
+
+### New
+- **GitHub releases link**: the What's New panel (click the version number in the titlebar) now has a "View all releases on GitHub ↗" link at the bottom
+
+### Changes
+- Display → Overlay settings are now grouped in a labelled sub-panel for cleaner layout; hotkey, transparency, and size controls have consistent alignment
+
 ## What's new in 1.1.8
 
 ### New

@@ -301,7 +301,8 @@ export default function ConfigPanel({
           </label>
         </div>
         {IS_TAURI && (
-          <>
+          <div className="config-subgroup">
+            <div className="config-subgroup-title">Overlay</div>
             <div className="config-row">
               <label className="config-check-label">
                 <input
@@ -309,14 +310,18 @@ export default function ConfigPanel({
                   checked={!!overlayEnabled}
                   onChange={e => onOverlayEnabledChange(e.target.checked)}
                 />
-                Show overlay during champion select
+                Show during champion select
               </label>
             </div>
             <div className="config-row config-row--spaced">
-              <span className="config-field-label">Overlay hotkey</span>
+              <label className="config-check-label" style={{ cursor: 'default' }}>
+                Hotkey
+              </label>
               <HotkeyCapture value={overlayHotkey} onChange={onOverlayHotkeyChange} />
             </div>
-            <span className="config-hint">Default: Ctrl+ArrowDown — press this combo to show/hide the overlay at any time</span>
+            <p className="config-hint" style={{ marginTop: 0, marginBottom: 10 }}>
+              Default: Ctrl+ArrowDown — click the box above and press any key combo to change
+            </p>
             <div className="config-row">
               <label className="config-check-label">
                 <input
@@ -324,12 +329,12 @@ export default function ConfigPanel({
                   checked={!!overlayTransparent}
                   onChange={e => onOverlayTransparentChange(e.target.checked)}
                 />
-                Transparent overlay background
+                Transparent background
               </label>
             </div>
-            <div className="config-row config-row--spaced">
-              <label className="config-inline-label">
-                Overlay size
+            <div className="config-row config-row--spaced" style={{ marginBottom: 0 }}>
+              <span className="config-check-label" style={{ cursor: 'default' }}>Size</span>
+              <div className="config-overlay-size">
                 <input
                   type="range"
                   className="weight-slider"
@@ -338,9 +343,9 @@ export default function ConfigPanel({
                   onChange={e => onOverlayScaleChange(+e.target.value)}
                 />
                 <span className="weight-val">{overlayScale}%</span>
-              </label>
+              </div>
             </div>
-          </>
+          </div>
         )}
       </div>
 

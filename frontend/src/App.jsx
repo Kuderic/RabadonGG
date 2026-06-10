@@ -453,6 +453,8 @@ function parseMarkdown(md) {
   return html
 }
 
+const GITHUB_RELEASES_URL = 'https://github.com/Kuderic/RabadonGG/releases'
+
 function ChangelogModal({ onClose }) {
   const html = useMemo(() => parseMarkdown(releaseNotesRaw), [])
   useEffect(() => {
@@ -460,6 +462,14 @@ function ChangelogModal({ onClose }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  const handleReleasesLink = e => {
+    if (IS_TAURI) {
+      e.preventDefault()
+      window.__TAURI__.core.invoke('open_url', { url: GITHUB_RELEASES_URL }).catch(() => {})
+    }
+  }
+
   return (
     <div className="changelog-backdrop" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="changelog-panel hx-panel">
@@ -468,6 +478,17 @@ function ChangelogModal({ onClose }) {
           <button className="changelog-close" onClick={onClose} aria-label="Close">✕</button>
         </div>
         <div className="changelog-body" dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="changelog-footer">
+          <a
+            href={GITHUB_RELEASES_URL}
+            className="changelog-releases-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleReleasesLink}
+          >
+            View all releases on GitHub ↗
+          </a>
+        </div>
       </div>
     </div>
   )
