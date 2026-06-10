@@ -266,13 +266,25 @@ async fn get_lcu_session(
         }
     }
 
+    // Extract the local player's pick intent (what they're hovering before lock-in)
+    let intent_champ_name: Option<String> = session["myTeam"]
+        .as_array()
+        .and_then(|arr| arr.iter().find(|m| m["cellId"].as_i64() == Some(local_cell_id)))
+        .and_then(|m| {
+            let champ_id = m["championId"].as_u64().unwrap_or(0);
+            let intent_id = m["championPickIntent"].as_u64().unwrap_or(0);
+            let effective_id = if champ_id > 0 { champ_id } else { intent_id };
+            if effective_id > 0 { champ_map.get(&effective_id).cloned() } else { None }
+        });
+
     Ok(json!({
         "connected": true,
         "session": {
-            "phase":   phase,
-            "my_role": my_role,
-            "allies":  allies,
-            "enemies": enemies,
+            "phase":        phase,
+            "my_role":      my_role,
+            "allies":       allies,
+            "enemies":      enemies,
+            "intent_champ": intent_champ_name,
         }
     }))
 }

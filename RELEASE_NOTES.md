@@ -1,3 +1,16 @@
+## What's new in 1.1.11
+
+### New
+- **Overlay: "Your pick" pinned row** — the champion you're hovering in champ select now appears pinned below the picks list with its S / C / Δ scores and a rank chip (`#8 of 41`). Recomputes when your intent changes.
+- **Per-tab sort defaults** — Overall tab stays sorted by WR + Δ; My Champions tab now defaults to Δ only, which better surfaces draft-specific swing when your baseline viability is already a given.
+
+### Bug fixes
+- **Settings → Display layout** — fixed two bugs in the Overlay sub-panel: the `--text-muted` CSS token was undefined (heading and changelog link fell back to the brightest ink); Hotkey and Size rows were stretched edge-to-edge with `justify-content: space-between` — controls now sit tightly beside their labels.
+
+### Changes
+- **Overlay: S / C metrics** — synergy and counter contributions are now larger (11.5px, stacked column) and positioned to the left of the Δ value instead of below it. The column header hint updates to `S · C · Δ`.
+- **Overlay window sizing** — the overlay window now tracks the panel's actual rendered height via `ResizeObserver` instead of a fixed 510 px constant. Eliminates up to ~300 px of empty transparent space below the panel in the "Waiting" and small-pool states.
+
 ## What's new in 1.1.10
 
 ### Bug fixes

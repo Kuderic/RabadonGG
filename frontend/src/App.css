@@ -60,6 +60,7 @@
   --ink-2:         #c0c8d8;
   --ink-3:         #8892a4;
   --ink-4:         #5d6880;
+  --text-muted:    var(--ink-3);
 
   /* Type */
   --font-display:  'Marcellus', 'Cinzel', Georgia, serif;
@@ -1285,6 +1286,10 @@ body {
 .config-row { display: flex; align-items: center; gap: 18px; margin-bottom: 10px; flex-wrap: wrap; }
 .config-row--disabled { opacity: 0.4; pointer-events: none; }
 .config-row--spaced { justify-content: space-between; }
+.config-subgroup .config-row--spaced { justify-content: flex-start; gap: 14px; }
+.config-subgroup .config-row--spaced > .config-check-label:first-child,
+.config-subgroup .config-row--spaced > span.config-check-label:first-child { flex: 0 0 92px; }
+.config-subgroup .config-overlay-size { max-width: 220px; }
 .config-check-label { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
 
 .hotkey-capture {
@@ -1327,7 +1332,7 @@ body {
   font-size: 11px;
   font-family: var(--font-display, 'Cinzel', serif);
   letter-spacing: 0.07em;
-  color: var(--text-muted);
+  color: var(--ink-3);
   margin-bottom: 12px;
 }
 .config-overlay-size {
@@ -3542,13 +3547,42 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 .overlay-sub .games { color: var(--ink-4); }
 .overlay-lown { color: var(--warn); font-weight: 700; }
 
-.overlay-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.overlay-delta { font-size: 15px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-.overlay-delta.pos { color: var(--pos); }
-.overlay-delta.neg { color: var(--neg); }
-.overlay-sc { display: flex; gap: 7px; font-size: 9px; font-variant-numeric: tabular-nums; line-height: 1; white-space: nowrap; }
+.overlay-metrics { display: flex; align-items: center; gap: 11px; }
+.overlay-sc {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  font-size: 11.5px; line-height: 1.1; white-space: nowrap;
+  font-variant-numeric: tabular-nums; font-weight: 600;
+}
 .overlay-sc .s { color: var(--ally-bright); }
 .overlay-sc .c { color: var(--enemy-bright); }
+.overlay-delta { font-size: 16px; min-width: 44px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.overlay-delta.pos { color: var(--pos); }
+.overlay-delta.neg { color: var(--neg); }
+
+/* ── "Your pick" pinned footer ───────────────────────────────────────────── */
+.overlay-yourpick {
+  border-top: 1px solid rgba(200,155,60,0.30);
+  background: rgba(200,155,60,0.05);
+  padding: 5px 8px 7px;
+}
+.overlay-yourpick-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 2px 4px 5px;
+}
+.overlay-yourpick-head .l {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-mid);
+}
+.overlay-yourpick-head .cmp { font-size: 9px; letter-spacing: 0.3px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.overlay-yourpick-head .cmp.best { color: var(--pos); }
+.overlay-pick--you { border-color: rgba(200,155,60,0.55); background: rgba(200,155,60,0.10); }
+.overlay-rank--you {
+  background: var(--panel-raised); color: var(--gold-bright);
+  box-shadow: inset 0 0 0 1px var(--gold-deep); font-size: 9px; font-variant-numeric: tabular-nums;
+}
+.overlay-yourpick-empty {
+  padding: 8px 6px 4px; text-align: center;
+  font-size: 10px; letter-spacing: 0.5px; color: var(--ink-4); font-style: italic;
+}
 
 /* ── Footer: live status + population ───────────────────────────────────── */
 .overlay-foot {

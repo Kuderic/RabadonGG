@@ -267,8 +267,11 @@ function SortHeaders({ sortMode, onSort }) {
 }
 
 export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool }) {
-  const [sortMode, setSortMode] = useState('rating')
   const [recTab, setRecTab] = useState('overall')
+  const [sortOverall, setSortOverall] = useState('rating')
+  const [sortPool, setSortPool]       = useState('delta')
+  const sortMode    = recTab === 'pool' ? sortPool : sortOverall
+  const setSortMode = recTab === 'pool' ? setSortPool : setSortOverall
   const [visibleCount, setVisibleCount] = useState(10)
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
@@ -486,7 +489,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
 
       {recTab === 'pool' && (
         <>
-          <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(s => s === m ? 'rating' : m)} />
+          <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(s => s === m ? 'delta' : m)} />
           <div className="rec-grid rec-grid--row">
             {sortedPool.length === 0 ? (
               <div className="pool-results-empty">

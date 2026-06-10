@@ -33,18 +33,29 @@ export function hasLowSample(rec) {
     .some(b => b.n > 0 && b.n < thr)
 }
 
-function PickRow({ rec, rank, role, onFocus }) {
+function PickRow({ rec, rank, role, onFocus, you }) {
   const { synContrib, ctrContrib, totalDelta, customOffset } = computeComponents(rec, DEFAULT_CONFIG, role)
   const adjusted = totalDelta + customOffset
   const lowN = hasLowSample(rec)
 
+  const pickClass = [
+    'overlay-pick',
+    rank === 1 && !you ? 'overlay-pick--best' : '',
+    you ? 'overlay-pick--you' : 'overlay-pick--clickable',
+  ].filter(Boolean).join(' ')
+
+  const rankClass = [
+    'overlay-rank',
+    you ? 'overlay-rank--you' : rank > 3 ? 'overlay-rank--dim' : '',
+  ].filter(Boolean).join(' ')
+
   return (
     <div
-      className={rank === 1 ? 'overlay-pick overlay-pick--best overlay-pick--clickable' : 'overlay-pick overlay-pick--clickable'}
-      onClick={onFocus}
-      title="Click to open full breakdown in Rabadon.GG"
+      className={pickClass}
+      onClick={!you ? onFocus : undefined}
+      title={!you ? 'Click to open full breakdown in Rabadon.GG' : undefined}
     >
-      <span className={rank <= 3 ? 'overlay-rank' : 'overlay-rank overlay-rank--dim'}>{rank}</span>
+      <span className={rankClass}>{rank}</span>
       <img className="overlay-icon" src={champIconUrl(rec.champion)} alt={rec.champion} onError={hideImg} />
       <div className="overlay-mid">
         <span className="overlay-name">{rec.champion}</span>
@@ -54,12 +65,12 @@ function PickRow({ rec, rank, role, onFocus }) {
           {lowN && <span className="overlay-lown" title="Low sample size — interpret with caution">⚠</span>}
         </span>
       </div>
-      <div className="overlay-right">
-        <span className={`overlay-delta ${adjusted >= 0 ? 'pos' : 'neg'}`}>{fmt(adjusted)}</span>
+      <div className="overlay-metrics">
         <span className="overlay-sc">
           <span className="s" title="Synergy with your allies">S {fmt(synContrib)}</span>
           <span className="c" title="Counter vs enemy laners">C {fmt(ctrContrib)}</span>
         </span>
+        <span className={`overlay-delta ${adjusted >= 0 ? 'pos' : 'neg'}`}>{fmt(adjusted)}</span>
       </div>
     </div>
   )
@@ -96,12 +107,14 @@ export function readDraft() {
 export default function OverlayApp() {
   const [recommendations, setRecommendations] = useState([])
   const [poolPicks, setPoolPicks] = useState([])
+  const [yourPick, setYourPick] = useState(null)
   const [tab, setTab] = useState('overall')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
   const prevDraftKeyRef = useRef(null)
   const prevPhaseRef = useRef(null)
+  const panelRef = useRef(null)
 
   // Connection status only — draft content comes from the shared localStorage state.
   const { connected: lcuConnected } = useLCUSession()
@@ -137,16 +150,29 @@ export default function OverlayApp() {
     document.body.style.overflow = 'hidden'
   }, [])
 
-  // Apply scale: zoom the whole overlay window and resize the Tauri window to match.
+  // Apply zoom only (zoom doesn't affect offsetWidth/Height, so keep separate from resize).
   useEffect(() => {
-    const scale = overlayScale / 100
-    document.documentElement.style.zoom = scale
-    if (IS_TAURI) {
+    document.documentElement.style.zoom = overlayScale / 100
+  }, [overlayScale])
+
+  // Resize the Tauri window to the panel's actual rendered content height.
+  // offsetWidth/Height are pre-zoom layout px in Chromium — multiply by scale
+  // for physical size. ResizeObserver fires on content changes, not zoom changes.
+  useEffect(() => {
+    if (!IS_TAURI) return
+    const panel = panelRef.current
+    if (!panel) return
+    const sync = () => {
+      const scale = overlayScale / 100
       window.__TAURI__.core.invoke('resize_overlay', {
-        width: Math.round(362 * scale),
-        height: Math.round(510 * scale),
+        width:  Math.round((panel.offsetWidth  + 16) * scale),
+        height: Math.round((panel.offsetHeight + 16) * scale),
       }).catch(() => {})
     }
+    sync()
+    const ro = new ResizeObserver(sync)
+    ro.observe(panel)
+    return () => ro.disconnect()
   }, [overlayScale])
 
   // Apply transparency: adjust the panel background opacity via CSS custom property.
@@ -180,7 +206,7 @@ export default function OverlayApp() {
     if (IS_TAURI) window.__TAURI__.core.invoke('focus_main').catch(() => {})
   }, [])
 
-  const fetchRecs = useCallback(async (role, allies, enemies, patch, tier, pool) => {
+  const fetchRecs = useCallback(async (role, allies, enemies, patch, tier, pool, intentChamp) => {
     if (!role || role === 'fill') return
     const filteredAllies = (allies || []).filter(a => a.champion)
     const filteredEnemies = (enemies || [])
@@ -192,6 +218,7 @@ export default function OverlayApp() {
     if (filteredAllies.length === 0 && filteredEnemies.length === 0) {
       setRecommendations([])
       setPoolPicks([])
+      setYourPick(null)
       return
     }
 
@@ -199,14 +226,42 @@ export default function OverlayApp() {
       .filter(p => p.roles.length === 0 || p.roles.includes(role))
       .map(p => p.champion)
 
+    // Include intent champ in the pool request so the backend scores it.
+    const poolForRequest = intentChamp
+      ? [...new Set([...poolForRole, intentChamp])]
+      : poolForRole
+
     setLoading(true)
     setError(null)
     try {
-      const result = await getRecommendations(role, filteredAllies, filteredEnemies, patch, tier, poolForRole)
-      setRecommendations((result.recommendations || []).slice(0, 5))
-      setPoolPicks((result.pool_picks || []).slice(0, 5))
+      const result = await getRecommendations(role, filteredAllies, filteredEnemies, patch, tier, poolForRequest)
+      const allRecs = result.recommendations || []
+      setRecommendations(allRecs.slice(0, 5))
+      // Filter out injected intent champ from pool display
+      setPoolPicks((result.pool_picks || []).filter(p => poolForRole.includes(p.champion)).slice(0, 5))
+
+      // Pin "your pick" section if there's an intent champion
+      if (intentChamp) {
+        const intentRec = (result.pool_picks || []).find(
+          p => p.champion.toLowerCase() === intentChamp.toLowerCase()
+        )
+        if (intentRec) {
+          const score = r => {
+            const { totalDelta, customOffset } = computeComponents(r, DEFAULT_CONFIG, role)
+            return r.win_rate + totalDelta + customOffset
+          }
+          const intentScore = score(intentRec)
+          const rank = allRecs.filter(r => score(r) > intentScore).length + 1
+          setYourPick({ ...intentRec, rank, field: allRecs.length })
+        } else {
+          setYourPick(null)
+        }
+      } else {
+        setYourPick(null)
+      }
     } catch {
       setError('No data')
+      setYourPick(null)
     } finally {
       setLoading(false)
     }
@@ -218,6 +273,7 @@ export default function OverlayApp() {
     if (phase !== prevPhaseRef.current) {
       setRecommendations([])
       setPoolPicks([])
+      setYourPick(null)
       prevDraftKeyRef.current = null
       prevPhaseRef.current = phase
     }
@@ -229,12 +285,13 @@ export default function OverlayApp() {
       role: draft.role,
       allies: (draft.allies || []).map(a => a.champion).join(','),
       enemies: (draft.enemies || []).map(e => e.champion).join(','),
+      intentChamp: draft.intentChamp ?? null,
     })
     if (key === prevDraftKeyRef.current) return
     prevDraftKeyRef.current = key
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(
-      () => fetchRecs(draft.role, draft.allies, draft.enemies, draft.patch ?? '16.11', draft.tier ?? TIER, draft.pool),
+      () => fetchRecs(draft.role, draft.allies, draft.enemies, draft.patch ?? '16.11', draft.tier ?? TIER, draft.pool, draft.intentChamp ?? null),
       600
     )
   }, [draft, fetchRecs])
@@ -253,7 +310,7 @@ export default function OverlayApp() {
 
   return (
     <div className="overlay-root">
-      <div className="overlay-panel">
+      <div className="overlay-panel" ref={panelRef}>
         <div className="overlay-head" data-tauri-drag-region>
           <span className="overlay-logo" data-tauri-drag-region />
           <span className="overlay-word" data-tauri-drag-region>RABADON.GG</span>
@@ -281,13 +338,26 @@ export default function OverlayApp() {
                   <button className={`overlay-tab ${tab === 'pool' ? 'overlay-tab--active' : ''}`} onClick={() => setTab('pool')}>My Pool</button>
                 )}
               </div>
-              <span className="r">Win% · Δ</span>
+              <span className="r">S · C · Δ</span>
             </div>
             <div className="overlay-picks">
               {(tab === 'pool' ? poolPicks : recommendations).map((rec, i) => (
                 <PickRow key={rec.champion} rec={rec} rank={i + 1} role={role} onFocus={() => handleFocusChamp(rec.champion)} />
               ))}
             </div>
+            {yourPick ? (
+              <div className="overlay-yourpick">
+                <div className="overlay-yourpick-head">
+                  <span className="l">Your pick</span>
+                  {yourPick.rank === 1
+                    ? <span className="cmp best">✓ best available</span>
+                    : <span className="cmp">#{yourPick.rank} of {yourPick.field}</span>}
+                </div>
+                <PickRow rec={yourPick} rank={yourPick.rank} role={role} you />
+              </div>
+            ) : hasSession && (
+              <div className="overlay-yourpick-empty">Hover a champion to compare</div>
+            )}
           </>
         )}
 
