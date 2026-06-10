@@ -276,6 +276,10 @@ export default function RecommendationList({ recommendations, loading, refreshin
   const sortMode    = recTab === 'pool' ? sortPool : sortOverall
   const setSortMode = recTab === 'pool' ? setSortPool : setSortOverall
   const [visibleCount, setVisibleCount] = useState(10)
+
+  useEffect(() => {
+    try { localStorage.setItem('rabadon-overlay-sort', sortOverall) } catch {}
+  }, [sortOverall])
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
 

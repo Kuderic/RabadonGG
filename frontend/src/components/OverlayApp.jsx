@@ -104,6 +104,13 @@ export function readDraft() {
   catch { return null }
 }
 
+function makeDeltaScore(sortMode, role) {
+  return r => {
+    const { totalDelta, customOffset } = computeComponents(r, DEFAULT_CONFIG, role)
+    return sortMode === 'rating' ? r.win_rate + totalDelta + customOffset : totalDelta + customOffset
+  }
+}
+
 export default function OverlayApp() {
   const [recommendations, setRecommendations] = useState([])
   const [poolPicks, setPoolPicks] = useState([])
@@ -115,6 +122,14 @@ export default function OverlayApp() {
   const prevDraftKeyRef = useRef(null)
   const prevPhaseRef = useRef(null)
   const panelRef = useRef(null)
+  // Full unsorted result arrays — kept so re-sorting doesn't need a re-fetch.
+  const allRecsRef = useRef([])
+  const allPoolRef = useRef([])
+  const [overlaySort, setOverlaySort] = useState(
+    () => localStorage.getItem('rabadon-overlay-sort') || 'delta'
+  )
+  const overlaySortRef = useRef(overlaySort)
+  overlaySortRef.current = overlaySort
 
   // Connection status only — draft content comes from the shared localStorage state.
   const { connected: lcuConnected } = useLCUSession()
@@ -138,6 +153,8 @@ export default function OverlayApp() {
         setOverlayScale(parseInt(e.newValue || '100', 10))
       } else if (e.key === 'rabadon-overlay-transparent') {
         setOverlayTransparent(e.newValue !== 'false')
+      } else if (e.key === 'rabadon-overlay-sort') {
+        setOverlaySort(e.newValue || 'delta')
       }
     }
     window.addEventListener('storage', handler)
@@ -181,6 +198,15 @@ export default function OverlayApp() {
     if (!panelRef.current) return
     panelRef.current.classList.toggle('overlay-panel--opaque', !overlayTransparent)
   }, [overlayTransparent])
+
+  // Re-sort existing results when the sort mode or role changes — no re-fetch needed.
+  useEffect(() => {
+    if (!allRecsRef.current.length) return
+    const currentRole = draft?.role || 'adc'
+    const score = makeDeltaScore(overlaySort, currentRole)
+    setRecommendations([...allRecsRef.current].sort((a, b) => score(b) - score(a)).slice(0, 5))
+    setPoolPicks([...allPoolRef.current].sort((a, b) => score(b) - score(a)).slice(0, 5))
+  }, [overlaySort, draft?.role])
 
   // Restore saved position on mount + persist on drag.
   useEffect(() => {
@@ -235,16 +261,13 @@ export default function OverlayApp() {
     try {
       const result = await getRecommendations(role, filteredAllies, filteredEnemies, patch, tier, poolForRequest)
       const allRecs = result.recommendations || []
-      // Sort by delta only — matches the main app's default sort
-      const deltaScore = r => {
-        const { totalDelta, customOffset } = computeComponents(r, DEFAULT_CONFIG, role)
-        return totalDelta + customOffset
-      }
-      const sortedByDelta = [...allRecs].sort((a, b) => deltaScore(b) - deltaScore(a))
-      setRecommendations(sortedByDelta.slice(0, 5))
-      // Filter out injected intent champ from pool display, sort by delta
       const poolFiltered = (result.pool_picks || []).filter(p => poolForRole.includes(p.champion))
-      setPoolPicks([...poolFiltered].sort((a, b) => deltaScore(b) - deltaScore(a)).slice(0, 5))
+      // Store full arrays for re-sorting when sort mode changes without re-fetching.
+      allRecsRef.current = allRecs
+      allPoolRef.current = poolFiltered
+      const score = makeDeltaScore(overlaySortRef.current, role)
+      setRecommendations([...allRecs].sort((a, b) => score(b) - score(a)).slice(0, 5))
+      setPoolPicks([...poolFiltered].sort((a, b) => score(b) - score(a)).slice(0, 5))
 
       // Pin "your pick" section if there's an intent champion
       if (intentChamp) {
@@ -252,8 +275,8 @@ export default function OverlayApp() {
           p => p.champion.toLowerCase() === intentChamp.toLowerCase()
         )
         if (intentRec) {
-          const intentScore = deltaScore(intentRec)
-          const rank = allRecs.filter(r => deltaScore(r) > intentScore).length + 1
+          const intentScore = score(intentRec)
+          const rank = allRecs.filter(r => score(r) > intentScore).length + 1
           // field = allRecs + the intent champ itself (which is in pool_picks, not allRecs)
           setYourPick({ ...intentRec, rank, field: allRecs.length + 1 })
         } else {

@@ -1,3 +1,8 @@
+## What's new in 1.1.17
+
+### Changes
+- **Overlay mirrors main app sort** — the overlay now tracks whichever sort mode (Δ only or WR + Δ) is active in the main window. Switching modes in Settings instantly re-orders the overlay picks without a re-fetch.
+
 ## What's new in 1.1.16
 
 ### Changes
