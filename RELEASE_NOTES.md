@@ -1,3 +1,16 @@
+## What's new in 1.1.8
+
+### New
+- **Overlay size setting**: a new slider in Settings → Display lets you scale the overlay from 70% to 150% — the overlay window resizes automatically to match
+- **Transparent overlay**: the overlay panel is now semi-transparent by default so it blends into the League client; toggle it off in Settings → Display for a fully opaque background
+
+### Bug fixes
+- Overlay header now shows "30d" instead of "30" when the 30-day data window is selected
+- Fixed a scroll bug when zoomed in (Ctrl +): clicking a recommendation could push the titlebar off-screen with no way to scroll back; the desktop root element now uses `overflow: clip` which prevents CSS zoom from making the document accidentally scrollable
+
+### Changes
+- Overlay is slightly larger by default (360 × 510 px, up from 320 × 460)
+
 ## What's new in 1.1.7
 
 ### New

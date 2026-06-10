@@ -306,6 +306,18 @@ async fn focus_main(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Resize the overlay window (called when the user changes overlay size setting).
+#[tauri::command]
+async fn resize_overlay(app: tauri::AppHandle, width: u32, height: u32) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("overlay") {
+        let _ = w.set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width: width as f64,
+            height: height as f64,
+        }));
+    }
+    Ok(())
+}
+
 /// Register (or re-register) the global shortcut that toggles the overlay.
 /// Called from the frontend on startup and whenever the user changes the hotkey.
 #[tauri::command]
@@ -520,7 +532,7 @@ async fn main() {
                 .build(app)?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url, control_overlay, set_overlay_shortcut, focus_main])
+        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url, control_overlay, set_overlay_shortcut, focus_main, resize_overlay])
         .run(tauri::generate_context!())
         .expect("error while running Rabadon desktop");
 }

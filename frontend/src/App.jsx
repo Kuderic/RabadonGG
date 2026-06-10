@@ -503,6 +503,12 @@ export default function App() {
   const [overlayHotkey, setOverlayHotkey] = useState(
     () => localStorage.getItem('rabadon_overlay_hotkey') || 'Ctrl+ArrowDown'
   )
+  const [overlayScale, setOverlayScale] = useState(
+    () => parseInt(localStorage.getItem('rabadon-overlay-scale') || '100', 10)
+  )
+  const [overlayTransparent, setOverlayTransparent] = useState(
+    () => localStorage.getItem('rabadon-overlay-transparent') !== 'false'
+  )
   const [zoomLevel, setZoomLevel] = useState(
     () => parseFloat(localStorage.getItem('rabadon_zoom') || '1')
   )
@@ -574,41 +580,57 @@ export default function App() {
       setViewRole(knownRole)
     }
 
+    // Build ally lookup: role → first ally with that role; collect fill-role allies separately
+    const allyByRole = {}
+    const fillAllies = []
+    for (const a of lcuSession.allies) {
+      if (a.role && a.role !== 'fill') {
+        if (!allyByRole[a.role]) allyByRole[a.role] = a
+      } else {
+        fillAllies.push(a)
+      }
+    }
+    let fillIdx = 0
     setAllies(makeAllies(slots).map(slot => {
       if (!isNewSession && manualOverrides.has(`ally.${slot.role}`)) {
         const existing = allies.find(a => a.role === slot.role)
         return existing || slot
       }
-      const match = lcuSession.allies.find(a => a.role === slot.role)
-      return { ...slot, champion: match?.champion || '' }
+      if (allyByRole[slot.role]) return { ...slot, champion: allyByRole[slot.role].champion }
+      // No ally assigned to this specific role — place next fill-role ally in this empty slot
+      if (fillIdx < fillAllies.length) return { ...slot, champion: fillAllies[fillIdx++].champion }
+      return { ...slot, champion: '' }
     }))
 
     const knownRoles = ['top','jungle','mid','adc','support']
     const filledSlots = {}
 
+    // Pass 1: enemies with explicit known roles — no overwriting; slot collision defers to pass 2
     for (const e of lcuSession.enemies) {
-      if (e.role && e.role !== 'fill' && knownRoles.includes(e.role)) {
+      if (e.role && e.role !== 'fill' && knownRoles.includes(e.role) && !filledSlots[e.role]) {
         filledSlots[e.role] = e.champion
       }
     }
 
+    // Pass 2: all remaining unplaced enemies via primary → secondary → first empty slot
+    const placed = new Set(Object.values(filledSlots))
     for (const e of lcuSession.enemies) {
-      if (!e.role || e.role === 'fill') {
-        const primary = champPrimaryRole(e.champion)
-        if (primary && !filledSlots[primary]) {
-          filledSlots[primary] = e.champion
+      if (placed.has(e.champion)) continue
+      const primary = champPrimaryRole(e.champion)
+      if (primary && !filledSlots[primary]) {
+        filledSlots[primary] = e.champion
+      } else {
+        // Try secondary (flex) role before falling back to first empty slot
+        const secondary = champSecondaryRole(e.champion)
+        if (secondary && !filledSlots[secondary]) {
+          filledSlots[secondary] = e.champion
         } else {
-          // Try secondary (flex) role before falling back to first empty slot
-          const secondary = champSecondaryRole(e.champion)
-          if (secondary && !filledSlots[secondary]) {
-            filledSlots[secondary] = e.champion
-          } else {
-            for (const r of knownRoles) {
-              if (!filledSlots[r]) { filledSlots[r] = e.champion; break }
-            }
+          for (const r of knownRoles) {
+            if (!filledSlots[r]) { filledSlots[r] = e.champion; break }
           }
         }
       }
+      placed.add(e.champion)
     }
 
     setEnemies(prev => {
@@ -685,6 +707,14 @@ export default function App() {
     if (!IS_TAURI) return
     window.__TAURI__.core.invoke('set_overlay_shortcut', { shortcut: overlayHotkey }).catch(() => {})
   }, [overlayHotkey])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon-overlay-scale', String(overlayScale))
+  }, [overlayScale])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon-overlay-transparent', String(overlayTransparent))
+  }, [overlayTransparent])
 
   // Publish the resolved draft to localStorage so the overlay window can read it.
   // The overlay reads this instead of doing its own LCU role-resolution, so manual
@@ -1215,6 +1245,10 @@ export default function App() {
               onOverlayEnabledChange={setOverlayEnabled}
               overlayHotkey={overlayHotkey}
               onOverlayHotkeyChange={setOverlayHotkey}
+              overlayScale={overlayScale}
+              onOverlayScaleChange={setOverlayScale}
+              overlayTransparent={overlayTransparent}
+              onOverlayTransparentChange={setOverlayTransparent}
               pool={championPool}
               onPoolAdd={handlePoolAdd}
               onPoolRemove={handlePoolRemove}

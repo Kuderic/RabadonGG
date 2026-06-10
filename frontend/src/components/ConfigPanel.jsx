@@ -78,6 +78,8 @@ export default function ConfigPanel({
   lowDetail, onLowDetailChange,
   overlayEnabled, onOverlayEnabledChange,
   overlayHotkey, onOverlayHotkeyChange,
+  overlayScale = 100, onOverlayScaleChange,
+  overlayTransparent = true, onOverlayTransparentChange,
   pool = [], onPoolAdd, onPoolRemove, onPoolRoleChange,
   poolVariant, onPoolVariantChange, onAddRole, onRemoveRole, onToggleRole,
   champions = [], playerRole,
@@ -315,6 +317,29 @@ export default function ConfigPanel({
               <HotkeyCapture value={overlayHotkey} onChange={onOverlayHotkeyChange} />
             </div>
             <span className="config-hint">Default: Ctrl+ArrowDown — press this combo to show/hide the overlay at any time</span>
+            <div className="config-row">
+              <label className="config-check-label">
+                <input
+                  type="checkbox"
+                  checked={!!overlayTransparent}
+                  onChange={e => onOverlayTransparentChange(e.target.checked)}
+                />
+                Transparent overlay background
+              </label>
+            </div>
+            <div className="config-row config-row--spaced">
+              <label className="config-inline-label">
+                Overlay size
+                <input
+                  type="range"
+                  className="weight-slider"
+                  min={70} max={150} step={5}
+                  value={overlayScale}
+                  onChange={e => onOverlayScaleChange(+e.target.value)}
+                />
+                <span className="weight-val">{overlayScale}%</span>
+              </label>
+            </div>
           </>
         )}
       </div>

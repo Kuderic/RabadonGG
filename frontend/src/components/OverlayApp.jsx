@@ -108,14 +108,48 @@ export default function OverlayApp() {
 
   // Draft state written by the main window on every relevant change.
   const [draft, setDraft] = useState(readDraft)
+
+  // Overlay appearance settings — read from localStorage, react to changes from main window.
+  const [overlayScale, setOverlayScale] = useState(
+    () => parseInt(localStorage.getItem('rabadon-overlay-scale') || '100', 10)
+  )
+  const [overlayTransparent, setOverlayTransparent] = useState(
+    () => localStorage.getItem('rabadon-overlay-transparent') !== 'false'
+  )
+
   useEffect(() => {
     const handler = e => {
-      if (e.key !== 'rabadon-overlay-draft') return
-      try { setDraft(JSON.parse(e.newValue || 'null')) } catch {}
+      if (e.key === 'rabadon-overlay-draft') {
+        try { setDraft(JSON.parse(e.newValue || 'null')) } catch {}
+      } else if (e.key === 'rabadon-overlay-scale') {
+        setOverlayScale(parseInt(e.newValue || '100', 10))
+      } else if (e.key === 'rabadon-overlay-transparent') {
+        setOverlayTransparent(e.newValue !== 'false')
+      }
     }
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
   }, [])
+
+  // Apply scale: zoom the whole overlay window and resize the Tauri window to match.
+  useEffect(() => {
+    const scale = overlayScale / 100
+    document.documentElement.style.zoom = scale
+    if (IS_TAURI) {
+      window.__TAURI__.core.invoke('resize_overlay', {
+        width: Math.round(362 * scale),
+        height: Math.round(510 * scale),
+      }).catch(() => {})
+    }
+  }, [overlayScale])
+
+  // Apply transparency: adjust the panel background opacity via CSS custom property.
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--overlay-bg-alpha',
+      overlayTransparent ? '0.82' : '0.97'
+    )
+  }, [overlayTransparent])
 
   // Restore saved position on mount + persist on drag.
   useEffect(() => {
@@ -218,7 +252,7 @@ export default function OverlayApp() {
           <span className="overlay-logo" data-tauri-drag-region />
           <span className="overlay-word" data-tauri-drag-region>RABADON.GG</span>
           <span className="overlay-head-spacer" data-tauri-drag-region />
-          <span className="overlay-patch">{patch}</span>
+          <span className="overlay-patch">{patch === '30' ? '30d' : patch}</span>
           <button className="overlay-close" onClick={handleClose} title="Hide overlay">✕</button>
         </div>
 

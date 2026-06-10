@@ -2239,6 +2239,12 @@ html[data-desktop] body {
   overflow: hidden;
 }
 
+/* overflow:clip (stricter than hidden) prevents CSS zoom from making the html
+   element scrollable, which would let scrollIntoView push the titlebar off-screen */
+html[data-desktop] {
+  overflow: clip;
+}
+
 html[data-desktop] #root {
   height: 100vh;
   display: flex;
@@ -3418,8 +3424,8 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 
 /* The visible panel */
 .overlay-panel {
-  width: 322px;
-  background: linear-gradient(180deg, rgba(11,15,24,0.95), rgba(8,11,20,0.95));
+  width: 360px;
+  background: linear-gradient(180deg, rgba(11,15,24,var(--overlay-bg-alpha,0.82)), rgba(8,11,20,var(--overlay-bg-alpha,0.82)));
   border: 1px solid rgba(200,155,60,0.50);
   border-radius: 3px;
   -webkit-backdrop-filter: blur(12px);
