@@ -2256,12 +2256,16 @@ body {
 
 :root { --titlebar-h: 40px; }
 
-/* overflow:clip on html, body, and #root: stricter than hidden — prevents
-   CSS zoom from making any ancestor scrollable, so scrollIntoView only
-   ever scrolls .app-container and never pushes the titlebar off-screen */
 html[data-desktop],
 html[data-desktop] body {
   height: 100%;
+  overflow: hidden;
+}
+
+/* overflow:clip (stricter than hidden) on html prevents accidental scrolling
+   of the document root. body and #root stay as hidden (not clip) so that
+   position:fixed modals (changelog, etc.) are not clipped. */
+html[data-desktop] {
   overflow: clip;
 }
 
@@ -2269,7 +2273,7 @@ html[data-desktop] #root {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: clip;
+  overflow: hidden;
 }
 
 html[data-desktop] .app-container {

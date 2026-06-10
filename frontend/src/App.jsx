@@ -758,7 +758,8 @@ export default function App() {
   useEffect(() => {
     if (!IS_TAURI) return
     localStorage.setItem('rabadon_zoom', String(zoomLevel))
-    document.documentElement.style.zoom = zoomLevel
+    // Zoom is applied via inline style on the wrapper div inside .app-container
+    // (not on documentElement) so scrollIntoView only ever scrolls .app-container.
   }, [zoomLevel])
 
   // Overlay → main: when user clicks a pick in the overlay, focus this window and open the lookup.
@@ -1116,6 +1117,7 @@ export default function App() {
     <>
       {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} version={__APP_VERSION__} onShowChangelog={() => setShowChangelog(true)} />}
       <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
+      <div style={IS_TAURI ? { zoom: zoomLevel } : undefined}>
       {updateInfo && (
         <div className="update-banner" role="status" aria-live="polite">
           <span className="update-banner-text">
@@ -1299,6 +1301,7 @@ export default function App() {
       <footer className="site-footer">
         <p>Rabadon.GG isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
       </footer>
+      </div>{/* end zoom wrapper */}
     </div>
     {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
     </>

@@ -1,3 +1,9 @@
+## What's new in 1.1.10
+
+### Bug fixes
+- Fixed zoom scroll bug (for real this time): CSS zoom is now applied to a wrapper div inside `.app-container` instead of the document root — `scrollIntoView` can only scroll `.app-container` and can no longer push the titlebar off-screen
+- Fixed the What's New panel not opening when clicking the version number in the titlebar — `overflow: clip` on `body` and `#root` was clipping `position: fixed` modals; reverted those two elements back to `overflow: hidden`
+
 ## What's new in 1.1.9
 
 ### Bug fixes
