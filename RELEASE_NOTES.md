@@ -1,3 +1,8 @@
+## What's new in 1.1.16
+
+### Changes
+- **Overlay now sorts by Δ only** — top picks list, My Pool tab, and "Your pick" rank all use draft-specific delta as the sort key, matching the main app's default. Previously the overlay used WR + Δ (backend order).
+
 ## What's new in 1.1.15
 
 ### Bug fixes

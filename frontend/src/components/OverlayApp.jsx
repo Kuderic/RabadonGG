@@ -235,9 +235,16 @@ export default function OverlayApp() {
     try {
       const result = await getRecommendations(role, filteredAllies, filteredEnemies, patch, tier, poolForRequest)
       const allRecs = result.recommendations || []
-      setRecommendations(allRecs.slice(0, 5))
-      // Filter out injected intent champ from pool display
-      setPoolPicks((result.pool_picks || []).filter(p => poolForRole.includes(p.champion)).slice(0, 5))
+      // Sort by delta only — matches the main app's default sort
+      const deltaScore = r => {
+        const { totalDelta, customOffset } = computeComponents(r, DEFAULT_CONFIG, role)
+        return totalDelta + customOffset
+      }
+      const sortedByDelta = [...allRecs].sort((a, b) => deltaScore(b) - deltaScore(a))
+      setRecommendations(sortedByDelta.slice(0, 5))
+      // Filter out injected intent champ from pool display, sort by delta
+      const poolFiltered = (result.pool_picks || []).filter(p => poolForRole.includes(p.champion))
+      setPoolPicks([...poolFiltered].sort((a, b) => deltaScore(b) - deltaScore(a)).slice(0, 5))
 
       // Pin "your pick" section if there's an intent champion
       if (intentChamp) {
@@ -245,12 +252,8 @@ export default function OverlayApp() {
           p => p.champion.toLowerCase() === intentChamp.toLowerCase()
         )
         if (intentRec) {
-          const score = r => {
-            const { totalDelta, customOffset } = computeComponents(r, DEFAULT_CONFIG, role)
-            return r.win_rate + totalDelta + customOffset
-          }
-          const intentScore = score(intentRec)
-          const rank = allRecs.filter(r => score(r) > intentScore).length + 1
+          const intentScore = deltaScore(intentRec)
+          const rank = allRecs.filter(r => deltaScore(r) > intentScore).length + 1
           // field = allRecs + the intent champ itself (which is in pool_picks, not allRecs)
           setYourPick({ ...intentRec, rank, field: allRecs.length + 1 })
         } else {
