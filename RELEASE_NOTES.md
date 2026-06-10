@@ -1,3 +1,12 @@
+## What's new in 1.1.15
+
+### Bug fixes
+- **Overlay transparent setting now works** — toggling "Transparent background" in Settings now clearly changes the overlay between a frosted semi-transparent panel (default, 65% opacity + blur) and a near-solid opaque panel (96% opacity, no blur). Fixed by switching from a fragile CSS variable inside `rgba()` to a reliable class toggle.
+
+### Changes
+- **Titlebar version chip label** — now reads "v1.1.15 · Patch notes" so users know it's clickable.
+- Removed the duplicate "What's New" button from the header (the titlebar chip is the canonical entry point).
+
 ## What's new in 1.1.14
 
 ### New

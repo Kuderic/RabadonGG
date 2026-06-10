@@ -175,12 +175,11 @@ export default function OverlayApp() {
     return () => ro.disconnect()
   }, [overlayScale])
 
-  // Apply transparency: adjust the panel background opacity via CSS custom property.
+  // Apply transparency via a class toggle. Class-based is more reliable than
+  // var() inside rgba() in some WebView2 builds.
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--overlay-bg-alpha',
-      overlayTransparent ? '0.82' : '0.97'
-    )
+    if (!panelRef.current) return
+    panelRef.current.classList.toggle('overlay-panel--opaque', !overlayTransparent)
   }, [overlayTransparent])
 
   // Restore saved position on mount + persist on drag.

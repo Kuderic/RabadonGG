@@ -39,8 +39,8 @@ export default function TitleBar({ lcuConnected, lcuSession, version, onShowChan
       </div>
       <div className="tb-spacer" />
       {version && (
-        <button className="tb-whats-new" onClick={onShowChangelog} title="What's new">
-          v{version}
+        <button className="tb-whats-new" onClick={onShowChangelog} title="What's new in this version">
+          v{version} · Patch notes
         </button>
       )}
       <div className="tb-controls">

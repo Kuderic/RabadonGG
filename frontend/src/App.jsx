@@ -1153,11 +1153,6 @@ export default function App() {
               onClick={() => setActiveTab('download')}
             >Download</button>
           )}
-          <button
-            className="header-secondary-link header-whats-new"
-            onClick={() => setShowChangelog(true)}
-            title="What's new in this version"
-          >What&apos;s New</button>
           <span className="header-secondary-sep" />
           <a
             href="https://github.com/Kuderic/RabadonGG"
