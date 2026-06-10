@@ -1116,7 +1116,7 @@ export default function App() {
 
   return (
     <>
-      {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} version={__APP_VERSION__} onShowChangelog={() => setShowChangelog(true)} />}
+      {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} />}
       <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
       <div style={IS_TAURI ? { zoom: zoomLevel } : undefined}>
       {updateInfo && (
@@ -1153,6 +1153,11 @@ export default function App() {
               onClick={() => setActiveTab('download')}
             >Download</button>
           )}
+          <button
+            className="header-secondary-link header-whats-new"
+            onClick={() => setShowChangelog(true)}
+            title="What's new in this version"
+          >What&apos;s New</button>
           <span className="header-secondary-sep" />
           <a
             href="https://github.com/Kuderic/RabadonGG"
@@ -1244,6 +1249,7 @@ export default function App() {
                     lookupResult={lookupResult}
                     onLookupChange={setLookupChampion}
                     onAddToPool={(champion, role) => handlePoolAdd(champion, [role])}
+                    onRemoveFromPool={handlePoolRemove}
                   />
                 </Suspense>
               </div>

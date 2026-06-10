@@ -3114,6 +3114,16 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 }
 .card-pool-star-add:hover { color: var(--gold-mid); opacity: 1; }
 .card-pool-star-add svg { width: 16px; height: 16px; }
+.card-pool-star--remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--gold);
+  filter: drop-shadow(0 0 5px rgba(200,155,60,0.55));
+  transition: color 0.15s, filter 0.15s;
+  flex-shrink: 0;
+}
+.card-pool-star--remove:hover { color: var(--ink-4); filter: none; }
+.card-pool-star--remove svg { width: 16px; height: 16px; }
 .card-champion-name { gap: 6px; }
 
 /* In-pool Overall rows get a gold left accent bar + faint gold tint so a

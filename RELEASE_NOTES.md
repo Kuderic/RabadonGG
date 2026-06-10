@@ -1,3 +1,13 @@
+## What's new in 1.1.13
+
+### New
+- **My Champions: rank numbers** — the "My Champions" tab now shows each champion's rank position (1, 2, 3…) instead of a star badge on the left, matching the Overall tab layout.
+- **Click gold star to remove from pool** — in the Overall tab, clicking the glowing gold star next to a champion you've pooled now removes them from your pool. The star dims on hover to signal the action.
+- **What's New button in header** — patch notes are now accessible from a "What's New" button in the top-right of the header. Works on both the web and desktop app.
+
+### Changes
+- Removed the version chip from the desktop titlebar (it was unclickable due to the drag region swallowing pointer events). The What's New button in the header replaces it and works reliably.
+
 ## What's new in 1.1.12
 
 ### New

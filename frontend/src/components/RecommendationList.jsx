@@ -30,17 +30,21 @@ function computeAdjustedScore(rec, sortMode, config, playerRole, modifiers) {
   return rec.win_rate + customOffset + totalDelta
 }
 
-function PoolBadge() {
-  return (
-    <span className="pool-badge" title="In your pool">
-      <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
-        <path d="M7 1l1.6 3.3 3.6.5-2.6 2.5.6 3.6L7 9.3l-3.2 1.6.6-3.6L1.8 4.8l3.6-.5z"/>
-      </svg>
-    </span>
-  )
-}
-
-function PoolStar() {
+function PoolStar({ onClick }) {
+  if (onClick) {
+    return (
+      <button
+        className="card-pool-star card-pool-star--remove"
+        title="Remove from your champion pool"
+        onClick={e => { e.stopPropagation(); onClick() }}
+        type="button"
+      >
+        <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+          <path d="M7 1l1.6 3.3 3.6.5-2.6 2.5.6 3.6L7 9.3l-3.2 1.6.6-3.6L1.8 4.8l3.6-.5z"/>
+        </svg>
+      </button>
+    )
+  }
   return (
     <span className="card-pool-star" title="In your champion pool">
       <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
@@ -151,11 +155,10 @@ function LookupInput({ lookupChampion, champions, onLookupChange }) {
   )
 }
 
-function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool, tier, patch, onAddToPool }) {
+function RecCard({ rec, rank, isPool, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool, tier, patch, onAddToPool, onRemoveFromPool }) {
   const lowN = hasLowN(rec, config)
   const { adjSyn, adjCtr, totalDelta, customOffset } = computeComponents(rec, config, playerRole, wrModifiers)
   const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
-  const isPool = rank === '★'
   const isLookup = rank === '?'
 
   return (
@@ -169,7 +172,7 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
         } : undefined}
       >
         <div className="card-header">
-          {isPool ? <PoolBadge /> : isLookup ? <LookupBadge /> : <RankBadge rank={rank} />}
+          {isLookup ? <LookupBadge /> : <RankBadge rank={rank} />}
           <img
             src={champIconUrl(rec.champion)}
             alt={rec.champion}
@@ -182,7 +185,7 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
           <span className="card-champion-name">
             {rec.champion}
             {!isPool && !isLookup && (inPool
-              ? <PoolStar />
+              ? <PoolStar onClick={onRemoveFromPool ? () => onRemoveFromPool(rec.champion) : undefined} />
               : onAddToPool && <AddToPoolStar onClick={() => onAddToPool(rec.champion, playerRole)} />
             )}
             <ExternalLink champion={rec.champion} tier={tier} patch={patch} />
@@ -266,7 +269,7 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool }) {
   const [recTab, setRecTab] = useState('overall')
   const [sortOverall, setSortOverall] = useState('rating')
   const [sortPool, setSortPool]       = useState('delta')
@@ -501,6 +504,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
                 tier={tier}
                 patch={patch}
                 onAddToPool={onAddToPool}
+                onRemoveFromPool={onRemoveFromPool}
               />
             ))}
           </div>
@@ -528,7 +532,8 @@ export default function RecommendationList({ recommendations, loading, refreshin
                 <RecCard
                   key={rec.champion}
                   rec={rec}
-                  rank="★"
+                  rank={idx + 1}
+                  isPool
                   isSelected={selectedPoolRec === idx}
                   onSelect={() => onSelectPoolRec(selectedPoolRec === idx ? null : idx)}
                   config={config}
@@ -536,8 +541,8 @@ export default function RecommendationList({ recommendations, loading, refreshin
                   wrModifiers={wrModifiers}
                   sortMode={sortMode}
                   breakdownRef={selectedPoolRec === idx ? poolBreakdownRef : null}
-                tier={tier}
-                patch={patch}
+                  tier={tier}
+                  patch={patch}
                 />
               ))
             )}
