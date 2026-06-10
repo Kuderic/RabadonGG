@@ -42,8 +42,16 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             desktop/src-tauri/target
-          key: windows-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+          # Include Cargo.toml in the key so a version bump (Cargo.toml change)
+          # busts the cache — prevents stale NSIS bundles named after the old version
+          key: windows-cargo-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}-${{ hashFiles('desktop/src-tauri/Cargo.toml') }}
           restore-keys: windows-cargo-
+
+      # Clear the NSIS bundle output so tauri build always produces a fresh
+      # installer with the correct version name (belt-and-suspenders vs. cache)
+      - name: Clear stale NSIS bundle
+        run: Remove-Item -Recurse -Force desktop/src-tauri/target/release/bundle/nsis -ErrorAction SilentlyContinue
+        shell: pwsh
 
       # ── Tauri build ────────────────────────────────────────────────────────
       - name: Install Tauri CLI
