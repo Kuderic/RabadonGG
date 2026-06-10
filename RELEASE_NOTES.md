@@ -1,3 +1,16 @@
+## What's new in 1.1.14
+
+### New
+- **No pool size limit** — your champion pool can now hold as many champions as you want (was capped at 20 in the backend).
+
+### Bug fixes
+- **Desktop titlebar version chip clickable** — the "v1.1.14" chip is back in the titlebar and now properly receives clicks (fixed pointer-events on the drag region).
+- **What's New respects Ctrl+/− zoom** — the changelog modal now lives inside the zoom wrapper so it scales correctly with the rest of the app.
+
+### Changes
+- **Recommended Picks default sort is now Δ only** — the draft-specific delta is the most useful first signal; WR + Δ is still a click away.
+- "Δ only" sort button moved to first position.
+
 ## What's new in 1.1.13
 
 ### New

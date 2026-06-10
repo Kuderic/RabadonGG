@@ -97,9 +97,9 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
                 logger.error(f"Error scoring {candidate}: {e}")
                 return None
 
-    # Parse pool: deduplicate, filter drafted champions, cap at 20
+    # Parse pool: deduplicate and filter drafted champions
     pool_names = list(dict.fromkeys(p.strip() for p in request.pool if p.strip()))
-    pool_names = [p for p in pool_names if p.lower() not in drafted][:20]
+    pool_names = [p for p in pool_names if p.lower() not in drafted]
 
     # Score candidates and pool in one gather so pool doesn't add latency
     all_names = candidates + pool_names

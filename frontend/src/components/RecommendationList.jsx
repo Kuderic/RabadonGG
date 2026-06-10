@@ -271,7 +271,7 @@ function SortHeaders({ sortMode, onSort }) {
 
 export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool }) {
   const [recTab, setRecTab] = useState('overall')
-  const [sortOverall, setSortOverall] = useState('rating')
+  const [sortOverall, setSortOverall] = useState('delta')
   const [sortPool, setSortPool]       = useState('delta')
   const sortMode    = recTab === 'pool' ? sortPool : sortOverall
   const setSortMode = recTab === 'pool' ? setSortPool : setSortOverall
@@ -414,13 +414,13 @@ export default function RecommendationList({ recommendations, loading, refreshin
       <div className="rec-toolbar">
         <span className="rec-toolbar-label">Sort by</span>
         <button
-          className={`sort-btn ${sortMode === 'rating' ? 'sort-btn--active' : ''}`}
-          onClick={() => setSortMode('rating')}
-        >WR + Δ</button>
-        <button
           className={`sort-btn ${sortMode === 'delta' ? 'sort-btn--active' : ''}`}
           onClick={() => setSortMode('delta')}
         >Δ only</button>
+        <button
+          className={`sort-btn ${sortMode === 'rating' ? 'sort-btn--active' : ''}`}
+          onClick={() => setSortMode('rating')}
+        >WR + Δ</button>
         <div className="rec-toolbar-spacer" />
 
         <label className="penalty-toggle" title="Weight matchups with fewer games than the threshold (configure in Settings)">

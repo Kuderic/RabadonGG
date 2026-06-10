@@ -2322,7 +2322,8 @@ html[data-desktop] .app-container {
 
 .titlebar > * { pointer-events: none; }
 .titlebar .tb-controls,
-.titlebar .tb-controls * { pointer-events: auto; }
+.titlebar .tb-controls *,
+.titlebar .tb-whats-new { pointer-events: auto; }
 
 .tb-brand {
   display: flex;

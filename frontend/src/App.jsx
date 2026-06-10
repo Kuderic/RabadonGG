@@ -1116,7 +1116,7 @@ export default function App() {
 
   return (
     <>
-      {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} />}
+      {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} version={__APP_VERSION__} onShowChangelog={() => setShowChangelog(true)} />}
       <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
       <div style={IS_TAURI ? { zoom: zoomLevel } : undefined}>
       {updateInfo && (
@@ -1308,9 +1308,9 @@ export default function App() {
       <footer className="site-footer">
         <p>Rabadon.GG isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
       </footer>
+      {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
       </div>{/* end zoom wrapper */}
     </div>
-    {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
     </>
   )
 }
