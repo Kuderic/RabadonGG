@@ -41,7 +41,7 @@ function PickRow({ rec, rank, role, onFocus, you }) {
   const pickClass = [
     'overlay-pick',
     rank === 1 && !you ? 'overlay-pick--best' : '',
-    you ? 'overlay-pick--you' : 'overlay-pick--clickable',
+    you ? 'overlay-pick--you overlay-pick--clickable' : 'overlay-pick--clickable',
   ].filter(Boolean).join(' ')
 
   const rankClass = [
@@ -52,8 +52,8 @@ function PickRow({ rec, rank, role, onFocus, you }) {
   return (
     <div
       className={pickClass}
-      onClick={!you ? onFocus : undefined}
-      title={!you ? 'Click to open full breakdown in Rabadon.GG' : undefined}
+      onClick={onFocus}
+      title={you ? 'Click to open lookup in Rabadon.GG' : 'Click to open full breakdown in Rabadon.GG'}
     >
       <span className={rankClass}>{rank}</span>
       <img className="overlay-icon" src={champIconUrl(rec.champion)} alt={rec.champion} onError={hideImg} />
@@ -252,7 +252,8 @@ export default function OverlayApp() {
           }
           const intentScore = score(intentRec)
           const rank = allRecs.filter(r => score(r) > intentScore).length + 1
-          setYourPick({ ...intentRec, rank, field: allRecs.length })
+          // field = allRecs + the intent champ itself (which is in pool_picks, not allRecs)
+          setYourPick({ ...intentRec, rank, field: allRecs.length + 1 })
         } else {
           setYourPick(null)
         }
@@ -353,7 +354,7 @@ export default function OverlayApp() {
                     ? <span className="cmp best">✓ best available</span>
                     : <span className="cmp">#{yourPick.rank} of {yourPick.field}</span>}
                 </div>
-                <PickRow rec={yourPick} rank={yourPick.rank} role={role} you />
+                <PickRow rec={yourPick} rank={yourPick.rank} role={role} you onFocus={() => handleFocusChamp(yourPick.champion)} />
               </div>
             ) : hasSession && (
               <div className="overlay-yourpick-empty">Hover a champion to compare</div>

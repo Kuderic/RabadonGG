@@ -1,3 +1,15 @@
+## What's new in 1.1.12
+
+### New
+- **Recommendation count badge** — a pill badge next to the "Recommended Picks" heading now shows the total number of champions scored for the current draft (e.g. "30"), so you always know the full field size.
+- **Lookup rank line** — when you look up a champion by name, a "Ranked **#N** of M for this draft" line now appears above the breakdown panel. Works for both pool champions and off-meta picks (the off-meta pick is counted as +1 to the field).
+- **Overlay: "Your pick" is now clickable** — clicking the pinned Your Pick row in the overlay opens the main window and pre-fills the champion lookup, so you can jump straight to the full breakdown.
+
+### Bug fixes
+- **Overlay: "#31 of 30" rank overflow fixed** — the intent champion is in `pool_picks`, not `recommendations`, so the field is now correctly set to `allRecs.length + 1` instead of `allRecs.length`.
+- **Lookup rank field size corrected** — when a looked-up champion is not in the regular recommendations pool, the field is now `recommendations.length + 1` (not capped at `recommendations.length`), preventing "#31 of 30"-style display bugs.
+- **Removed 30-champion cap** — the backend now returns all scored champions instead of capping at 30, ensuring the overlay rank and recommendation count reflect the full pool.
+
 ## What's new in 1.1.11
 
 ### New

@@ -288,6 +288,22 @@ export default function RecommendationList({ recommendations, loading, refreshin
     setVisibleCount(10)
   }, [playerRole])
 
+  const lookupRank = useMemo(() => {
+    if (!lookupResult || !recommendations.length) return null
+    const score = r => computeAdjustedScore(r, 'rating', config, playerRole, wrModifiers)
+    // Prefer using the recommendations version of the champion to avoid pool_picks
+    // scoring discrepancies that can make rank exceed field.
+    const inRecs = recommendations.find(
+      r => r.champion.toLowerCase() === lookupResult.champion.toLowerCase()
+    )
+    const refScore = score(inRecs ?? lookupResult)
+    const rank = recommendations.filter(r =>
+      r.champion.toLowerCase() !== lookupResult.champion.toLowerCase() && score(r) > refScore
+    ).length + 1
+    const field = inRecs ? recommendations.length : recommendations.length + 1
+    return { rank, field }
+  }, [lookupResult, recommendations, config, playerRole, wrModifiers])
+
   const { sorted, penalizedCount } = useMemo(() => {
     if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
 
@@ -337,7 +353,12 @@ export default function RecommendationList({ recommendations, loading, refreshin
   return (
     <div className="recommendations-list">
       <div className="rec-panel-heading">
-        <span className="rec-panel-title">Recommended Picks</span>
+        <span className="rec-panel-title">
+          Recommended Picks
+          {recommendations.length > 0 && (
+            <span className="rec-result-count">{recommendations.length}</span>
+          )}
+        </span>
         <div className="rec-role-switch" role="tablist" aria-label="View top picks for a role">
           {ROLES.map(r => (
             <button
@@ -434,16 +455,23 @@ export default function RecommendationList({ recommendations, loading, refreshin
       {lookupChampion && (
         <div className="lookup-result-section">
           {lookupResult ? (
-            <BreakdownPanel
-              rec={lookupResult}
-              rank="?"
-              onClose={() => onLookupChange(null)}
-              settings={config}
-              playerRole={playerRole}
-              modifiers={wrModifiers}
-              tier={tier}
-              patch={patch}
-            />
+            <>
+              {lookupRank != null && (
+                <div className="lookup-rank-line">
+                  Ranked <strong>#{lookupRank.rank}</strong> of {lookupRank.field} for this draft
+                </div>
+              )}
+              <BreakdownPanel
+                rec={lookupResult}
+                rank={lookupRank?.rank ?? '?'}
+                onClose={() => onLookupChange(null)}
+                settings={config}
+                playerRole={playerRole}
+                modifiers={wrModifiers}
+                tier={tier}
+                patch={patch}
+              />
+            </>
           ) : !refreshing && (
             <div className="lookup-no-data">{lookupChampion} has no data for this role — they may not be played here.</div>
           )}

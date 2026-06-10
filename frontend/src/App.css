@@ -626,6 +626,17 @@ body {
   text-transform: uppercase;
   letter-spacing: 2.5px;
   color: var(--ink-2);
+  display: flex; align-items: center; gap: 8px;
+}
+.rec-result-count {
+  font-family: var(--font-stat);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+  text-transform: none;
+  color: var(--ink-4);
+  background: var(--panel-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 1px 7px;
 }
 .rec-panel-role {
   font-family: var(--font-stat);
@@ -1008,6 +1019,12 @@ body {
 .lookup-clear:hover { color: var(--ink-2); }
 .lookup-input-wrap .champ-autocomplete { top: calc(100% + 4px); left: 0; right: 0; }
 .lookup-result-section { margin-bottom: 12px; }
+.lookup-rank-line {
+  padding: 6px 14px 5px;
+  font-size: 12px; color: var(--ink-3);
+  border-bottom: 1px solid var(--hairline);
+}
+.lookup-rank-line strong { color: var(--gold-mid); font-weight: 600; }
 .lookup-no-data {
   padding: 10px 12px;
   font-size: 12px;
