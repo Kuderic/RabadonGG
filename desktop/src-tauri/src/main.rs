@@ -296,6 +296,16 @@ async fn control_overlay(app: tauri::AppHandle, action: String) -> Result<(), St
     Ok(())
 }
 
+/// Show and focus the main window (called from the overlay when a pick is clicked).
+#[tauri::command]
+async fn focus_main(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+    Ok(())
+}
+
 /// Register (or re-register) the global shortcut that toggles the overlay.
 /// Called from the frontend on startup and whenever the user changes the hotkey.
 #[tauri::command]
@@ -510,7 +520,7 @@ async fn main() {
                 .build(app)?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url, control_overlay, set_overlay_shortcut])
+        .invoke_handler(tauri::generate_handler![get_lcu_session, open_url, control_overlay, set_overlay_shortcut, focus_main])
         .run(tauri::generate_context!())
         .expect("error while running Rabadon desktop");
 }

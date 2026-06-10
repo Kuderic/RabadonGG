@@ -710,6 +710,20 @@ export default function App() {
     document.documentElement.style.zoom = zoomLevel
   }, [zoomLevel])
 
+  // Overlay → main: when user clicks a pick in the overlay, focus this window and open the lookup.
+  useEffect(() => {
+    if (!IS_DESKTOP) return
+    const handler = e => {
+      if (e.key !== 'rabadon-overlay-focus') return
+      const champion = e.newValue
+      if (!champion) return
+      setActiveTab('draft')
+      setLookupChampion(champion)
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
+
   useEffect(() => {
     if (!IS_TAURI) return
     const onKey = e => {
@@ -1175,6 +1189,7 @@ export default function App() {
                     lookupChampion={lookupChampion}
                     lookupResult={lookupResult}
                     onLookupChange={setLookupChampion}
+                    onAddToPool={(champion, role) => handlePoolAdd(champion, [role])}
                   />
                 </Suspense>
               </div>

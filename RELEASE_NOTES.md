@@ -1,3 +1,12 @@
+## What's new in 1.1.7
+
+### New
+- **Overlay → main app**: click any pick row in the overlay to open the full breakdown panel for that champion in the main window
+- **Quick pool add**: each recommendation card now shows a faint star outline — click it to add that champion to your pool for the role you're currently viewing; the star fills gold once they're in your pool
+
+### Changes
+- Sample size penalty reverted to linear weighting (`n / threshold`) — the square-root curve was producing too much noise at the high end of the rankings
+
 ## What's new in 1.1.6
 
 ### Bug fixes

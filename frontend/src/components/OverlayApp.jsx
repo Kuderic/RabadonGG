@@ -33,13 +33,17 @@ export function hasLowSample(rec) {
     .some(b => b.n > 0 && b.n < thr)
 }
 
-function PickRow({ rec, rank, role }) {
+function PickRow({ rec, rank, role, onFocus }) {
   const { synContrib, ctrContrib, totalDelta, customOffset } = computeComponents(rec, DEFAULT_CONFIG, role)
   const adjusted = totalDelta + customOffset
   const lowN = hasLowSample(rec)
 
   return (
-    <div className={rank === 1 ? 'overlay-pick overlay-pick--best' : 'overlay-pick'}>
+    <div
+      className={rank === 1 ? 'overlay-pick overlay-pick--best overlay-pick--clickable' : 'overlay-pick overlay-pick--clickable'}
+      onClick={onFocus}
+      title="Click to open full breakdown in Rabadon.GG"
+    >
       <span className={rank <= 3 ? 'overlay-rank' : 'overlay-rank overlay-rank--dim'}>{rank}</span>
       <img className="overlay-icon" src={champIconUrl(rec.champion)} alt={rec.champion} onError={hideImg} />
       <div className="overlay-mid">
@@ -130,6 +134,11 @@ export default function OverlayApp() {
   }, [])
 
   const handleClose = () => { getTauriWindow()?.hide() }
+
+  const handleFocusChamp = useCallback((champion) => {
+    try { localStorage.setItem('rabadon-overlay-focus', champion) } catch (_) {}
+    if (IS_TAURI) window.__TAURI__.core.invoke('focus_main').catch(() => {})
+  }, [])
 
   const fetchRecs = useCallback(async (role, allies, enemies, patch, tier, pool) => {
     if (!role || role === 'fill') return
@@ -236,7 +245,7 @@ export default function OverlayApp() {
             </div>
             <div className="overlay-picks">
               {(tab === 'pool' ? poolPicks : recommendations).map((rec, i) => (
-                <PickRow key={rec.champion} rec={rec} rank={i + 1} role={role} />
+                <PickRow key={rec.champion} rec={rec} rank={i + 1} role={role} onFocus={() => handleFocusChamp(rec.champion)} />
               ))}
             </div>
           </>

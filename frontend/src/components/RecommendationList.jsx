@@ -50,6 +50,21 @@ function PoolStar() {
   )
 }
 
+function AddToPoolStar({ onClick }) {
+  return (
+    <button
+      className="card-pool-star-add"
+      title="Add to your champion pool for this role"
+      onClick={e => { e.stopPropagation(); onClick() }}
+      type="button"
+    >
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+        <path d="M7 1l1.6 3.3 3.6.5-2.6 2.5.6 3.6L7 9.3l-3.2 1.6.6-3.6L1.8 4.8l3.6-.5z"/>
+      </svg>
+    </button>
+  )
+}
+
 function LookupBadge() {
   return (
     <span className="lookup-badge" title="Champion lookup">
@@ -136,7 +151,7 @@ function LookupInput({ lookupChampion, champions, onLookupChange }) {
   )
 }
 
-function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool, tier, patch }) {
+function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool, tier, patch, onAddToPool }) {
   const lowN = hasLowN(rec, config)
   const { adjSyn, adjCtr, totalDelta, customOffset } = computeComponents(rec, config, playerRole, wrModifiers)
   const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
@@ -166,7 +181,10 @@ function RecCard({ rec, rank, isSelected, onSelect, config, playerRole, wrModifi
           />
           <span className="card-champion-name">
             {rec.champion}
-            {!isPool && inPool && <PoolStar />}
+            {!isPool && !isLookup && (inPool
+              ? <PoolStar />
+              : onAddToPool && <AddToPoolStar onClick={() => onAddToPool(rec.champion, playerRole)} />
+            )}
             <ExternalLink champion={rec.champion} tier={tier} patch={patch} />
           </span>
           <div className="card-stats">
@@ -248,7 +266,7 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool }) {
   const [sortMode, setSortMode] = useState('rating')
   const [recTab, setRecTab] = useState('overall')
   const [visibleCount, setVisibleCount] = useState(10)
@@ -451,6 +469,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
                 inPool={poolChampions.has(rec.champion.toLowerCase())}
                 tier={tier}
                 patch={patch}
+                onAddToPool={onAddToPool}
               />
             ))}
           </div>

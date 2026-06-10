@@ -4,7 +4,7 @@ export function getMultiplier(n, config) {
   if (!config?.penalize) return 1
   if (!n || n <= 0) return 0
   if (n >= config.penalizeThreshold) return 1
-  return Math.sqrt(n / config.penalizeThreshold)
+  return n / config.penalizeThreshold
 }
 
 /**
