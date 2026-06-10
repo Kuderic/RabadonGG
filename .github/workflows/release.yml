@@ -172,9 +172,16 @@ jobs:
           Set-Content -Path "release_body.md" -Value $section -Encoding utf8
         shell: pwsh
 
+      # Give GitHub a moment to index the tag before creating the release,
+      # preventing the "not yet discoverable" timing issue.
+      - name: Wait for tag to be indexed
+        run: Start-Sleep -Seconds 10
+        shell: pwsh
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ steps.version.outputs.TAG }}
           name: "Rabadon.GG ${{ steps.version.outputs.TAG }}"
           draft: false

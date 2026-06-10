@@ -131,6 +131,12 @@ export default function OverlayApp() {
     return () => window.removeEventListener('storage', handler)
   }, [])
 
+  // Prevent scrollbars: the overlay window has fixed dimensions and resizes with zoom.
+  useEffect(() => {
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+  }, [])
+
   // Apply scale: zoom the whole overlay window and resize the Tauri window to match.
   useEffect(() => {
     const scale = overlayScale / 100
