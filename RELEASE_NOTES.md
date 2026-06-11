@@ -1,3 +1,9 @@
+## What's new in 1.2.2
+
+### Changes
+- **Rate-limited lolalytics client** — all backend data fetches now route through a centralized client capped at 10 concurrent connections and 30 requests per second, with a 30-second graceful timeout. Prevents server IP blacklisting under load.
+- **Faster recommendations** — route-level semaphore tuned from 5 → 15 concurrent scoring coroutines, reducing warm-cache latency by ~3×.
+
 ## What's new in 1.2.1
 
 ### Changes
