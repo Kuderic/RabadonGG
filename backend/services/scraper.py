@@ -24,6 +24,7 @@ from typing import Dict, List, Optional, Tuple
 import httpx
 
 from . import db
+from .lolalytics_client import get_client
 
 LOLA_API = "https://a1.lolalytics.com/mega/"
 DD_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json"
@@ -137,7 +138,7 @@ async def _ensure_champion_map(patch: str) -> None:
 
 async def _fetch(ep: str, lane: str, champ_slug: Optional[str], patch: str, tier: str = TIER,
                  days: int = 0, extra: Optional[Dict[str, str]] = None) -> dict:
-    """Single request to the lolalytics mega API."""
+    """Single request to the lolalytics mega API via the rate-limiting client."""
     params: dict = {
         "ep": ep,
         "v": "1",
@@ -153,9 +154,7 @@ async def _fetch(ep: str, lane: str, champ_slug: Optional[str], patch: str, tier
         params["c"] = champ_slug
     if extra:
         params.update(extra)
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(LOLA_API, params=params)
-    return resp.json()
+    return await get_client().fetch(params)
 
 
 VS_LANES = ["top", "jungle", "middle", "bottom", "support"]
@@ -260,9 +259,6 @@ async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
             # site's displayed tier list (e.g. ~52 bottom).
             if int(info.get("tier", 0)) > 0
         ]
-        # Sort by tier desc then win-rate desc so pool[:N] slices give the
-        # strongest candidates — used by the draft-overview open-slot cap.
-        entries.sort(key=lambda x: (int(x[1].get("tier", 0)), float(x[1].get("wr", 0))), reverse=True)
         names = [_id_to_slug[cid] for cid, _ in entries if cid in _id_to_slug]
         games_by_slug = {
             _slug(_id_to_slug[cid]): int(info.get("games", 0))

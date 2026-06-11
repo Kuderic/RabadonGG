@@ -68,7 +68,7 @@ async def recommend(request: RecommendRequest) -> RecommendResponse:
     drafted = {c["champion"].lower() for c in allies + enemies}
     candidates = [c for c in candidates if c.lower() not in drafted]
 
-    sem = asyncio.Semaphore(5)
+    sem = asyncio.Semaphore(15)
 
     async def _score_candidate(candidate: str) -> tuple | None:
         async with sem:

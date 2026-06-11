@@ -59,7 +59,7 @@ async def draft_overview(request: DraftOverviewRequest) -> DraftOverviewResponse
         if s.champion and s.champion.strip()
     }
 
-    sem = asyncio.Semaphore(50)
+    sem = asyncio.Semaphore(15)
 
     async def score_one(champion: str, role: str, allies: list, enemies: list) -> Recommendation | None:
         async with sem:

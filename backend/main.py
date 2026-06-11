@@ -60,16 +60,14 @@ app.include_router(lcu_router, prefix="/api", tags=["lcu"])
 app.include_router(draft_overview_router, prefix="/api", tags=["draft-overview"])
 
 
-async def _patch_has_lolalytics_data(patch: str, client: httpx.AsyncClient) -> bool:
+async def _patch_has_lolalytics_data(patch: str) -> bool:
     """Return True if lolalytics has live data for this patch (≥10 ranked champions)."""
+    from services.lolalytics_client import get_client
     try:
-        resp = await client.get(
-            "https://a1.lolalytics.com/mega/",
-            params={"ep": "list", "v": "1", "lane": "middle",
-                    "tier": "emerald_plus", "patch": patch, "queue": "420", "region": "all"},
-            timeout=4,
-        )
-        data = resp.json()
+        data = await get_client().fetch({
+            "ep": "list", "v": "1", "lane": "middle",
+            "tier": "emerald_plus", "patch": patch, "queue": "ranked", "region": "all",
+        })
         ranked = sum(1 for info in data.get("cid", {}).values() if int(info.get("tier", 0)) > 0)
         return ranked >= 10
     except Exception:
@@ -97,10 +95,9 @@ async def get_patches() -> dict:
                     break
 
         # Drop any leading candidates that DDragon listed before lolalytics has data
-        async with httpx.AsyncClient(timeout=5) as client:
-            while len(candidates) > 1 and not await _patch_has_lolalytics_data(candidates[0], client):
-                logger.info(f"Patch {candidates[0]} not yet live on lolalytics — skipping")
-                candidates.pop(0)
+        while len(candidates) > 1 and not await _patch_has_lolalytics_data(candidates[0]):
+            logger.info(f"Patch {candidates[0]} not yet live on lolalytics — skipping")
+            candidates.pop(0)
 
         return {"patches": candidates[:5]}
     except Exception as e:
@@ -200,6 +197,8 @@ async def startup_event():
 async def shutdown_event():
     """Run on application shutdown."""
     logger.info("Rabadon.GG API shutting down")
+    from services.lolalytics_client import get_client
+    await get_client().close()
 
 
 if __name__ == "__main__":
