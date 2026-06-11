@@ -101,12 +101,13 @@ function OvPickCard({ rec, role, side, rank, total, best, onOpen }) {
 }
 
 // ── open slot — top-3 picks inline ─────────────────────────────────────────
-function OvOpenSlot({ slot, side, isYou, config, onOpen }) {
+function OvOpenSlot({ slot, side, isYou, config, sortMode, onOpen }) {
   const { role, candidates } = slot
   const ranked = useMemo(() => (candidates || []).map(rec => {
     const c = computeComponents(rec, config, role)
-    return { rec, total: c.totalDelta, rating: rec.win_rate + c.totalDelta }
-  }).sort((a, b) => b.rating - a.rating).slice(0, 3), [candidates, config, role])
+    const rating = sortMode === 'delta' ? c.totalDelta : rec.win_rate + c.totalDelta
+    return { rec, total: c.totalDelta, rating }
+  }).sort((a, b) => b.rating - a.rating).slice(0, 3), [candidates, config, role, sortMode])
 
   return (
     <div className={`ov-slot is-open ov-slot--${side}${isYou ? ' ov-slot--you' : ''}`}>
@@ -128,7 +129,7 @@ function OvOpenSlot({ slot, side, isYou, config, onOpen }) {
 }
 
 // ── team column ────────────────────────────────────────────────────────────
-function OvColumn({ side, slots, youRole, config, onOpen }) {
+function OvColumn({ side, slots, youRole, config, sortMode, onOpen }) {
   const lockedCount = slots.filter(s => s.locked).length
   const teamName = side === 'ally' ? 'Allied Team' : 'Enemy Team'
   return (
@@ -144,7 +145,7 @@ function OvColumn({ side, slots, youRole, config, onOpen }) {
             ? <OvLockedSlot key={slot.role} slot={slot} side={side} isYou={isYou}
                             config={config} onOpen={onOpen} />
             : <OvOpenSlot key={slot.role} slot={slot} side={side} isYou={isYou}
-                          config={config} onOpen={onOpen} />
+                          config={config} sortMode={sortMode} onOpen={onOpen} />
         })}
       </div>
     </div>
@@ -242,6 +243,7 @@ function OvLoadingSlot({ role, side }) {
 // ── main view ──────────────────────────────────────────────────────────────
 export default function DraftOverview({ overviewData, loading, youRole, config, patch, tier }) {
   const [breakdown, setBreakdown] = useState(null)
+  const [sortMode, setSortMode] = useState('delta')
 
   const handleOpenBreakdown = (payload) => setBreakdown(payload)
   const handleCloseBreakdown = () => setBreakdown(null)
@@ -270,6 +272,16 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
         <span className="ov-head-title">Draft Overview</span>
         <span className="ov-head-sub">· champion-select board</span>
         <div className="ov-head-right">
+          <div className="ov-sort-toggle">
+            <button
+              className={`ov-sort-btn${sortMode === 'delta' ? ' active' : ''}`}
+              onClick={() => setSortMode('delta')}
+            >Δ only</button>
+            <button
+              className={`ov-sort-btn${sortMode === 'wr_delta' ? ' active' : ''}`}
+              onClick={() => setSortMode('wr_delta')}
+            >WR + Δ</button>
+          </div>
           <div className="ov-pop">
             <span className="pop-patch">{patchLabel}</span>
             <span className="pop-sep">·</span>
@@ -283,7 +295,7 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
       {isEmpty && (
         <div className="ov-emptystate">
           <h3>Waiting for champion select</h3>
-          <p>Enter champions in the Draft tab or start champion select. As picks fill in, each champion's contribution appears here and the team deltas update automatically. Recommended picks fill every open slot.</p>
+          <p>Enter champions in the Recommend tab or start champion select. As picks fill in, each champion's contribution appears here and the team deltas update automatically. Recommended picks fill every open slot.</p>
         </div>
       )}
 
@@ -327,6 +339,7 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
               slots={overviewData.ally}
               youRole={youRole}
               config={config}
+              sortMode={sortMode}
               onOpen={handleOpenBreakdown}
             />
             <div className="ov-board-divider" />
@@ -335,6 +348,7 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
               slots={overviewData.enemy}
               youRole={youRole}
               config={config}
+              sortMode={sortMode}
               onOpen={handleOpenBreakdown}
             />
           </div>

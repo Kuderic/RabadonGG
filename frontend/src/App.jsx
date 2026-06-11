@@ -1215,11 +1215,11 @@ export default function App() {
         <button
           className={`tab-btn ${activeTab === 'draft' ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab('draft')}
-        >Draft</button>
+        >Recommend</button>
         <button
           className={`tab-btn ${activeTab === 'overview' ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab('overview')}
-        >Overview</button>
+        >Draft</button>
         <button
           className={`tab-btn ${activeTab === 'config' ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab('config')}

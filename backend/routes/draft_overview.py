@@ -110,15 +110,21 @@ async def draft_overview(request: DraftOverviewRequest) -> DraftOverviewResponse
             rec = await score_one(champ, slot.role, teammates, opp_locked)
             return DraftSlotResult(role=slot.role, locked=True, champion=champ, rec=rec)
 
-        # Open slot: top-3 is all the board shows; backend order matches client default config
-        pool = pools.get(slot.role, [])[:3]
+        # Open slot: pool is pre-sorted by tier+wr, so [:20] gives the strongest
+        # candidates — fast enough on cold cache (20 vs 50+ champions per slot)
+        pool = pools.get(slot.role, [])[:20]
         cand_recs = await asyncio.gather(*[
             score_one(c, slot.role, own_locked, opp_locked) for c in pool
         ])
+        scored = sorted(
+            [r for r in cand_recs if r is not None],
+            key=lambda r: r.rating,
+            reverse=True,
+        )
         return DraftSlotResult(
             role=slot.role,
             locked=False,
-            candidates=[r for r in cand_recs if r is not None],
+            candidates=scored[:10],
         )
 
     ally_tasks = [build_slot(s, locked_ally, locked_enemy) for s in request.ally]

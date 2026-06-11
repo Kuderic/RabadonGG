@@ -260,6 +260,9 @@ async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
             # site's displayed tier list (e.g. ~52 bottom).
             if int(info.get("tier", 0)) > 0
         ]
+        # Sort by tier desc then win-rate desc so pool[:N] slices give the
+        # strongest candidates — used by the draft-overview open-slot cap.
+        entries.sort(key=lambda x: (int(x[1].get("tier", 0)), float(x[1].get("wr", 0))), reverse=True)
         names = [_id_to_slug[cid] for cid, _ in entries if cid in _id_to_slug]
         games_by_slug = {
             _slug(_id_to_slug[cid]): int(info.get("games", 0))
