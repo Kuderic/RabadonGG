@@ -5,6 +5,7 @@ import { getRecommendations, getChampions, getPatches, getDraftOverview } from '
 import { useLCUSession } from './services/lcu'
 import { champPrimaryRole, champSecondaryRole, champIconUrl } from './utils/champion'
 import releaseNotesRaw from '../../RELEASE_NOTES.md?raw'
+import { TIER_OPTIONS } from './components/TierSelector'
 
 const IS_DESKTOP = import.meta.env.VITE_DESKTOP === 'true'
 const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
@@ -249,6 +250,7 @@ function AboutPanel() {
 
 function OverlayShowcase() {
   const ROLE_ICON_ADC = 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-bottom.png';
+  const showcaseTier = TIER_OPTIONS.find(t => t.value === 'emerald_plus') || TIER_OPTIONS[1];
   const enemies = ['Darius', 'Lee Sin', 'Zed', 'Jinx', 'Leona'];
   const picks = [
     { c: 'Caitlyn', wr: 52.4, g: 184, d: 3.8, s: 1.2, cc: 2.6, low: false },
@@ -289,7 +291,7 @@ function OverlayShowcase() {
           </div>
         ))}
       </div>
-      <div className="ovx-foot"><span className="dot" /><span>Champion select</span><span className="tier">Emerald+</span></div>
+      <div className="ovx-foot"><span className="dot" /><span>Champion select</span><span className="tier">{showcaseTier.icon && <img src={showcaseTier.icon} alt="" className="tier-icon" onError={e => { e.target.style.display = 'none' }} />}{showcaseTier.label}</span></div>
     </div>
   );
 }
@@ -565,6 +567,9 @@ export default function App() {
   const [computeDraftRecs, setComputeDraftRecs] = useState(
     () => localStorage.getItem('rabadon_compute_draft_recs') === 'true'
   )
+  const [sortMode, setSortMode] = useState(
+    () => localStorage.getItem('rabadon_sort_mode') || 'delta'
+  )
   const debounceRef = useRef(null)
   const overviewDebounceRef = useRef(null)
 
@@ -725,6 +730,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('rabadon_compute_draft_recs', String(computeDraftRecs))
   }, [computeDraftRecs])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon_sort_mode', sortMode)
+  }, [sortMode])
 
   useEffect(() => {
     localStorage.setItem('rabadon_overlay_enabled', String(overlayEnabled))
@@ -1311,6 +1320,8 @@ export default function App() {
               patch={patch}
               tier={tier}
               computeDraftRecs={computeDraftRecs}
+              onComputeDraftRecsChange={setComputeDraftRecs}
+              sortMode={sortMode}
             />
           </Suspense>
         )}
@@ -1351,6 +1362,8 @@ export default function App() {
               onModifierChange={handleModifierChange}
               computeDraftRecs={computeDraftRecs}
               onComputeDraftRecsChange={setComputeDraftRecs}
+              sortMode={sortMode}
+              onSortModeChange={setSortMode}
             />
           </Suspense>
         )}

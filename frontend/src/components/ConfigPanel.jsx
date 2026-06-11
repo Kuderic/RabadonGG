@@ -85,6 +85,7 @@ export default function ConfigPanel({
   champions = [], playerRole,
   wrModifiers = {}, onModifierChange,
   computeDraftRecs = false, onComputeDraftRecsChange,
+  sortMode = 'delta', onSortModeChange,
 }) {
   const [viewRole, setViewRole] = useState('adc')
   const weights = config.roleWeights?.[viewRole] || {}
@@ -289,17 +290,36 @@ export default function ConfigPanel({
       <div className="config-section">
         <div className="config-section-title">Draft Overview</div>
         <p className="config-desc">
-          When enabled, the Draft tab scores every champion in the pool for each open slot and shows the top 3 recommendations. Disabled by default — scoring all open slots can take 5–20 seconds depending on cache state.
+          Controls for the Draft tab's champion-select board.
         </p>
-        <div className="config-row">
-          <label className="config-check-label">
-            <input
-              type="checkbox"
-              checked={!!computeDraftRecs}
-              onChange={e => onComputeDraftRecsChange(e.target.checked)}
-            />
-            Compute open slot recommendations
-          </label>
+        <div className="config-subgroup">
+          <div className="config-subgroup-title">Open Slot Picks</div>
+          <p className="config-desc" style={{ marginBottom: 10 }}>
+            When enabled, each open slot shows the top 3 recommended picks. Scoring all open slots can take 5–20 seconds on a cold cache.
+          </p>
+          <div className="config-row">
+            <label className="config-check-label">
+              <input
+                type="checkbox"
+                checked={!!computeDraftRecs}
+                onChange={e => onComputeDraftRecsChange(e.target.checked)}
+              />
+              Compute open slot recommendations
+            </label>
+          </div>
+          <div className={`config-row config-row--spaced${!computeDraftRecs ? ' config-row--disabled' : ''}`} style={{ marginTop: 8, marginBottom: 0 }}>
+            <span className="config-check-label" style={{ cursor: 'default' }}>Sort by</span>
+            <div className="ov-sort-toggle">
+              <button
+                className={`ov-sort-btn${sortMode === 'delta' ? ' active' : ''}`}
+                onClick={() => onSortModeChange('delta')}
+              >Δ only</button>
+              <button
+                className={`ov-sort-btn${sortMode === 'wr_delta' ? ' active' : ''}`}
+                onClick={() => onSortModeChange('wr_delta')}
+              >WR + Δ</button>
+            </div>
+          </div>
         </div>
       </div>
 

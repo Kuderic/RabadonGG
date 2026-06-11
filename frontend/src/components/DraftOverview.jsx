@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { computeComponents } from '../utils/scoring'
 import { champIconUrl } from '../utils/champion'
 import BreakdownPanel from './BreakdownPanel'
+import { TierDisplay } from './TierSelector'
 
 const ROLE_ICON = {
   top:     'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-top.png',
@@ -13,7 +14,6 @@ const ROLE_ICON = {
 
 const ROLE_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP' }
 const ROLE_DISPLAY = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'Bot', support: 'Support' }
-const TIER_LABEL = { diamond_plus: 'Diamond+', emerald_plus: 'Emerald+', platinum_plus: 'Platinum+', gold_plus: 'Gold+', all: 'All Ranks' }
 
 const OV_ADV_MAX = 12
 const OV_DELTA_MAX = 6
@@ -122,7 +122,7 @@ function OvOpenSlot({ slot, side, isYou, config, sortMode, computeDraftRecs, onO
           </div>
         ) : (
           <div className="ov-open-empty">
-            {computeDraftRecs ? 'No candidates — all picks taken.' : 'Enable in Settings → Draft Overview'}
+            {computeDraftRecs ? 'No candidates — all picks taken.' : '—'}
           </div>
         )}
       </div>
@@ -244,9 +244,8 @@ function OvLoadingSlot({ role, side }) {
 }
 
 // ── main view ──────────────────────────────────────────────────────────────
-export default function DraftOverview({ overviewData, loading, youRole, config, patch, tier, computeDraftRecs }) {
+export default function DraftOverview({ overviewData, loading, youRole, config, patch, tier, computeDraftRecs, onComputeDraftRecsChange, sortMode = 'delta' }) {
   const [breakdown, setBreakdown] = useState(null)
-  const [sortMode, setSortMode] = useState('delta')
 
   const handleOpenBreakdown = (payload) => setBreakdown(payload)
   const handleCloseBreakdown = () => setBreakdown(null)
@@ -275,24 +274,24 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
         <span className="ov-head-title">Draft Overview</span>
         <span className="ov-head-sub">· champion-select board</span>
         <div className="ov-head-right">
-          <div className="ov-sort-toggle">
-            <button
-              className={`ov-sort-btn${sortMode === 'delta' ? ' active' : ''}`}
-              onClick={() => setSortMode('delta')}
-            >Δ only</button>
-            <button
-              className={`ov-sort-btn${sortMode === 'wr_delta' ? ' active' : ''}`}
-              onClick={() => setSortMode('wr_delta')}
-            >WR + Δ</button>
-          </div>
           <div className="ov-pop">
             <span className="pop-patch">{patchLabel}</span>
             <span className="pop-sep">·</span>
-            <span className="tier-display">
-              <span>{TIER_LABEL[tier] || tier}</span>
-            </span>
+            <TierDisplay tier={tier} />
           </div>
         </div>
+      </div>
+
+      <div className="ov-compute-bar">
+        <label className="ov-compute-label">
+          <input
+            type="checkbox"
+            checked={!!computeDraftRecs}
+            onChange={e => onComputeDraftRecsChange?.(e.target.checked)}
+          />
+          Open slot picks
+        </label>
+        <span className="ov-compute-hint">⏱ may take up to 20s</span>
       </div>
 
       {isEmpty && (

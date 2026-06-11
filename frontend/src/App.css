@@ -3627,7 +3627,8 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 .overlay-foot-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ink-4); flex-shrink: 0; }
 .overlay-foot-dot.connected { background: var(--ally); box-shadow: 0 0 5px var(--ally); }
 .overlay-foot-dot.live { background: var(--pos); box-shadow: 0 0 5px var(--pos); }
-.overlay-foot .tier { margin-left: auto; letter-spacing: 0.4px; text-transform: none; color: var(--ink-3); }
+.overlay-foot .tier { margin-left: auto; letter-spacing: 0.4px; text-transform: none; color: var(--ink-3); display: flex; align-items: center; gap: 4px; }
+.overlay-foot .tier-icon { width: 12px; height: 12px; }
 
 /* ── Empty / loading state ──────────────────────────────────────────────── */
 .overlay-empty { padding: 22px 10px; text-align: center; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-4); }
@@ -3873,7 +3874,8 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
   font-size: 9px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--ink-4);
 }
 .ovx-foot .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 5px var(--pos); }
-.ovx-foot .tier { margin-left: auto; letter-spacing: 0.4px; text-transform: none; color: var(--ink-3); }
+.ovx-foot .tier { margin-left: auto; letter-spacing: 0.4px; text-transform: none; color: var(--ink-3); display: flex; align-items: center; gap: 4px; }
+.ovx-foot .tier-icon { width: 12px; height: 12px; }
 
 @media (max-width: 720px) {
   .overlay-showcase { grid-template-columns: 1fr; }
@@ -4205,6 +4207,45 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 .ov-pick-card .ov-delta { justify-content: flex-start; }
 .ov-pick-card .ov-delta--bar { flex-direction: column; align-items: flex-start; gap: 3px; }
 .ov-pick-card .ov-delta-bar-track { width: 100%; max-width: 92px; }
+
+/* ── compute bar ────────────────────────────────────────────────────────── */
+.ov-compute-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 18px;
+}
+.ov-compute-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  user-select: none;
+}
+.ov-compute-label input[type="checkbox"] {
+  accent-color: var(--gold);
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ov-compute-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-stat);
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  background: var(--panel-2);
+  padding: 2px 9px;
+  border-radius: 10px;
+}
 
 /* ── empty / waiting state ───────────────────────────────────────────────── */
 .ov-emptystate { text-align: center; padding: 40px 20px; color: var(--ink-4); }

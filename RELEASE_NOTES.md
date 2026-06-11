@@ -1,3 +1,9 @@
+## What's new in 1.2.3
+
+### Changes
+- **Draft Overview sort moved to Settings** — the Δ only / WR + Δ sort toggle for open slot picks now lives in Settings → Draft Overview, where it persists across sessions. Previously reset on every page load.
+- **Inline open slot toggle** — the Draft tab now has a compact "Open slot picks" checkbox directly on the board so you can enable/disable scoring without leaving the tab. An info tag signals the 5–20s cost on a cold cache.
+
 ## What's new in 1.2.2
 
 ### Changes
