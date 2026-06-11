@@ -562,6 +562,9 @@ export default function App() {
   const [selectedPoolRec, setSelectedPoolRec] = useState(null)
   const [draftOverview, setDraftOverview] = useState(null)
   const [draftOverviewLoading, setDraftOverviewLoading] = useState(false)
+  const [computeDraftRecs, setComputeDraftRecs] = useState(
+    () => localStorage.getItem('rabadon_compute_draft_recs') === 'true'
+  )
   const debounceRef = useRef(null)
   const overviewDebounceRef = useRef(null)
 
@@ -718,6 +721,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('rabadon_tier', tier)
   }, [tier])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon_compute_draft_recs', String(computeDraftRecs))
+  }, [computeDraftRecs])
 
   useEffect(() => {
     localStorage.setItem('rabadon_overlay_enabled', String(overlayEnabled))
@@ -1101,7 +1108,7 @@ export default function App() {
         const lockedCount = allySlots.filter(s => s.locked).length + enemySlots.filter(s => s.locked).length
         if (lockedCount === 0) { setDraftOverviewLoading(false); return }
         const you = { side: 'ally', role }
-        const data = await getDraftOverview(allySlots, enemySlots, patch, tier, you)
+        const data = await getDraftOverview(allySlots, enemySlots, patch, tier, you, computeDraftRecs)
         setDraftOverview(data)
       } catch (err) {
         console.error('[draft-overview]', err)
@@ -1110,7 +1117,7 @@ export default function App() {
       }
     }, 800)
     return () => clearTimeout(overviewDebounceRef.current)
-  }, [allies, enemies, patch, tier, role, hasValidChampion]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [allies, enemies, patch, tier, role, hasValidChampion, computeDraftRecs]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep URL in sync with draft state so any URL can be shared
   useEffect(() => {
@@ -1303,6 +1310,7 @@ export default function App() {
               config={config}
               patch={patch}
               tier={tier}
+              computeDraftRecs={computeDraftRecs}
             />
           </Suspense>
         )}
@@ -1341,6 +1349,8 @@ export default function App() {
               playerRole={role}
               wrModifiers={wrModifiers}
               onModifierChange={handleModifierChange}
+              computeDraftRecs={computeDraftRecs}
+              onComputeDraftRecsChange={setComputeDraftRecs}
             />
           </Suspense>
         )}

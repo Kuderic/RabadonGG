@@ -25,11 +25,11 @@ export async function getRecommendations(role, allies, enemies, patch, tier, poo
   return res.json()
 }
 
-export async function getDraftOverview(ally, enemy, patch, tier, you = null) {
+export async function getDraftOverview(ally, enemy, patch, tier, you = null, computeOpen = false) {
   const res = await fetch(`${BASE_URL}/api/draft-overview`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ally, enemy, patch, tier, you }),
+    body: JSON.stringify({ ally, enemy, patch, tier, you, compute_open: computeOpen }),
   })
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`)
   return res.json()

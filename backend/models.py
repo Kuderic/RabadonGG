@@ -67,6 +67,7 @@ class DraftOverviewRequest(BaseModel):
     you: Optional[YouSpec] = None
     ally: List[DraftSlot]
     enemy: List[DraftSlot]
+    compute_open: bool = Field(default=False, description="Score open slots and return candidate picks")
 
 
 class DraftSlotResult(BaseModel):

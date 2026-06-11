@@ -84,6 +84,7 @@ export default function ConfigPanel({
   poolVariant, onPoolVariantChange, onAddRole, onRemoveRole, onToggleRole,
   champions = [], playerRole,
   wrModifiers = {}, onModifierChange,
+  computeDraftRecs = false, onComputeDraftRecsChange,
 }) {
   const [viewRole, setViewRole] = useState('adc')
   const weights = config.roleWeights?.[viewRole] || {}
@@ -281,6 +282,24 @@ export default function ConfigPanel({
               <span className="weight-val">{synBlend.toFixed(1)}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Draft Overview ──────────────────────────────────── */}
+      <div className="config-section">
+        <div className="config-section-title">Draft Overview</div>
+        <p className="config-desc">
+          When enabled, the Draft tab scores every champion in the pool for each open slot and shows the top 3 recommendations. Disabled by default — scoring all open slots can take 5–20 seconds depending on cache state.
+        </p>
+        <div className="config-row">
+          <label className="config-check-label">
+            <input
+              type="checkbox"
+              checked={!!computeDraftRecs}
+              onChange={e => onComputeDraftRecsChange(e.target.checked)}
+            />
+            Compute open slot recommendations
+          </label>
         </div>
       </div>
 

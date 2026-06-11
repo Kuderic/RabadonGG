@@ -1,3 +1,11 @@
+## What's new in 1.2.1
+
+### Changes
+- **Draft Overview — lazy by default** — the Draft tab now loads instantly; open slot recommendations are opt-in. Enable "Compute open slot recommendations" in Settings → Draft Overview to score the full champion pool for every open slot.
+- **WR + Δ sort option** — the Draft Overview header now has a toggle to sort open-slot picks by delta only or win rate + delta.
+- **Renamed tabs** — "Draft" → "Recommend", "Overview" → "Draft" for clearer labelling.
+- **Accurate top-3 picks** — open slots now score the full role pool (same as the Recommend tab) and sort by rating; previously showed champions in arbitrary order.
+
 ## What's new in 1.2.0
 
 ### New
