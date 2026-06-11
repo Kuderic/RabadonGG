@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import DraftForm from './components/DraftForm'
 import TitleBar from './components/TitleBar'
-import { getRecommendations, getChampions, getPatches } from './api/client'
+import { getRecommendations, getChampions, getPatches, getDraftOverview } from './api/client'
 import { useLCUSession } from './services/lcu'
 import { champPrimaryRole, champSecondaryRole, champIconUrl } from './utils/champion'
 import releaseNotesRaw from '../../RELEASE_NOTES.md?raw'
@@ -19,6 +19,7 @@ function handleExternalLink(e) {
 
 const RecommendationList = lazy(() => import('./components/RecommendationList'))
 const ConfigPanel = lazy(() => import('./components/ConfigPanel'))
+const DraftOverview = lazy(() => import('./components/DraftOverview'))
 
 const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 
@@ -559,7 +560,10 @@ export default function App() {
   })
   const [poolResults, setPoolResults] = useState([])
   const [selectedPoolRec, setSelectedPoolRec] = useState(null)
+  const [draftOverview, setDraftOverview] = useState(null)
+  const [draftOverviewLoading, setDraftOverviewLoading] = useState(false)
   const debounceRef = useRef(null)
+  const overviewDebounceRef = useRef(null)
 
   // Refs so handleSubmit can read current state without being in its dep array
   const recommendationsRef = useRef(recommendations)
@@ -1075,6 +1079,39 @@ export default function App() {
     return () => clearTimeout(debounceRef.current)
   }, [handleSubmit, hasValidChampion, lookupChampion])
 
+  // Draft overview: fetch whenever the draft changes (debounced 800ms)
+  useEffect(() => {
+    if (!hasValidChampion) { setDraftOverview(null); return }
+    clearTimeout(overviewDebounceRef.current)
+    overviewDebounceRef.current = setTimeout(async () => {
+      setDraftOverviewLoading(true)
+      try {
+        // Build full 5-slot ally array (player's own slot is always open)
+        const allySlots = ROLES.map(r => {
+          if (r === role) return { role: r, champion: null, locked: false }
+          const a = allies.find(x => x.role === r) || { role: r, champion: '' }
+          const champ = a.champion.trim() || null
+          return { role: r, champion: champ, locked: !!champ }
+        })
+        const enemySlots = enemies.map(e => {
+          const champ = e.champion.trim() || null
+          return { role: e.role, champion: champ, locked: !!champ }
+        })
+        // Don't fetch if no champions have been locked — avoids scoring 175+ candidates × 9 open slots
+        const lockedCount = allySlots.filter(s => s.locked).length + enemySlots.filter(s => s.locked).length
+        if (lockedCount === 0) { setDraftOverviewLoading(false); return }
+        const you = { side: 'ally', role }
+        const data = await getDraftOverview(allySlots, enemySlots, patch, tier, you)
+        setDraftOverview(data)
+      } catch (err) {
+        console.error('[draft-overview]', err)
+      } finally {
+        setDraftOverviewLoading(false)
+      }
+    }, 800)
+    return () => clearTimeout(overviewDebounceRef.current)
+  }, [allies, enemies, patch, tier, role, hasValidChampion]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Keep URL in sync with draft state so any URL can be shared
   useEffect(() => {
     const p = new URLSearchParams()
@@ -1180,6 +1217,10 @@ export default function App() {
           onClick={() => setActiveTab('draft')}
         >Draft</button>
         <button
+          className={`tab-btn ${activeTab === 'overview' ? 'tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >Overview</button>
+        <button
           className={`tab-btn ${activeTab === 'config' ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab('config')}
         >Settings</button>
@@ -1251,6 +1292,19 @@ export default function App() {
             )}
 
           </>
+        )}
+
+        {activeTab === 'overview' && (
+          <Suspense fallback={null}>
+            <DraftOverview
+              overviewData={draftOverview}
+              loading={draftOverviewLoading}
+              youRole={role}
+              config={config}
+              patch={patch}
+              tier={tier}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'config' && (

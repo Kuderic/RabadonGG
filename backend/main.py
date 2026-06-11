@@ -12,6 +12,7 @@ from fastapi.responses import Response
 
 from routes.recommend import router as recommend_router
 from routes.lcu import router as lcu_router
+from routes.draft_overview import router as draft_overview_router
 
 # Configure logging
 logging.basicConfig(
@@ -56,6 +57,7 @@ app.add_middleware(
 # Mount routers
 app.include_router(recommend_router, prefix="/api", tags=["recommendations"])
 app.include_router(lcu_router, prefix="/api", tags=["lcu"])
+app.include_router(draft_overview_router, prefix="/api", tags=["draft-overview"])
 
 
 async def _patch_has_lolalytics_data(patch: str, client: httpx.AsyncClient) -> bool:

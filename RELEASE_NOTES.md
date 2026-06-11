@@ -1,3 +1,9 @@
+## What's new in 1.2.0
+
+### New
+- **Draft Overview tab** — a champion-select style board showing both team compositions side by side. Locked champions display their synergy/counter contribution and a delta bar. Every open slot shows the top 3 recommended picks inline. A scoreline at the top tracks summed allied vs enemy deltas and a center-diverging advantage bar.
+- **Breakdown modal in Overview** — click any locked champion or any recommended pick card to open the full breakdown panel without leaving the Overview tab.
+
 ## What's new in 1.1.17
 
 ### Changes

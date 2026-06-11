@@ -1,6 +1,6 @@
 """Pydantic models for API requests and responses."""
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -46,3 +46,37 @@ class RecommendResponse(BaseModel):
     tier: str
     recommendations: List[Recommendation]
     pool_picks: List[Recommendation] = Field(default_factory=list, description="Pool champion scoring results")
+
+
+# ── Draft Overview ──────────────────────────────────────────────────────────
+
+class DraftSlot(BaseModel):
+    role: str
+    champion: Optional[str] = None
+    locked: bool = False
+
+
+class YouSpec(BaseModel):
+    side: str  # "ally" | "enemy"
+    role: str
+
+
+class DraftOverviewRequest(BaseModel):
+    patch: str = Field(default="16.11")
+    tier: str = Field(default="emerald_plus")
+    you: Optional[YouSpec] = None
+    ally: List[DraftSlot]
+    enemy: List[DraftSlot]
+
+
+class DraftSlotResult(BaseModel):
+    role: str
+    locked: bool
+    champion: Optional[str] = None
+    rec: Optional[Recommendation] = None
+    candidates: Optional[List[Recommendation]] = None
+
+
+class DraftOverviewResponse(BaseModel):
+    ally: List[DraftSlotResult]
+    enemy: List[DraftSlotResult]
