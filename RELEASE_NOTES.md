@@ -1,3 +1,9 @@
+## What's new in 1.2.4
+
+### Changes
+- **WR + Δ is now the default sort** — recommender, overlay, and Draft Overview all default to WR + Δ instead of Δ only.
+- **Sample size penalty threshold raised to 2000** — matchups need at least 2000 games for full weight (up from 1000), producing more conservative scoring on lower-volume data.
+
 ## What's new in 1.2.3
 
 ### Changes

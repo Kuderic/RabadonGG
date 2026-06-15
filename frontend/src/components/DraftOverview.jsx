@@ -244,7 +244,7 @@ function OvLoadingSlot({ role, side }) {
 }
 
 // ── main view ──────────────────────────────────────────────────────────────
-export default function DraftOverview({ overviewData, loading, youRole, config, patch, tier, computeDraftRecs, onComputeDraftRecsChange, sortMode = 'delta' }) {
+export default function DraftOverview({ overviewData, loading, youRole, config, patch, tier, computeDraftRecs, onComputeDraftRecsChange, sortMode = 'wr_delta' }) {
   const [breakdown, setBreakdown] = useState(null)
 
   const handleOpenBreakdown = (payload) => setBreakdown(payload)

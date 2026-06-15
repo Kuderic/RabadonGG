@@ -20,9 +20,10 @@ const IS_DESKTOP = import.meta.env.VITE_DESKTOP === 'true'
 
 /**
  * @typedef {Object} LCUSession
- * @property {string}        phase     - "PLANNING" | "BAN_PICK" | "FINALIZATION" | ...
- * @property {string|null}   my_role   - "top" | "jungle" | "mid" | "adc" | "support" | null
- * @property {Array<{champion: string, role: string|null}>} allies
+ * @property {string}        phase       - "PLANNING" | "BAN_PICK" | "FINALIZATION" | ...
+ * @property {string|null}   my_role     - "top" | "jungle" | "mid" | "adc" | "support" | null
+ * @property {boolean}       spectating  - true when watching someone else's champion select
+ * @property {Array<{champion: string, role: string|null}>} allies  - in spectate, all 5 myTeam members
  * @property {Array<{champion: string}>}                    enemies
  */
 

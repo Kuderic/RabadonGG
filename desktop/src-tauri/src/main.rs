@@ -200,6 +200,11 @@ async fn get_lcu_session(
 
     let local_cell_id = session["localPlayerCellId"].as_i64().unwrap_or(-1);
 
+    // Spectate mode: LCU sets isSpectating=true, and localPlayerCellId is -1
+    // (no local player exists in the session). Either signal is sufficient.
+    let is_spectating = session["isSpectating"].as_bool().unwrap_or(false)
+        || local_cell_id == -1;
+
     let mut allies: Vec<Value> = Vec::new();
     let mut enemies: Vec<Value> = Vec::new();
 
@@ -285,6 +290,7 @@ async fn get_lcu_session(
             "allies":       allies,
             "enemies":      enemies,
             "intent_champ": intent_champ_name,
+            "spectating":   is_spectating,
         }
     }))
 }

@@ -36,7 +36,7 @@ const ENEMY_SLOTS = ['top', 'jungle', 'mid', 'adc', 'support']
 
 export const DEFAULT_CONFIG = {
   penalize: true,
-  penalizeThreshold: 1000,
+  penalizeThreshold: 2000,
   roleWeights: {
     top: {
       enemy: { top: 1.0, jungle: 1.0, mid: 1.0, support: 1.0, adc: 1.0 },
@@ -568,7 +568,7 @@ export default function App() {
     () => localStorage.getItem('rabadon_compute_draft_recs') === 'true'
   )
   const [sortMode, setSortMode] = useState(
-    () => localStorage.getItem('rabadon_sort_mode') || 'delta'
+    () => localStorage.getItem('rabadon_sort_mode') || 'wr_delta'
   )
   const debounceRef = useRef(null)
   const overviewDebounceRef = useRef(null)
@@ -1103,10 +1103,16 @@ export default function App() {
       setDraftOverviewLoading(true)
       try {
         // Build full 5-slot ally array (player's own slot is always open)
+        const isSpectating = !!(lcuSession?.spectating)
         const allySlots = ROLES.map(r => {
-          if (r === role) return { role: r, champion: null, locked: false }
-          const a = allies.find(x => x.role === r) || { role: r, champion: '' }
-          const champ = a.champion.trim() || null
+          // In spectate mode the player's own slot has a real champion — include it
+          if (r === role && !isSpectating) return { role: r, champion: null, locked: false }
+          const a = allies.find(x => x.role === r)
+          let champ = a?.champion?.trim() || null
+          // Spectate: the "your role" champion lives in lcuSession.allies (not the allies state)
+          if (!champ && isSpectating && lcuSession?.allies) {
+            champ = lcuSession.allies.find(x => x.role === r)?.champion?.trim() || null
+          }
           return { role: r, champion: champ, locked: !!champ }
         })
         const enemySlots = enemies.map(e => {
@@ -1116,7 +1122,8 @@ export default function App() {
         // Don't fetch if no champions have been locked — avoids scoring 175+ candidates × 9 open slots
         const lockedCount = allySlots.filter(s => s.locked).length + enemySlots.filter(s => s.locked).length
         if (lockedCount === 0) { setDraftOverviewLoading(false); return }
-        const you = { side: 'ally', role }
+        // In spectate mode there is no "you" — all 10 slots are equal
+        const you = isSpectating ? null : { side: 'ally', role }
         const data = await getDraftOverview(allySlots, enemySlots, patch, tier, you, computeDraftRecs)
         setDraftOverview(data)
       } catch (err) {
@@ -1126,7 +1133,7 @@ export default function App() {
       }
     }, 800)
     return () => clearTimeout(overviewDebounceRef.current)
-  }, [allies, enemies, patch, tier, role, hasValidChampion, computeDraftRecs]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [allies, enemies, patch, tier, role, hasValidChampion, computeDraftRecs, lcuSession?.spectating]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep URL in sync with draft state so any URL can be shared
   useEffect(() => {

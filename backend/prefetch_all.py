@@ -70,18 +70,8 @@ except Exception:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-async def prefetch(tiers: list[str], patch: str | None) -> None:
-    global _bytes_received
-    _bytes_received = 0
-    wall_start = time.monotonic()
-
-    # Resolve patch if not specified
-    if patch is None:
-        from services.scraper import _get_patch
-        patch = await _get_patch()
-
-    log.info(f"Starting prefetch — patch={patch}, tiers={tiers}, roles={ROLES}")
-
+async def prefetch_patch(patch: str, tiers: list[str]) -> tuple[int, int, dict]:
+    """Prefetch all tier × role combinations for a single patch string."""
     total_ok = 0
     total_err = 0
     tier_stats: dict[str, dict] = {}
@@ -90,7 +80,7 @@ async def prefetch(tiers: list[str], patch: str | None) -> None:
         tier_start = time.monotonic()
         tier_ok = tier_err = 0
         log.info(f"{'─'*60}")
-        log.info(f"TIER: {tier.upper()}")
+        log.info(f"TIER: {tier.upper()}  (patch={patch})")
 
         for role in ROLES:
             log.info(f"  {role.upper()} ...")
@@ -113,6 +103,39 @@ async def prefetch(tiers: list[str], patch: str | None) -> None:
         total_ok  += tier_ok
         total_err += tier_err
 
+    return total_ok, total_err, tier_stats
+
+
+async def prefetch(tiers: list[str], patch: str | None) -> None:
+    global _bytes_received
+    _bytes_received = 0
+    wall_start = time.monotonic()
+
+    # Resolve current patch if not specified
+    if patch is None:
+        from services.scraper import _get_patch
+        patch = await _get_patch()
+
+    # Always prefetch both the current patch and the 30-day rolling window.
+    # "30" is the patch token the frontend/API uses for the 30-day mode
+    # (sends patch=30 to lolalytics, cached under a separate key from patch-specific data).
+    patches_to_run = [patch, "30"]
+
+    log.info(f"Starting prefetch — patches={patches_to_run}, tiers={tiers}, roles={ROLES}")
+
+    total_ok = 0
+    total_err = 0
+    all_tier_stats: dict[str, dict] = {}
+
+    for p in patches_to_run:
+        log.info(f"{'='*60}")
+        log.info(f"PATCH: {p}")
+        ok, err, tier_stats = await prefetch_patch(p, tiers)
+        total_ok  += ok
+        total_err += err
+        for tier, s in tier_stats.items():
+            all_tier_stats[f"{p}/{tier}"] = s
+
     wall_elapsed = time.monotonic() - wall_start
     mb_received  = _bytes_received / 1_048_576
 
@@ -121,14 +144,14 @@ async def prefetch(tiers: list[str], patch: str | None) -> None:
         "",
         f"{'='*70}",
         f"RUN: {datetime.datetime.now().isoformat(timespec='seconds')}",
-        f"PATCH: {patch}   TIERS: {', '.join(tiers)}",
+        f"PATCHES: {', '.join(patches_to_run)}   TIERS: {', '.join(tiers)}",
         f"TOTAL: {total_ok} champions fetched, {total_err} errors",
         f"WALL TIME: {wall_elapsed/60:.1f} min ({wall_elapsed:.0f} s)",
         f"DATA RECEIVED: {mb_received:.1f} MB ({_bytes_received:,} bytes)",
     ]
-    for tier, s in tier_stats.items():
+    for key, s in all_tier_stats.items():
         summary_lines.append(
-            f"  {tier:<20} {s['ok']:>4} ok  {s['err']:>3} err  {s['elapsed_s']/60:.1f} min"
+            f"  {key:<30} {s['ok']:>4} ok  {s['err']:>3} err  {s['elapsed_s']/60:.1f} min"
         )
     summary_lines.append(f"{'='*70}")
 

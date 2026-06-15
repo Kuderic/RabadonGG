@@ -271,8 +271,8 @@ function SortHeaders({ sortMode, onSort }) {
 
 export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool }) {
   const [recTab, setRecTab] = useState('overall')
-  const [sortOverall, setSortOverall] = useState('delta')
-  const [sortPool, setSortPool]       = useState('delta')
+  const [sortOverall, setSortOverall] = useState('wr_delta')
+  const [sortPool, setSortPool]       = useState('wr_delta')
   const sortMode    = recTab === 'pool' ? sortPool : sortOverall
   const setSortMode = recTab === 'pool' ? setSortPool : setSortOverall
   const [visibleCount, setVisibleCount] = useState(10)

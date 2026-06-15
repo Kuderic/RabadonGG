@@ -4088,8 +4088,8 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
   position: absolute; top: 0; bottom: 0;
   transition: left 0.4s cubic-bezier(0.22,1,0.36,1), width 0.4s cubic-bezier(0.22,1,0.36,1), background 0.3s;
 }
-.ov-adv-fill--ally  { background: linear-gradient(90deg, rgba(65,185,220,0.5), var(--ally-bright)); box-shadow: 0 0 10px var(--ally-glow); }
-.ov-adv-fill--enemy { background: linear-gradient(90deg, var(--enemy-bright), rgba(229,72,92,0.5)); box-shadow: 0 0 10px var(--enemy-glow); }
+.ov-adv-fill--ally  { background: linear-gradient(90deg, rgba(65,185,220,0), var(--ally));   box-shadow: 0 0 12px rgba(65,185,220,0.4); }
+.ov-adv-fill--enemy { background: linear-gradient(90deg, var(--enemy), rgba(229,72,92,0));   box-shadow: 0 0 12px rgba(229,72,92,0.4); }
 
 /* ── BOARD ────────────────────────────────────────────────────────────────── */
 .ov-board { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 0 22px; align-items: start; }

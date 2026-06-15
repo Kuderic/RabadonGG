@@ -4,11 +4,12 @@ import { computeComponents } from '../utils/scoring'
 import { getRecommendations } from '../api/client'
 import { useLCUSession } from '../services/lcu'
 import { DEFAULT_CONFIG } from '../App'
+import { TIER_OPTIONS } from './TierSelector'
 
 const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
 
 const TIER = 'emerald_plus'
-const TIER_LABEL = 'Emerald+'
+const TIER_OPT = TIER_OPTIONS.find(t => t.value === TIER) || TIER_OPTIONS[1]
 
 const ROLE_ORDER = ['top', 'jungle', 'mid', 'adc', 'support']
 const ROLE_LABEL = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP' }
@@ -126,7 +127,7 @@ export default function OverlayApp() {
   const allRecsRef = useRef([])
   const allPoolRef = useRef([])
   const [overlaySort, setOverlaySort] = useState(
-    () => localStorage.getItem('rabadon-overlay-sort') || 'delta'
+    () => localStorage.getItem('rabadon-overlay-sort') || 'wr_delta'
   )
   const overlaySortRef = useRef(overlaySort)
   overlaySortRef.current = overlaySort
@@ -154,7 +155,7 @@ export default function OverlayApp() {
       } else if (e.key === 'rabadon-overlay-transparent') {
         setOverlayTransparent(e.newValue !== 'false')
       } else if (e.key === 'rabadon-overlay-sort') {
-        setOverlaySort(e.newValue || 'delta')
+        setOverlaySort(e.newValue || 'wr_delta')
       }
     }
     window.addEventListener('storage', handler)
@@ -390,7 +391,12 @@ export default function OverlayApp() {
         <div className="overlay-foot">
           <span className={`overlay-foot-dot ${statusCls}`} />
           <span>{statusText}</span>
-          {hasSession && <span className="tier">{TIER_LABEL}</span>}
+          {hasSession && (
+            <span className="tier">
+              {TIER_OPT.icon && <img src={TIER_OPT.icon} alt="" className="tier-icon" onError={e => { e.target.style.display = 'none' }} />}
+              {TIER_OPT.label}
+            </span>
+          )}
         </div>
       </div>
     </div>

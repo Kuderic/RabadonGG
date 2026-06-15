@@ -85,7 +85,7 @@ export default function ConfigPanel({
   champions = [], playerRole,
   wrModifiers = {}, onModifierChange,
   computeDraftRecs = false, onComputeDraftRecsChange,
-  sortMode = 'delta', onSortModeChange,
+  sortMode = 'wr_delta', onSortModeChange,
 }) {
   const [viewRole, setViewRole] = useState('adc')
   const weights = config.roleWeights?.[viewRole] || {}
@@ -307,7 +307,7 @@ export default function ConfigPanel({
               Compute open slot recommendations
             </label>
           </div>
-          <div className={`config-row config-row--spaced${!computeDraftRecs ? ' config-row--disabled' : ''}`} style={{ marginTop: 8, marginBottom: 0 }}>
+          <div className="config-row config-row--spaced" style={{ marginTop: 8, marginBottom: 0 }}>
             <span className="config-check-label" style={{ cursor: 'default' }}>Sort by</span>
             <div className="ov-sort-toggle">
               <button
