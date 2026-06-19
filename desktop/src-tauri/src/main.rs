@@ -17,7 +17,7 @@ use tokio::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager,
+    Manager,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, ShortcutState};
 
@@ -503,8 +503,8 @@ async fn main() {
                 .with_handler(|app, shortcut, event| {
                     if event.state() != ShortcutState::Pressed { return; }
                     // Ctrl+ArrowUp → show/focus main window
-                    if shortcut.mods().contains(Modifiers::CONTROL)
-                        && shortcut.key() == Code::ArrowUp
+                    if shortcut.mods.contains(Modifiers::CONTROL)
+                        && shortcut.key == Code::ArrowUp
                     {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
