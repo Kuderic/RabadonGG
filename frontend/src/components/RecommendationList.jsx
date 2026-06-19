@@ -286,7 +286,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
   useEffect(() => {
     if (selectedIndex !== null && breakdownRef.current) {
       requestAnimationFrame(() => {
-        breakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        breakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
       })
     }
   }, [selectedIndex])
@@ -418,13 +418,13 @@ export default function RecommendationList({ recommendations, loading, refreshin
       <div className="rec-toolbar">
         <span className="rec-toolbar-label">Sort by</span>
         <button
-          className={`sort-btn ${sortMode === 'delta' ? 'sort-btn--active' : ''}`}
-          onClick={() => setSortMode('delta')}
-        >Δ only</button>
-        <button
           className={`sort-btn ${sortMode === 'rating' ? 'sort-btn--active' : ''}`}
           onClick={() => setSortMode('rating')}
         >WR + Δ</button>
+        <button
+          className={`sort-btn ${sortMode === 'delta' ? 'sort-btn--active' : ''}`}
+          onClick={() => setSortMode('delta')}
+        >Δ only</button>
         <div className="rec-toolbar-spacer" />
 
         <label className="penalty-toggle" title="Weight matchups with fewer games than the threshold (configure in Settings)">

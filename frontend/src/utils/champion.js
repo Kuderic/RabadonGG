@@ -30,39 +30,56 @@ export function champIconUrl(name) {
   return `${_apiBase}/api/icon/${key}`
 }
 
+// Primary role = highest pick-rate role for each champion.
 const CHAMPION_PRIMARY_ROLE = {
-  Aatrox:'top',Ambessa:'top',Camille:'top',Cho_Gath:'top',Darius:'top',DrMundo:'top',
-  Fiora:'top',Gangplank:'top',Garen:'top',Gnar:'top',Gwen:'top',Illaoi:'top',
-  Irelia:'top',Jayce:'top',Kayle:'top',Kennen:'top',Kled:'top',Malphite:'top',
-  Maokai:'top',Mordekaiser:'top',Nasus:'top',Ornn:'top',Pantheon:'top',Poppy:'top',
-  Quinn:'top',Renekton:'top',Riven:'top',Rumble:'top',Sett:'top',Shen:'top',
-  Singed:'top',Sion:'top',Teemo:'top',Tryndamere:'top',Urgot:'top',
-  Vladimir:'top',Volibear:'top',Warwick:'top',Yorick:'top',KSante:'top',
-  Amumu:'jungle',BelVeth:'jungle',Briar:'jungle',Diana:'jungle',Ekko:'jungle',
-  Elise:'jungle',Evelynn:'jungle',Fiddlesticks:'jungle',Gragas:'jungle',Graves:'jungle',
-  Hecarim:'jungle',Ivern:'jungle',JarvanIV:'jungle',Jax:'jungle',Kayn:'jungle',
-  Karthus:'jungle',KhaZix:'jungle',Kindred:'jungle',LeeSin:'jungle',Lillia:'jungle',
-  MasterYi:'jungle',Nidalee:'jungle',Nocturne:'jungle',Nunu:'jungle',Olaf:'jungle',
-  Rammus:'jungle',RekSai:'jungle',Rengar:'jungle',Sejuani:'jungle',Shaco:'jungle',
-  Shyvana:'jungle',Skarner:'jungle',Talon:'jungle',Trundle:'jungle',Udyr:'jungle',
-  Vi:'jungle',Viego:'jungle',Wukong:'jungle',Xin_Zhao:'jungle',Zac:'jungle',
-  Ahri:'mid',Akali:'mid',Akshan:'mid',Anivia:'mid',AurelionSol:'mid',Aurora:'mid',
-  Azir:'mid',Cassiopeia:'mid',Corki:'mid',Fizz:'mid',Galio:'mid',Karma:'mid',
-  Kassadin:'mid',Katarina:'mid',LeBlanc:'mid',Lissandra:'mid',Lux:'mid',
-  Malzahar:'mid',Mel:'mid',Naafiri:'mid',Orianna:'mid',Qiyana:'mid',Ryze:'mid',
-  Sylas:'mid',Syndra:'mid',Taliyah:'mid',TwistedFate:'mid',Veigar:'mid',Vex:'mid',
-  Viktor:'mid',Xerath:'mid',Yone:'mid',Yasuo:'mid',Zed:'mid',Ziggs:'mid',Zoe:'mid',
-  Annie:'mid',Neeko:'mid',Hwei:'mid',
-  Aphelios:'adc',Ashe:'adc',Caitlyn:'adc',Draven:'adc',Ezreal:'adc',Jhin:'adc',
-  Jinx:'adc',KaiSa:'adc',Kalista:'adc',KogMaw:'adc',Lucian:'adc',MissFortune:'adc',
-  Nilah:'adc',Samira:'adc',Sivir:'adc',Smolder:'adc',Tristana:'adc',Twitch:'adc',
-  Varus:'adc',Vayne:'adc',Xayah:'adc',Zeri:'adc',
-  Alistar:'support',Bard:'support',Blitzcrank:'support',Brand:'support',Braum:'support',
-  Janna:'support',Leona:'support',Lulu:'support',Milio:'support',Morgana:'support',
-  Nami:'support',Nautilus:'support',Pyke:'support',Rakan:'support',Renata:'support',
-  Senna:'support',Seraphine:'support',Sona:'support',Soraka:'support',TahmKench:'support',
-  Taric:'support',Thresh:'support',Vel_Koz:'support',Yuumi:'support',Zilean:'support',
-  Zyra:'support',Heimerdinger:'support',Swain:'support',
+  // TOP
+  Aatrox:'top', Ambessa:'top', Camille:'top', Cho_Gath:'top', Darius:'top',
+  DrMundo:'top', Fiora:'top', Gangplank:'top', Garen:'top', Gnar:'top',
+  Gwen:'top', Illaoi:'top', Irelia:'top', Jax:'top', Jayce:'top',
+  Kayle:'top', Kennen:'top', Kled:'top', KSante:'top', Malphite:'top',
+  Maokai:'top', Mordekaiser:'top', Nasus:'top', Ornn:'top', Pantheon:'top',
+  Poppy:'top', Quinn:'top', Renekton:'top', Riven:'top', Rumble:'top',
+  Sett:'top', Shen:'top', Singed:'top', Sion:'top', Teemo:'top',
+  Trundle:'top', Tryndamere:'top', Urgot:'top', Vladimir:'top', Volibear:'top',
+  Warwick:'top', Yorick:'top',
+
+  // JUNGLE
+  Amumu:'jungle', BelVeth:'jungle', Briar:'jungle', Diana:'jungle',
+  Ekko:'jungle', Elise:'jungle', Evelynn:'jungle', Fiddlesticks:'jungle',
+  Gragas:'jungle', Graves:'jungle', Hecarim:'jungle', Ivern:'jungle',
+  JarvanIV:'jungle', Kayn:'jungle', Karthus:'jungle', KhaZix:'jungle',
+  Kindred:'jungle', LeeSin:'jungle', Lillia:'jungle', MasterYi:'jungle',
+  Nidalee:'jungle', Nocturne:'jungle', Nunu:'jungle', Olaf:'jungle',
+  Rammus:'jungle', RekSai:'jungle', Rengar:'jungle', Sejuani:'jungle',
+  Shaco:'jungle', Shyvana:'jungle', Skarner:'jungle', Udyr:'jungle',
+  Vi:'jungle', Viego:'jungle', Wukong:'jungle', XinZhao:'jungle', Zac:'jungle',
+
+  // MID
+  Ahri:'mid', Akali:'mid', Akshan:'mid', Anivia:'mid', AurelionSol:'mid',
+  Aurora:'mid', Azir:'mid', Cassiopeia:'mid', Corki:'mid', Fizz:'mid',
+  Galio:'mid', Kassadin:'mid', Katarina:'mid', LeBlanc:'mid', Lissandra:'mid',
+  Malzahar:'mid', Mel:'mid', Naafiri:'mid', Neeko:'mid', Orianna:'mid',
+  Qiyana:'mid', Ryze:'mid', Sylas:'mid', Syndra:'mid', Taliyah:'mid',
+  Talon:'mid', TwistedFate:'mid', Veigar:'mid', Vex:'mid', Viktor:'mid',
+  Xerath:'mid', Yasuo:'mid', Yone:'mid', Zed:'mid', Ziggs:'mid', Zoe:'mid',
+  Annie:'mid', Hwei:'mid',
+
+  // ADC
+  Aphelios:'adc', Ashe:'adc', Caitlyn:'adc', Draven:'adc', Ezreal:'adc',
+  Jhin:'adc', Jinx:'adc', KaiSa:'adc', Kalista:'adc', KogMaw:'adc',
+  Lucian:'adc', MissFortune:'adc', Nilah:'adc', Samira:'adc', Sivir:'adc',
+  Smolder:'adc', Tristana:'adc', Twitch:'adc', Varus:'adc', Vayne:'adc',
+  Xayah:'adc', Zeri:'adc',
+
+  // SUPPORT
+  Alistar:'support', Bard:'support', Blitzcrank:'support', Brand:'support',
+  Braum:'support', Janna:'support', Karma:'support', Leona:'support',
+  Lulu:'support', Lux:'support', Milio:'support', Morgana:'support',
+  Nami:'support', Nautilus:'support', Pyke:'support', Rakan:'support',
+  Renata:'support', Senna:'support', Seraphine:'support', Sona:'support',
+  Soraka:'support', TahmKench:'support', Taric:'support', Thresh:'support',
+  Vel_Koz:'support', Yuumi:'support', Zilean:'support', Zyra:'support',
+  Heimerdinger:'support', Swain:'support',
 }
 
 export function champPrimaryRole(name) {
@@ -77,35 +94,38 @@ export function champPrimaryRole(name) {
   return CHAMPION_PRIMARY_ROLE[key3] || null
 }
 
-// Most-played secondary (flex) roles for champions that commonly appear off-role.
+// Secondary role = second-highest pick-rate role for flex champions.
 // Used to resolve slot conflicts when two enemies share the same primary role.
 const CHAMPION_SECONDARY_ROLE = {
-  // Top flexes
-  Camille:'jungle', Jayce:'mid', Vladimir:'mid', Gragas:'mid',
-  Kennen:'jungle', Poppy:'jungle', Pantheon:'support', Malphite:'support',
-  Garen:'support', Sion:'jungle', Cho_Gath:'mid', Volibear:'jungle',
-  Warwick:'support', Mordekaiser:'jungle', Urgot:'jungle',
+  // Top → secondary
+  Camille:'jungle', Cho_Gath:'mid', Garen:'support', Irelia:'mid',
+  Jax:'jungle', Jayce:'mid', Kennen:'mid', Malphite:'support',
+  Maokai:'support', Mordekaiser:'jungle', Pantheon:'support', Poppy:'jungle',
+  Rumble:'support', Sion:'support', Trundle:'jungle', Urgot:'jungle',
+  Vladimir:'mid', Volibear:'jungle', Warwick:'support',
 
-  // Jungle flexes
-  Diana:'mid', Ekko:'mid', Graves:'mid', Karthus:'mid',
-  Wukong:'top', Fiddlesticks:'support', Nocturne:'mid',
-  Shyvana:'top', Trundle:'top', Olaf:'top', Udyr:'top',
+  // Jungle → secondary
+  Diana:'mid', Ekko:'mid', Fiddlesticks:'support', Graves:'mid',
+  Hecarim:'support', Ivern:'support', Karthus:'mid', Nocturne:'mid',
+  Olaf:'top', Rengar:'mid', Shaco:'support', Shyvana:'top',
+  Udyr:'top', Wukong:'top', Zac:'support',
 
-  // Mid flexes
-  Akali:'top', Irelia:'top', Sylas:'jungle', Zed:'jungle',
-  LeBlanc:'support', TwistedFate:'support', Katarina:'jungle',
-  Annie:'support', Lissandra:'support', Galio:'support',
-  Neeko:'support', Hwei:'support', Taliyah:'jungle',
+  // Mid → secondary
+  Akali:'top', Akshan:'top', Annie:'support',
+  Aurora:'top', Corki:'adc', Galio:'support', Hwei:'support',
+  Katarina:'jungle', LeBlanc:'support', Lissandra:'support',
+  Neeko:'support', Sylas:'jungle', Taliyah:'jungle', Talon:'jungle',
+  TwistedFate:'support', Veigar:'support', Yasuo:'top', Yone:'top',
+  Zed:'jungle', Ziggs:'adc',
 
-  // ADC flexes
-  Lucian:'mid', Vayne:'top', Twitch:'jungle', Tristana:'mid',
-  Sivir:'mid', Varus:'mid',
+  // ADC → secondary
+  Lucian:'mid', Smolder:'mid', Tristana:'mid',
+  Twitch:'jungle', Varus:'mid', Vayne:'top',
 
-  // Support flexes
-  Brand:'mid', Karma:'mid', Lux:'mid', Zyra:'mid',
-  Swain:'mid', Seraphine:'mid', Morgana:'mid',
-  Heimerdinger:'top', Vel_Koz:'mid', Thresh:'jungle',
-  Pyke:'mid', Milio:'mid', Senna:'adc',
+  // Support → secondary
+  Brand:'mid', Heimerdinger:'top', Karma:'mid', Lux:'mid',
+  Morgana:'mid', Pyke:'mid', Seraphine:'mid', Senna:'adc',
+  Swain:'mid', Vel_Koz:'mid', Zyra:'mid',
 }
 
 function _roleKey(name) {

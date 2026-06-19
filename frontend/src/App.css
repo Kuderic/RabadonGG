@@ -3251,7 +3251,7 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 /* ---- Variant A · Role lanes (5 containers) ------------------------------ */
 .pool-lanes {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
 }
@@ -3262,6 +3262,7 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
   display: flex;
   flex-direction: column;
   min-height: 168px;
+  min-width: 0;
   overflow: visible;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -4034,10 +4035,10 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 .ov-head-sub { font-family: var(--font-stat); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-4); }
 .ov-head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
 
-.ov-sort-toggle { display: flex; gap: 2px; background: var(--panel-2); border-radius: 6px; padding: 2px; }
-.ov-sort-btn { background: none; border: none; padding: 3px 10px; border-radius: 4px; font-family: var(--font-stat); font-size: 11px; letter-spacing: 0.8px; color: var(--ink-3); cursor: pointer; transition: background 0.15s, color 0.15s; }
-.ov-sort-btn:hover { color: var(--ink-1); }
-.ov-sort-btn.active { background: var(--panel-4); color: var(--ink-0); }
+.ov-sort-toggle { display: flex; gap: 4px; }
+.ov-sort-btn { background: var(--panel-inset); border: 1px solid var(--border); padding: 3px 10px; border-radius: 4px; font-family: var(--font-stat); font-size: 11px; letter-spacing: 0.8px; color: var(--ink-3); cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.ov-sort-btn:hover { border-color: var(--gold-deep); color: var(--ink-2); }
+.ov-sort-btn.active { border-color: var(--gold); color: var(--gold-bright); background: rgba(200,155,60,0.08); }
 
 .ov-pop { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
 .ov-pop .pop-patch { font-weight: 600; letter-spacing: 0.4px; }

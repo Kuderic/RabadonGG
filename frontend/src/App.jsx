@@ -686,7 +686,18 @@ export default function App() {
       })
     })
 
-    if (isNewSession) setManualOverrides(new Set())
+    if (isNewSession) {
+      setManualOverrides(new Set())
+      setRecommendations([])
+      setPoolResults([])
+      setSelectedRec(null)
+      setSelectedPoolRec(null)
+      setLookupChampion(null)
+      setLookupResult(null)
+      setError(null)
+      setDraftOverview(null)
+      setDraftOverviewLoading(false)
+    }
   }, [lcuSession, lcuConnected]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show the overlay when champion select starts; hide it when it ends.
@@ -783,7 +794,9 @@ export default function App() {
     // (not on documentElement) so scrollIntoView only ever scrolls .app-container.
   }, [zoomLevel])
 
-  // Overlay → main: when user clicks a pick in the overlay, focus this window and open the lookup.
+  // Overlay → main: when user clicks a pick in the overlay, focus this window and
+  // select its breakdown card if the champion is in the top-10 results, otherwise
+  // fall back to the lookup input.
   useEffect(() => {
     if (!IS_DESKTOP) return
     const handler = e => {
@@ -791,7 +804,14 @@ export default function App() {
       const champion = e.newValue
       if (!champion) return
       setActiveTab('draft')
-      setLookupChampion(champion)
+      const recs = recommendationsRef.current
+      const idx = recs.findIndex(r => r.champion.toLowerCase() === champion.toLowerCase())
+      if (idx !== -1) {
+        setSelectedRec(idx)
+        setSelectedPoolRec(null)
+      } else {
+        setLookupChampion(champion)
+      }
     }
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)

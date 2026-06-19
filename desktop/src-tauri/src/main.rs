@@ -19,7 +19,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, ShortcutState};
 
 // ---------------------------------------------------------------------------
 // App state — champion id→name map cached for the process lifetime
@@ -500,15 +500,25 @@ async fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, _shortcut, event| {
-                    if event.state() == ShortcutState::Pressed {
-                        if let Some(overlay) = app.get_webview_window("overlay") {
-                            if overlay.is_visible().unwrap_or(false) {
-                                let _ = overlay.hide();
-                            } else {
-                                let _ = overlay.show();
-                                let _ = overlay.set_always_on_top(true);
-                            }
+                .with_handler(|app, shortcut, event| {
+                    if event.state() != ShortcutState::Pressed { return; }
+                    // Ctrl+ArrowUp → show/focus main window
+                    if shortcut.mods().contains(Modifiers::CONTROL)
+                        && shortcut.key() == Code::ArrowUp
+                    {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                        return;
+                    }
+                    // All other registered shortcuts → toggle overlay
+                    if let Some(overlay) = app.get_webview_window("overlay") {
+                        if overlay.is_visible().unwrap_or(false) {
+                            let _ = overlay.hide();
+                        } else {
+                            let _ = overlay.show();
+                            let _ = overlay.set_always_on_top(true);
                         }
                     }
                 })
@@ -548,6 +558,10 @@ async fn main() {
                     }
                 })
                 .build(app)?;
+
+            // Ctrl+ArrowUp — always-on focus-main shortcut (fixed, not user-configurable)
+            let _ = app.global_shortcut().register("Ctrl+ArrowUp");
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![get_lcu_session, open_url, control_overlay, set_overlay_shortcut, focus_main, resize_overlay])

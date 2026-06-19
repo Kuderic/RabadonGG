@@ -183,8 +183,8 @@ export default function OverlayApp() {
     const sync = () => {
       const scale = overlayScale / 100
       window.__TAURI__.core.invoke('resize_overlay', {
-        width:  Math.round((panel.offsetWidth  + 16) * scale),
-        height: Math.round((panel.offsetHeight + 16) * scale),
+        width:  Math.round((panel.offsetWidth  + 2) * scale),
+        height: Math.round((panel.offsetHeight + 2) * scale),
       }).catch(() => {})
     }
     sync()
@@ -294,16 +294,20 @@ export default function OverlayApp() {
     }
   }, [])
 
-  // Clear stale results immediately when a new champion select phase begins
+  // Clear stale results on session boundaries only (start or end), not between
+  // phases within a session (e.g. BAN_PICK → FINALIZATION) to avoid a flash.
   useEffect(() => {
     const phase = draft?.phase ?? null
-    if (phase !== prevPhaseRef.current) {
+    const prev = prevPhaseRef.current
+    const isNewSession = !prev && !!phase
+    const isSessionEnd = !!prev && !phase
+    if (isNewSession || isSessionEnd) {
       setRecommendations([])
       setPoolPicks([])
       setYourPick(null)
       prevDraftKeyRef.current = null
-      prevPhaseRef.current = phase
     }
+    prevPhaseRef.current = phase
   }, [draft?.phase])
 
   useEffect(() => {

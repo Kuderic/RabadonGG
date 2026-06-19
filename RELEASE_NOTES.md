@@ -1,3 +1,14 @@
+## What's new in 1.2.5
+
+### Changes
+- **Overlay precision** — removed excess padding on the right and bottom edges; overlay window now hugs the panel precisely.
+- **Ctrl+Up Arrow** — new global shortcut to show and focus the main Rabadon.GG window from anywhere (including while the overlay is open).
+- **Overlay click-through** — clicking a top-10 champion in the overlay now opens their full breakdown card in the main app and scrolls to the bottom. Champions outside the top 10 open the lookup instead.
+- **Fresh slate on new champion select** — when a new champion select session starts, all stale recommendations, selected cards, and lookup state are cleared automatically in both the main app and the overlay.
+- **Enemy role auto-fill rewrite** — primary and secondary roles for all champions rebuilt from pick-rate data. Jax, Talon, and Trundle corrected to their true primary lanes; Karma and Lux moved to support primary; secondary flex routes added for 20+ champions (Zac, Ivern, Ziggs, Yone, Aurora, Maokai, etc.).
+- **Sort button order** — WR + Δ now appears before Δ only everywhere, matching the default.
+- **My Champions overflow fix** — support lane column no longer overflows the right edge when all 5 roles have champions.
+
 ## What's new in 1.2.4
 
 ### Changes

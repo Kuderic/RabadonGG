@@ -311,13 +311,13 @@ export default function ConfigPanel({
             <span className="config-check-label" style={{ cursor: 'default' }}>Sort by</span>
             <div className="ov-sort-toggle">
               <button
-                className={`ov-sort-btn${sortMode === 'delta' ? ' active' : ''}`}
-                onClick={() => onSortModeChange('delta')}
-              >Δ only</button>
-              <button
                 className={`ov-sort-btn${sortMode === 'wr_delta' ? ' active' : ''}`}
                 onClick={() => onSortModeChange('wr_delta')}
               >WR + Δ</button>
+              <button
+                className={`ov-sort-btn${sortMode === 'delta' ? ' active' : ''}`}
+                onClick={() => onSortModeChange('delta')}
+              >Δ only</button>
             </div>
           </div>
         </div>
