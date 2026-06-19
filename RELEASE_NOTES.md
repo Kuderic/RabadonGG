@@ -1,3 +1,9 @@
+## What's new in 1.2.6
+
+### Fixes
+- **Backend lint** — fixed undefined `DraftSlot` import in `draft_overview.py` and removed unused variable in scraper tests.
+- **Desktop compile** — fixed `shortcut.mods`/`shortcut.key` field access (not method calls) and removed unused `Emitter` import in Rust.
+
 ## What's new in 1.2.5
 
 ### Changes
