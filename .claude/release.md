@@ -10,7 +10,8 @@ Before tagging a new release, update the version number in ALL of these files:
 ## Steps
 
 1. Run pylint and fix all errors: `python -m pylint backend/ --errors-only`
-2. Update both version files above to the new version
+2. Run ruff and fix all errors: `ruff check --select F backend/` (F8xx undefined names, unused variables)
+3. Update both version files above to the new version
 3. **Write release notes**: add a `## What's new in x.y.z` section at the top of `RELEASE_NOTES.md` — the CI uses this as the GitHub Release body
 4. Commit everything: `git commit -m "Bump version to x.y.z"`
 5. Tag: `git tag vx.y.z`

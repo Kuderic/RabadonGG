@@ -272,7 +272,6 @@ class TestGetMatchupData:
         def fetch_side_effect(params):
             ep = params.get("ep")
             if ep == "counter":
-                vslane = params.get("vslane", "bottom")
                 entry = {"cid": CID_THRESH, "d2": 278, "n": 5000, "vsWr": 49.0}
                 return {"stats": {"wr": 51.5}, "counters": [entry]}
             elif ep == "build-team":

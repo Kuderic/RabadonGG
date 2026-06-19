@@ -9,6 +9,7 @@ from models import (
     ChampionDelta,
     DraftOverviewRequest,
     DraftOverviewResponse,
+    DraftSlot,
     DraftSlotResult,
     Recommendation,
 )
@@ -108,7 +109,7 @@ async def draft_overview(request: DraftOverviewRequest) -> DraftOverviewResponse
     else:
         pools = {}
 
-    async def build_slot(slot: "DraftSlot", own_locked: list, opp_locked: list) -> DraftSlotResult:
+    async def build_slot(slot: DraftSlot, own_locked: list, opp_locked: list) -> DraftSlotResult:
         champ = (slot.champion or "").strip()
         if slot.locked and champ:
             teammates = [s for s in own_locked if s["champion"].lower() != champ.lower()]
