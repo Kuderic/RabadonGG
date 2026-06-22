@@ -269,17 +269,24 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange }) {
   const [recTab, setRecTab] = useState('overall')
-  const [sortOverall, setSortOverall] = useState('wr_delta')
-  const [sortPool, setSortPool]       = useState('wr_delta')
+  const [sortOverall, setSortOverall] = useState(() => externalSort || 'wr_delta')
+  const [sortPool, setSortPool]       = useState(() => externalSort || 'wr_delta')
   const sortMode    = recTab === 'pool' ? sortPool : sortOverall
-  const setSortMode = recTab === 'pool' ? setSortPool : setSortOverall
-  const [visibleCount, setVisibleCount] = useState(10)
+  const setSortMode = (val) => {
+    if (recTab === 'pool') setSortPool(val)
+    else setSortOverall(val)
+    onSortModeChange?.(val)
+  }
 
   useEffect(() => {
-    try { localStorage.setItem('rabadon-overlay-sort', sortOverall) } catch {}
-  }, [sortOverall])
+    if (!externalSort) return
+    setSortOverall(externalSort)
+    setSortPool(externalSort)
+  }, [externalSort])
+  const [visibleCount, setVisibleCount] = useState(10)
+
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
 
@@ -418,8 +425,8 @@ export default function RecommendationList({ recommendations, loading, refreshin
       <div className="rec-toolbar">
         <span className="rec-toolbar-label">Sort by</span>
         <button
-          className={`sort-btn ${sortMode === 'rating' ? 'sort-btn--active' : ''}`}
-          onClick={() => setSortMode('rating')}
+          className={`sort-btn ${sortMode !== 'delta' && sortMode !== 'synergy' && sortMode !== 'counter' ? 'sort-btn--active' : ''}`}
+          onClick={() => setSortMode('wr_delta')}
         >WR + Δ</button>
         <button
           className={`sort-btn ${sortMode === 'delta' ? 'sort-btn--active' : ''}`}
@@ -487,7 +494,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
 
       {recTab === 'overall' && (
         <>
-          <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(s => s === m ? 'rating' : m)} />
+          <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(sortMode === m ? 'wr_delta' : m)} />
           <div className="rec-grid rec-grid--row">
             {sorted.slice(0, visibleCount).map(({ rec, origIdx }, rank) => (
               <RecCard
@@ -525,7 +532,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
 
       {recTab === 'pool' && (
         <>
-          <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(s => s === m ? 'delta' : m)} />
+          <SortHeaders sortMode={sortMode} onSort={(m) => setSortMode(sortMode === m ? 'wr_delta' : m)} />
           <div className="rec-grid rec-grid--row">
             {sortedPool.length === 0 ? (
               <div className="pool-results-empty">

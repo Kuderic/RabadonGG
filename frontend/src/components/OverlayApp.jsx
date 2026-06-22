@@ -108,7 +108,7 @@ export function readDraft() {
 function makeDeltaScore(sortMode, role) {
   return r => {
     const { totalDelta, customOffset } = computeComponents(r, DEFAULT_CONFIG, role)
-    return sortMode === 'rating' ? r.win_rate + totalDelta + customOffset : totalDelta + customOffset
+    return sortMode !== 'delta' ? r.win_rate + totalDelta + customOffset : totalDelta + customOffset
   }
 }
 
@@ -131,6 +131,10 @@ export default function OverlayApp() {
   )
   const overlaySortRef = useRef(overlaySort)
   overlaySortRef.current = overlaySort
+
+  useEffect(() => {
+    try { localStorage.setItem('rabadon-overlay-sort', overlaySort) } catch {}
+  }, [overlaySort])
 
   // Connection status only — draft content comes from the shared localStorage state.
   const { connected: lcuConnected } = useLCUSession()
@@ -354,7 +358,7 @@ export default function OverlayApp() {
 
         {!hasSession ? (
           <div className="overlay-empty">Waiting for champion select…</div>
-        ) : loading ? (
+        ) : (loading && recommendations.length === 0) ? (
           <div className="overlay-empty">Analyzing draft…</div>
         ) : error ? (
           <div className="overlay-empty">{error}</div>
@@ -369,7 +373,10 @@ export default function OverlayApp() {
                   <button className={`overlay-tab ${tab === 'pool' ? 'overlay-tab--active' : ''}`} onClick={() => setTab('pool')}>My Pool</button>
                 )}
               </div>
-              <span className="r">S · C · Δ</span>
+              <div className="ov-sort-toggle">
+                <button className={`ov-sort-btn${overlaySort === 'wr_delta' ? ' active' : ''}`} onClick={() => setOverlaySort('wr_delta')}>WR+Δ</button>
+                <button className={`ov-sort-btn${overlaySort === 'delta' ? ' active' : ''}`} onClick={() => setOverlaySort('delta')}>Δ</button>
+              </div>
             </div>
             <div className="overlay-picks">
               {(tab === 'pool' ? poolPicks : recommendations).map((rec, i) => (

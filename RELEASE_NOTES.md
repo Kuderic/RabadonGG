@@ -1,3 +1,11 @@
+## What's new in 1.2.7
+
+### Changes
+- **Sort buttons always highlighted correctly** — WR + Δ and Δ buttons in the recommender now reflect the active sort on first load and after overlay-triggered navigation; fixed a stale `'rating'` value that prevented the highlight from appearing.
+- **Overlay sort is independent** — the overlay has its own WR + Δ / Δ toggle that persists separately from the main app. Clicking through from the overlay now syncs the main app to the overlay's current sort mode.
+- **Overlay no longer redraws on every pick** — while re-fetching after a draft change the existing picks stay visible instead of collapsing to a loading spinner, eliminating the shrink-and-expand flicker on each champ-select update.
+- **Pool "Add to…" inputs no longer overflow** — the search inputs in the My Pool lane columns now shrink to fit their column width at any panel size.
+
 ## What's new in 1.2.6
 
 ### Fixes

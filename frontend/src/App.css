@@ -3195,7 +3195,7 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 .poolx-search {
   position: relative;
   flex: 1;
-  min-width: 180px;
+  min-width: 0;
 }
 .poolx-search input {
   width: 100%;

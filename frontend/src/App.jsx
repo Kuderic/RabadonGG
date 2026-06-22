@@ -804,6 +804,8 @@ export default function App() {
       const champion = e.newValue
       if (!champion) return
       setActiveTab('draft')
+      const overlaySort = localStorage.getItem('rabadon-overlay-sort')
+      if (overlaySort === 'delta' || overlaySort === 'wr_delta') setSortMode(overlaySort)
       const recs = recommendationsRef.current
       const idx = recs.findIndex(r => r.champion.toLowerCase() === champion.toLowerCase())
       if (idx !== -1) {
@@ -1329,6 +1331,8 @@ export default function App() {
                     onLookupChange={setLookupChampion}
                     onAddToPool={(champion, role) => handlePoolAdd(champion, [role])}
                     onRemoveFromPool={handlePoolRemove}
+                    sortMode={sortMode}
+                    onSortModeChange={setSortMode}
                   />
                 </Suspense>
               </div>
