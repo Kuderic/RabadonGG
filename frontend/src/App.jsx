@@ -1134,9 +1134,10 @@ export default function App() {
       try {
         // Build full 5-slot ally array (player's own slot is always open)
         const isSpectating = !!(lcuSession?.spectating)
+        const myLockedChamp = lcuSession?.my_locked_champ ?? null
         const allySlots = ROLES.map(r => {
-          // In spectate mode the player's own slot has a real champion — include it
-          if (r === role && !isSpectating) return { role: r, champion: null, locked: false }
+          // Player's own slot: include their locked-in champion if they've locked; otherwise open
+          if (r === role && !isSpectating) return { role: r, champion: myLockedChamp, locked: !!myLockedChamp }
           const a = allies.find(x => x.role === r)
           let champ = a?.champion?.trim() || null
           // Spectate: the "your role" champion lives in lcuSession.allies (not the allies state)
@@ -1163,7 +1164,7 @@ export default function App() {
       }
     }, 800)
     return () => clearTimeout(overviewDebounceRef.current)
-  }, [allies, enemies, patch, tier, role, hasValidChampion, computeDraftRecs, lcuSession?.spectating]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [allies, enemies, patch, tier, role, hasValidChampion, computeDraftRecs, lcuSession?.spectating, lcuSession?.my_locked_champ]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep URL in sync with draft state so any URL can be shared
   useEffect(() => {
@@ -1304,6 +1305,14 @@ export default function App() {
               tier={tier}
               onShare={handleShare}
               shareCopied={shareCopied}
+              onClear={() => {
+                setAllies(makeAllies(ROLE_ALLY_SLOTS[role]))
+                setEnemies(makeEnemies())
+                setRecommendations([])
+                setSelectedRec(null)
+                setSelectedPoolRec(null)
+                setError(null)
+              }}
               lcuConnected={lcuConnected}
               lcuSession={lcuSession}
             />

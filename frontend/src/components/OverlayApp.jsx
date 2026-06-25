@@ -126,6 +126,7 @@ export default function OverlayApp() {
   // Full unsorted result arrays — kept so re-sorting doesn't need a re-fetch.
   const allRecsRef = useRef([])
   const allPoolRef = useRef([])
+  const intentRecRef = useRef(null) // raw intent champion rec, for rank recalc on sort change
   const [overlaySort, setOverlaySort] = useState(
     () => localStorage.getItem('rabadon-overlay-sort') || 'wr_delta'
   )
@@ -211,6 +212,11 @@ export default function OverlayApp() {
     const score = makeDeltaScore(overlaySort, currentRole)
     setRecommendations([...allRecsRef.current].sort((a, b) => score(b) - score(a)).slice(0, 5))
     setPoolPicks([...allPoolRef.current].sort((a, b) => score(b) - score(a)).slice(0, 5))
+    if (intentRecRef.current) {
+      const intentScore = score(intentRecRef.current)
+      const rank = allRecsRef.current.filter(r => score(r) > intentScore).length + 1
+      setYourPick(prev => prev ? { ...prev, rank } : prev)
+    }
   }, [overlaySort, draft?.role])
 
   // Restore saved position on mount + persist on drag.
@@ -279,6 +285,7 @@ export default function OverlayApp() {
         const intentRec = (result.pool_picks || []).find(
           p => p.champion.toLowerCase() === intentChamp.toLowerCase()
         )
+        intentRecRef.current = intentRec || null
         if (intentRec) {
           const intentScore = score(intentRec)
           const rank = allRecs.filter(r => score(r) > intentScore).length + 1
@@ -288,6 +295,7 @@ export default function OverlayApp() {
           setYourPick(null)
         }
       } else {
+        intentRecRef.current = null
         setYourPick(null)
       }
     } catch {
@@ -350,6 +358,10 @@ export default function OverlayApp() {
           <span className="overlay-logo" data-tauri-drag-region />
           <span className="overlay-word" data-tauri-drag-region>RABADON.GG</span>
           <span className="overlay-head-spacer" data-tauri-drag-region />
+          <span className="overlay-tier-badge" title={TIER_OPT.label}>
+            {TIER_OPT.icon && <img src={TIER_OPT.icon} alt="" className="overlay-tier-icon" onError={e => { e.target.style.display = 'none' }} />}
+            <span>{TIER_OPT.label}</span>
+          </span>
           <span className="overlay-patch">{patch === '30' ? '30d' : patch}</span>
           <button className="overlay-close" onClick={handleClose} title="Hide overlay">✕</button>
         </div>
@@ -391,7 +403,7 @@ export default function OverlayApp() {
                     ? <span className="cmp best">✓ best available</span>
                     : <span className="cmp">#{yourPick.rank} of {yourPick.field}</span>}
                 </div>
-                <PickRow rec={yourPick} rank={yourPick.rank} role={role} you onFocus={() => handleFocusChamp(yourPick.champion)} />
+                <PickRow rec={yourPick} rank={yourPick.rank} role={role} you onFocus={yourPick.rank > 10 ? () => handleFocusChamp(yourPick.champion) : undefined} />
               </div>
             ) : hasSession && (
               <div className="overlay-yourpick-empty">Hover a champion to compare</div>
@@ -402,12 +414,6 @@ export default function OverlayApp() {
         <div className="overlay-foot">
           <span className={`overlay-foot-dot ${statusCls}`} />
           <span>{statusText}</span>
-          {hasSession && (
-            <span className="tier">
-              {TIER_OPT.icon && <img src={TIER_OPT.icon} alt="" className="tier-icon" onError={e => { e.target.style.display = 'none' }} />}
-              {TIER_OPT.label}
-            </span>
-          )}
         </div>
       </div>
     </div>

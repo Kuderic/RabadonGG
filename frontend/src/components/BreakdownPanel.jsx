@@ -86,7 +86,7 @@ export default function BreakdownPanel({ rec, rank, onClose, settings, playerRol
           {rec.total_games > 0 && (
             <span className="bp-games">{(rec.total_games / 1000).toFixed(0)}K games</span>
           )}
-          <ExternalLink champion={rec.champion} tier={tier} patch={patch} />
+          <ExternalLink champion={rec.champion} tier={tier} patch={patch} lane={playerRole} />
         </div>
         <button className="bp-close" onClick={onClose}>✕</button>
       </div>

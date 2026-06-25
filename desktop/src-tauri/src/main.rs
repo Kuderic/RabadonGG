@@ -271,26 +271,30 @@ async fn get_lcu_session(
         }
     }
 
-    // Extract the local player's pick intent (what they're hovering before lock-in)
-    let intent_champ_name: Option<String> = session["myTeam"]
+    // Extract the local player's pick intent (hover or locked) and locked-in champion separately.
+    let (intent_champ_name, locked_champ_name): (Option<String>, Option<String>) = session["myTeam"]
         .as_array()
         .and_then(|arr| arr.iter().find(|m| m["cellId"].as_i64() == Some(local_cell_id)))
-        .and_then(|m| {
+        .map(|m| {
             let champ_id = m["championId"].as_u64().unwrap_or(0);
             let intent_id = m["championPickIntent"].as_u64().unwrap_or(0);
             let effective_id = if champ_id > 0 { champ_id } else { intent_id };
-            if effective_id > 0 { champ_map.get(&effective_id).cloned() } else { None }
-        });
+            let intent = if effective_id > 0 { champ_map.get(&effective_id).cloned() } else { None };
+            let locked = if champ_id > 0 { champ_map.get(&champ_id).cloned() } else { None };
+            (intent, locked)
+        })
+        .unwrap_or((None, None));
 
     Ok(json!({
         "connected": true,
         "session": {
-            "phase":        phase,
-            "my_role":      my_role,
-            "allies":       allies,
-            "enemies":      enemies,
-            "intent_champ": intent_champ_name,
-            "spectating":   is_spectating,
+            "phase":           phase,
+            "my_role":         my_role,
+            "allies":          allies,
+            "enemies":         enemies,
+            "intent_champ":    intent_champ_name,
+            "my_locked_champ": locked_champ_name,
+            "spectating":      is_spectating,
         }
     }))
 }

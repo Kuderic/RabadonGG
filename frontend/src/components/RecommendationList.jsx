@@ -188,7 +188,7 @@ function RecCard({ rec, rank, isPool, isSelected, onSelect, config, playerRole, 
               ? <PoolStar onClick={onRemoveFromPool ? () => onRemoveFromPool(rec.champion) : undefined} />
               : onAddToPool && <AddToPoolStar onClick={() => onAddToPool(rec.champion, playerRole)} />
             )}
-            <ExternalLink champion={rec.champion} tier={tier} patch={patch} />
+            <ExternalLink champion={rec.champion} tier={tier} patch={patch} lane={playerRole} />
           </span>
           <div className="card-stats">
             <div className="card-wr-line">

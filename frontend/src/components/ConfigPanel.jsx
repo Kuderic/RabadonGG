@@ -293,7 +293,7 @@ export default function ConfigPanel({
           Controls for the Draft tab's champion-select board.
         </p>
         <div className="config-subgroup">
-          <div className="config-subgroup-title">Open Slot Picks</div>
+          <div className="config-subgroup-title">Show Recommendations</div>
           <p className="config-desc" style={{ marginBottom: 10 }}>
             When enabled, each open slot shows the top 3 recommended picks. Scoring all open slots can take 5–20 seconds on a cold cache.
           </p>
@@ -304,7 +304,7 @@ export default function ConfigPanel({
                 checked={!!computeDraftRecs}
                 onChange={e => onComputeDraftRecsChange(e.target.checked)}
               />
-              Compute open slot recommendations
+              Show recommendations
             </label>
           </div>
           <div className="config-row config-row--spaced" style={{ marginTop: 8, marginBottom: 0 }}>

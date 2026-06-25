@@ -319,6 +319,23 @@ body {
 .share-btn:hover { border-color: var(--gold-deep); color: var(--ink-2); }
 .share-btn--copied { border-color: var(--gold) !important; color: var(--gold-bright) !important; }
 
+.clear-btn {
+  font-family: var(--font-stat);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.clear-btn:hover { border-color: var(--red, #c0392b); color: var(--red, #c0392b); }
+.clear-btn:disabled { opacity: 0.4; cursor: default; }
+
 .draft-population-display {
   display: flex; align-items: center; gap: 8px;
   font-size: 13px; color: var(--ink-2);
@@ -3516,6 +3533,8 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 .overlay-word { font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--gold-mid); }
 .overlay-head-spacer { flex: 1; }
 .overlay-patch { font-size: 9px; letter-spacing: 0.5px; color: var(--ink-3); border: 1px solid var(--border-soft); border-radius: 2px; padding: 2px 6px; }
+.overlay-tier-badge { display: flex; align-items: center; gap: 3px; font-size: 9px; letter-spacing: 0.4px; color: var(--ink-3); border: 1px solid var(--border-soft); border-radius: 2px; padding: 2px 6px; }
+.overlay-tier-icon { width: 11px; height: 11px; object-fit: contain; }
 .overlay-close {
   width: 18px; height: 18px; background: none; border: none; color: var(--ink-4);
   cursor: pointer; display: flex; align-items: center; justify-content: center;

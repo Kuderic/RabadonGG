@@ -289,7 +289,7 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
             checked={!!computeDraftRecs}
             onChange={e => onComputeDraftRecsChange?.(e.target.checked)}
           />
-          Open slot picks
+          Show recommendations
         </label>
         <span className="ov-compute-hint">⏱ may take up to 20s</span>
       </div>

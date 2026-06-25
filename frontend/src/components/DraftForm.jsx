@@ -345,6 +345,7 @@ export default function DraftForm({
   onSubmit, loading, error,
   patch, tier,
   onShare, shareCopied,
+  onClear,
   lcuConnected = false,
   lcuSession = null,
 }) {
@@ -379,6 +380,11 @@ export default function DraftForm({
               title="Copy link to this draft"
             >
               {shareCopied ? '✓ Copied' : '⎘ Share'}
+            </button>
+          )}
+          {onClear && (
+            <button className="clear-btn" onClick={onClear} title="Clear all champion inputs" disabled={loading}>
+              ✕ Clear
             </button>
           )}
         </div>
