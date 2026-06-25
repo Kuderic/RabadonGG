@@ -1,3 +1,17 @@
+## What's new in 1.2.8
+
+### Changes
+- **Clear button** — new ✕ Clear button in the draft header clears all ally and enemy inputs and resets results in one click.
+- **Lolalytics links include lane** — external links to lolalytics.com now include the correct lane parameter (e.g. `lane=bottom` for ADC), opening the right role page directly.
+- **Overlay tier badge in header** — the population tier (Emerald+, Diamond+, etc.) now appears as a compact icon+label badge in the overlay header next to the patch, replacing the footer display.
+- **Overlay no-flicker refresh** — existing picks stay visible while the overlay re-fetches on draft changes; the panel no longer collapses to a spinner on every update.
+- **Overlay sort independence** — the overlay WR+Δ / Δ toggle persists separately from the main app and syncs the main app's sort when clicking through.
+- **Sort buttons always correct** — fixed WR+Δ button never highlighting due to a stale internal value.
+- **Your pick click-through** — clicking the "Your pick" row in the overlay opens the lookup only when your pick ranks outside the top 10.
+- **Draft Overview sees your locked champion** — when you lock in your own champion during champion select, the Draft Overview now includes your slot with your pick instead of leaving it open.
+- **Overlay rank recalculates on sort change** — your pick's rank in the overlay updates correctly when switching between WR+Δ and Δ sort.
+- **"Show recommendations" rename** — "Open slot picks" label renamed to "Show recommendations" in Draft Overview and Settings for clarity.
+
 ## What's new in 1.2.7
 
 ### Changes
