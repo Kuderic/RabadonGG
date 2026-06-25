@@ -511,6 +511,9 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [champions, setChampions] = useState([])
+  // Data-derived primary role per champion (from lolalytics pick volume) — fallback
+  // for champions missing from the hardcoded role map in utils/champion.js.
+  const [championRoles, setChampionRoles] = useState({})
   const [patch, setPatch] = useState(
     _url?.params.get('patch') ?? localStorage.getItem('rabadon_patch') ?? '30'
   )
@@ -649,7 +652,9 @@ export default function App() {
     const placed = new Set(Object.values(filledSlots))
     for (const e of lcuSession.enemies) {
       if (placed.has(e.champion)) continue
-      const primary = champPrimaryRole(e.champion)
+      // Fall back to the data-derived role (from lolalytics pick volume) when the
+      // champion isn't in the hardcoded map — avoids silently defaulting to top.
+      const primary = champPrimaryRole(e.champion) || championRoles[e.champion] || null
       if (primary && !filledSlots[primary]) {
         filledSlots[primary] = e.champion
       } else {
@@ -839,7 +844,10 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    getChampions().then(setChampions).catch(() => {})
+    getChampions().then(({ names, primaryRoles }) => {
+      setChampions(names)
+      setChampionRoles(primaryRoles)
+    }).catch(() => {})
     getPatches().then(patches => {
       setAvailablePatches(patches)
       // Auto-select latest patch only for first-time web users (no saved pref, no URL param)

@@ -8,7 +8,9 @@ export async function getChampions() {
   const res = await fetch(`${BASE_URL}/api/champions`)
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   const data = await res.json()
-  return data.champions
+  // { names: string[], primaryRoles: { [displayName]: role } } — primaryRoles is
+  // the data-derived fallback for champions missing from the hardcoded role map.
+  return { names: data.champions, primaryRoles: data.primary_roles ?? {} }
 }
 
 export async function getRecommendations(role, allies, enemies, patch, tier, pool = []) {

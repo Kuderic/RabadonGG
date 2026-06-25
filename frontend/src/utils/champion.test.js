@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { champDDragonKey, champSlug, champPrimaryRole, filterChampions } from './champion'
+import roster from './champion.roster.json'
 
 describe('champDDragonKey', () => {
   it('removes spaces: "Miss Fortune" → "MissFortune"', () => {
@@ -92,6 +93,21 @@ describe('champPrimaryRole', () => {
 
   it('"Kai\'Sa" → "adc" (stored as KaiSa)', () => {
     expect(champPrimaryRole("Kai'Sa")).toBe('adc')
+  })
+})
+
+// Regression guard for the "champion defaults to top lane" class of bug:
+// every champion in the live roster must resolve to a primary role in the
+// hardcoded map. champion.roster.json is a snapshot of GET /api/champions —
+// refresh it when Riot ships a new champion, which will fail this test until
+// the champion is added to CHAMPION_PRIMARY_ROLE in champion.js.
+// (The backend also serves a data-derived fallback via /api/champions, but the
+// hardcoded map is the fast path and should stay complete for shipped champions.)
+describe('champPrimaryRole — full roster coverage', () => {
+  const missing = roster.filter(name => champPrimaryRole(name) === null)
+
+  it('every champion in the roster has a primary role', () => {
+    expect(missing).toEqual([])
   })
 })
 

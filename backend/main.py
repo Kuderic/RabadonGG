@@ -105,13 +105,63 @@ async def get_patches() -> dict:
         return {"patches": ["16.11", "16.10", "16.9", "16.8", "16.7"]}
 
 
+# lolalytics lane strings → the role keys used everywhere else in the app
+_LANE_TO_ROLE = {
+    "top": "top",
+    "jungle": "jungle",
+    "middle": "mid",
+    "bottom": "adc",
+    "support": "support",
+}
+
+
+def _slugify(name: str) -> str:
+    """Champion display name → lolalytics slug (lowercase alphanumeric)."""
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def _compute_primary_roles(patches: list[str], tier: str) -> dict[str, str]:
+    """Derive each champion's primary role from pooled pick volume.
+
+    Reads `games_by_slug` from the per-lane pool cache and returns, for every
+    champion slug, the role in which it has the most games. Aggregated across
+    the given patches (current + 30-day window) for maximum coverage of newly
+    released champions. This is the data-driven fallback for champions missing
+    from the frontend's hardcoded role map.
+    """
+    from services.db import read_pool
+
+    games: dict[str, dict[str, int]] = {}
+    for patch in patches:
+        for lane, role in _LANE_TO_ROLE.items():
+            pool = read_pool(lane, patch, tier)
+            if not pool:
+                continue
+            for slug, n in (pool.get("games_by_slug") or {}).items():
+                by_role = games.setdefault(slug.lower(), {})
+                by_role[role] = by_role.get(role, 0) + (n or 0)
+    return {slug: max(by_role, key=by_role.get) for slug, by_role in games.items() if by_role}
+
+
 @app.get("/api/champions")
 async def get_all_champions() -> dict:
-    """Return all known champion display names for frontend autocomplete."""
+    """Return all champion display names + data-derived primary roles.
+
+    `primary_roles` maps display name → role for every champion lolalytics has
+    pick-volume data for, so the frontend can place champions missing from its
+    hardcoded role map instead of silently defaulting them to top lane.
+    """
     from services.scraper import _id_to_slug, _ensure_champion_map, _get_patch
     patch = await _get_patch()
     await _ensure_champion_map(patch)
-    return {"champions": sorted(_id_to_slug.values())}
+    names = sorted(_id_to_slug.values())
+    roles_by_slug = _compute_primary_roles([patch, "30"], "emerald_plus")
+    primary_roles = {
+        name: roles_by_slug[_slugify(name)]
+        for name in names
+        if _slugify(name) in roles_by_slug
+    }
+    return {"champions": names, "primary_roles": primary_roles}
 
 
 _icon_cache: dict[str, bytes] = {}

@@ -41,7 +41,7 @@ const CHAMPION_PRIMARY_ROLE = {
   Poppy:'top', Quinn:'top', Renekton:'top', Riven:'top', Rumble:'top',
   Sett:'top', Shen:'top', Singed:'top', Sion:'top', Teemo:'top',
   Trundle:'top', Tryndamere:'top', Urgot:'top', Vladimir:'top', Volibear:'top',
-  Warwick:'top', Yorick:'top',
+  Warwick:'top', Yorick:'top', Zaahen:'top',
 
   // JUNGLE
   Amumu:'jungle', BelVeth:'jungle', Briar:'jungle', Diana:'jungle',
@@ -62,14 +62,14 @@ const CHAMPION_PRIMARY_ROLE = {
   Qiyana:'mid', Ryze:'mid', Sylas:'mid', Syndra:'mid', Taliyah:'mid',
   Talon:'mid', TwistedFate:'mid', Veigar:'mid', Vex:'mid', Viktor:'mid',
   Xerath:'mid', Yasuo:'mid', Yone:'mid', Zed:'mid', Ziggs:'mid', Zoe:'mid',
-  Annie:'mid', Hwei:'mid',
+  Annie:'mid', Hwei:'mid', Locke:'mid',
 
   // ADC
   Aphelios:'adc', Ashe:'adc', Caitlyn:'adc', Draven:'adc', Ezreal:'adc',
   Jhin:'adc', Jinx:'adc', KaiSa:'adc', Kalista:'adc', KogMaw:'adc',
   Lucian:'adc', MissFortune:'adc', Nilah:'adc', Samira:'adc', Sivir:'adc',
   Smolder:'adc', Tristana:'adc', Twitch:'adc', Varus:'adc', Vayne:'adc',
-  Xayah:'adc', Zeri:'adc',
+  Xayah:'adc', Yunara:'adc', Zeri:'adc',
 
   // SUPPORT
   Alistar:'support', Bard:'support', Blitzcrank:'support', Brand:'support',
@@ -79,7 +79,7 @@ const CHAMPION_PRIMARY_ROLE = {
   Renata:'support', Senna:'support', Seraphine:'support', Sona:'support',
   Soraka:'support', TahmKench:'support', Taric:'support', Thresh:'support',
   Vel_Koz:'support', Yuumi:'support', Zilean:'support', Zyra:'support',
-  Heimerdinger:'support', Swain:'support',
+  Heimerdinger:'support', Swain:'support', Rell:'support',
 }
 
 export function champPrimaryRole(name) {
@@ -102,7 +102,7 @@ const CHAMPION_SECONDARY_ROLE = {
   Jax:'jungle', Jayce:'mid', Kennen:'mid', Malphite:'support',
   Maokai:'support', Mordekaiser:'jungle', Pantheon:'support', Poppy:'jungle',
   Rumble:'support', Sion:'support', Trundle:'jungle', Urgot:'jungle',
-  Vladimir:'mid', Volibear:'jungle', Warwick:'support',
+  Vladimir:'mid', Volibear:'jungle', Warwick:'support', Zaahen:'jungle',
 
   // Jungle → secondary
   Diana:'mid', Ekko:'mid', Fiddlesticks:'support', Graves:'mid',
@@ -116,7 +116,7 @@ const CHAMPION_SECONDARY_ROLE = {
   Katarina:'jungle', LeBlanc:'support', Lissandra:'support',
   Neeko:'support', Sylas:'jungle', Taliyah:'jungle', Talon:'jungle',
   TwistedFate:'support', Veigar:'support', Yasuo:'top', Yone:'top',
-  Zed:'jungle', Ziggs:'adc',
+  Zed:'jungle', Ziggs:'adc', Locke:'jungle',
 
   // ADC → secondary
   Lucian:'mid', Smolder:'mid', Tristana:'mid',
