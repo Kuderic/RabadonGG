@@ -1,3 +1,15 @@
+## What's new in 1.2.10
+
+### Bug fixes
+- **Enemies now appear during champion select** — enemy champions show up as soon as someone hovers a pick, not only after they lock in. Your recommendations update earlier and more accurately.
+- **Overlay no longer shows after you've disabled it** — toggling the overlay off in Settings now takes effect immediately and stays off for the entire session.
+- **Clear button now fully resets the app** — clicking ✕ Clear previously left some hidden state behind that could block the LCU auto-fill from working correctly on the next game. Everything is properly reset now.
+- **Blacklisted champions can't get stuck in the breakdown** — if you blacklisted a champion while it was selected, the breakdown panel could get stuck open on a hidden card. It now closes automatically.
+- **Recommendations still shown after a disconnect** — a brief LCU connection hiccup (e.g. client restarts) no longer wipes your current draft and forces a reload.
+- **Settings search resets when switching roles** — in the Champion Blacklist settings, typing a name and then switching to a different role tab no longer carries over the text you typed.
+- **Matchup data more likely to be available after midnight** — previously, cached data was thrown out right at midnight even if it was only minutes old, causing a slow first load. Data from the prior day is now kept until it's actually a full day old.
+- **Various stability fixes** — addressed several edge cases that could cause slowdowns or errors under the hood when fetching and caching matchup data.
+
 ## What's new in 1.2.9
 
 ### Changes
