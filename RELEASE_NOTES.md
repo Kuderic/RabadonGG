@@ -1,3 +1,11 @@
+## What's new in 1.2.9
+
+### Changes
+- **Overlay closes when champion select ends** — the overlay now automatically hides itself when champion select ends, rather than staying open until manually dismissed.
+- **Champion blacklist** — new Settings section lets you blacklist champions per role so they never appear in recommendations. Add champions by searching, remove with ✕. Works in both the main app and overlay.
+- **Remove overlay hotkey** — the overlay hotkey field in Settings now has a ✕ button to clear the hotkey entirely.
+- **Overlay stays closed mid-session** — closing the overlay with ✕ during champion select now keeps it hidden for the rest of that session; it re-opens automatically on the next champion select.
+
 ## What's new in 1.2.8
 
 ### Changes

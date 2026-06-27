@@ -235,7 +235,10 @@ export default function OverlayApp() {
     })
   }, [])
 
-  const handleClose = () => { getTauriWindow()?.hide() }
+  const handleClose = () => {
+    try { localStorage.setItem('rabadon-overlay-dismissed', '1') } catch {}
+    getTauriWindow()?.hide()
+  }
 
   const handleFocusChamp = useCallback((champion) => {
     try { localStorage.setItem('rabadon-overlay-focus', champion) } catch (_) {}
@@ -271,8 +274,13 @@ export default function OverlayApp() {
     setError(null)
     try {
       const result = await getRecommendations(role, filteredAllies, filteredEnemies, patch, tier, poolForRequest)
-      const allRecs = result.recommendations || []
-      const poolFiltered = (result.pool_picks || []).filter(p => poolForRole.includes(p.champion))
+      let blacklisted
+      try {
+        const bl = JSON.parse(localStorage.getItem('rabadon_champ_blacklist') || '{}')
+        blacklisted = new Set((bl[role] || []).map(c => c.toLowerCase()))
+      } catch { blacklisted = new Set() }
+      const allRecs = (result.recommendations || []).filter(r => !blacklisted.has(r.champion.toLowerCase()))
+      const poolFiltered = (result.pool_picks || []).filter(p => poolForRole.includes(p.champion) && !blacklisted.has(p.champion.toLowerCase()))
       // Store full arrays for re-sorting when sort mode changes without re-fetching.
       allRecsRef.current = allRecs
       allPoolRef.current = poolFiltered
@@ -318,6 +326,9 @@ export default function OverlayApp() {
       setPoolPicks([])
       setYourPick(null)
       prevDraftKeyRef.current = null
+    }
+    if (isSessionEnd) {
+      getTauriWindow()?.hide()
     }
     prevPhaseRef.current = phase
   }, [draft?.phase])

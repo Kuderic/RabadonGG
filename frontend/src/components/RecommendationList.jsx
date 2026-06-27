@@ -269,7 +269,7 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {} }) {
   const [recTab, setRecTab] = useState('overall')
   const [sortOverall, setSortOverall] = useState(() => externalSort || 'wr_delta')
   const [sortPool, setSortPool]       = useState(() => externalSort || 'wr_delta')
@@ -329,15 +329,20 @@ export default function RecommendationList({ recommendations, loading, refreshin
       }
     }
 
+    const blacklistedForRole = new Set(
+      (champBlacklist[playerRole] || []).map(c => c.toLowerCase())
+    )
+
     const sorted = [...recommendations]
       .map((rec, origIdx) => ({ rec, origIdx }))
+      .filter(({ rec }) => !blacklistedForRole.has(rec.champion.toLowerCase()))
       .sort((a, b) =>
         computeAdjustedScore(b.rec, sortMode, config, playerRole, wrModifiers) -
         computeAdjustedScore(a.rec, sortMode, config, playerRole, wrModifiers)
       )
 
     return { sorted, penalizedCount }
-  }, [recommendations, sortMode, config, playerRole, wrModifiers])
+  }, [recommendations, sortMode, config, playerRole, wrModifiers, champBlacklist])
 
   const sortedPool = useMemo(() => {
     if (!poolResults.length) return []

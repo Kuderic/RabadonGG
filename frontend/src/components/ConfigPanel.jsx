@@ -86,8 +86,12 @@ export default function ConfigPanel({
   wrModifiers = {}, onModifierChange,
   computeDraftRecs = false, onComputeDraftRecsChange,
   sortMode = 'wr_delta', onSortModeChange,
+  champBlacklist = {}, onChampBlacklistChange,
 }) {
   const [viewRole, setViewRole] = useState('adc')
+  const [blacklistRole, setBlacklistRole] = useState('top')
+  const [blacklistInput, setBlacklistInput] = useState('')
+  const [blacklistSuggestions, setBlacklistSuggestions] = useState([])
   const weights = config.roleWeights?.[viewRole] || {}
   const allySlots = ALLY_SLOTS[viewRole] || []
 
@@ -323,6 +327,74 @@ export default function ConfigPanel({
         </div>
       </div>
 
+      {/* ── Champion Blacklist ──────────────────────────────── */}
+      <div className="config-section">
+        <div className="config-section-title">Champion Blacklist</div>
+        <p className="config-desc">
+          Champions added here will never appear in recommendations. Blacklists are per-role — select a role tab, then type a champion name to add it.
+        </p>
+        <div className="config-role-tabs">
+          {ROLES.map(r => (
+            <button
+              key={r}
+              className={`config-role-tab ${blacklistRole === r ? 'config-role-tab--active' : ''}`}
+              onClick={() => { setBlacklistRole(r); setBlacklistInput(''); setBlacklistSuggestions([]) }}
+            >{ROLE_LABEL[r]}</button>
+          ))}
+        </div>
+        <div className="blacklist-add-row">
+          <input
+            type="text"
+            className="blacklist-input"
+            placeholder="Search champion to blacklist…"
+            value={blacklistInput}
+            onChange={e => {
+              const v = e.target.value
+              setBlacklistInput(v)
+              if (v.length < 2) { setBlacklistSuggestions([]); return }
+              const lower = v.toLowerCase()
+              const already = new Set((champBlacklist[blacklistRole] || []).map(c => c.toLowerCase()))
+              setBlacklistSuggestions(
+                champions.filter(c => c.toLowerCase().includes(lower) && !already.has(c.toLowerCase())).slice(0, 8)
+              )
+            }}
+            onBlur={() => setTimeout(() => setBlacklistSuggestions([]), 150)}
+          />
+          {blacklistSuggestions.length > 0 && (
+            <div className="blacklist-suggestions">
+              {blacklistSuggestions.map(c => (
+                <div key={c} className="blacklist-suggestion" onMouseDown={() => {
+                  onChampBlacklistChange({
+                    ...champBlacklist,
+                    [blacklistRole]: [...(champBlacklist[blacklistRole] || []), c]
+                  })
+                  setBlacklistInput('')
+                  setBlacklistSuggestions([])
+                }}>
+                  {c}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="blacklist-chips">
+          {(champBlacklist[blacklistRole] || []).length === 0
+            ? <span className="config-hint">No champions blacklisted for {ROLE_LABEL[blacklistRole]}.</span>
+            : (champBlacklist[blacklistRole] || []).map(c => (
+                <div key={c} className="blacklist-chip">
+                  {c}
+                  <button className="blacklist-chip-remove" onClick={() => {
+                    onChampBlacklistChange({
+                      ...champBlacklist,
+                      [blacklistRole]: (champBlacklist[blacklistRole] || []).filter(x => x !== c)
+                    })
+                  }}>✕</button>
+                </div>
+              ))
+          }
+        </div>
+      </div>
+
       {/* ── Display ─────────────────────────────────────────── */}
       <div className="config-section">
         <div className="config-section-title">Display</div>
@@ -356,10 +428,19 @@ export default function ConfigPanel({
               <label className="config-check-label" style={{ cursor: 'default' }}>
                 Hotkey
               </label>
-              <HotkeyCapture value={overlayHotkey} onChange={onOverlayHotkeyChange} />
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <HotkeyCapture value={overlayHotkey} onChange={onOverlayHotkeyChange} />
+                {overlayHotkey && (
+                  <button
+                    className="hotkey-clear-btn"
+                    onClick={() => onOverlayHotkeyChange('')}
+                    title="Remove hotkey"
+                  >✕</button>
+                )}
+              </div>
             </div>
             <p className="config-hint" style={{ marginTop: 0, marginBottom: 10 }}>
-              Default: Ctrl+ArrowDown — click the box above and press any key combo to change
+              {overlayHotkey ? 'Click the box to change, ✕ to remove' : 'No hotkey set — click the box to record one'}
             </p>
             <div className="config-row">
               <label className="config-check-label">

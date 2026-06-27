@@ -533,6 +533,9 @@ export default function App() {
   const [overlayScale, setOverlayScale] = useState(
     () => parseInt(localStorage.getItem('rabadon-overlay-scale') || '100', 10)
   )
+  const [champBlacklist, setChampBlacklist] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('rabadon_champ_blacklist') || '{}') } catch { return {} }
+  })
   const [overlayTransparent, setOverlayTransparent] = useState(
     () => localStorage.getItem('rabadon-overlay-transparent') !== 'false'
   )
@@ -702,6 +705,7 @@ export default function App() {
       setError(null)
       setDraftOverview(null)
       setDraftOverviewLoading(false)
+      try { localStorage.removeItem('rabadon-overlay-dismissed') } catch {}
     }
   }, [lcuSession, lcuConnected]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -710,7 +714,7 @@ export default function App() {
     if (!IS_TAURI) return
     const phase = lcuSession?.phase ?? null
     if (phase !== prevLcuPhaseRef.current) {
-      if (phase && overlayEnabled) {
+      if (phase && overlayEnabled && !localStorage.getItem('rabadon-overlay-dismissed')) {
         window.__TAURI__.core.invoke('control_overlay', { action: 'show' }).catch(() => {})
       } else if (prevLcuPhaseRef.current) {
         window.__TAURI__.core.invoke('control_overlay', { action: 'hide' }).catch(() => {})
@@ -750,6 +754,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('rabadon_sort_mode', sortMode)
   }, [sortMode])
+
+  useEffect(() => {
+    localStorage.setItem('rabadon_champ_blacklist', JSON.stringify(champBlacklist))
+  }, [champBlacklist])
 
   useEffect(() => {
     localStorage.setItem('rabadon_overlay_enabled', String(overlayEnabled))
@@ -1350,6 +1358,7 @@ export default function App() {
                     onRemoveFromPool={handlePoolRemove}
                     sortMode={sortMode}
                     onSortModeChange={setSortMode}
+                    champBlacklist={champBlacklist}
                   />
                 </Suspense>
               </div>
@@ -1412,6 +1421,8 @@ export default function App() {
               onComputeDraftRecsChange={setComputeDraftRecs}
               sortMode={sortMode}
               onSortModeChange={setSortMode}
+              champBlacklist={champBlacklist}
+              onChampBlacklistChange={setChampBlacklist}
             />
           </Suspense>
         )}

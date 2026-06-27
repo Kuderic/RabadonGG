@@ -1435,6 +1435,45 @@ body {
 }
 .config-reset-btn:hover { border-color: var(--enemy); color: var(--enemy-bright); }
 
+/* ── Champion Blacklist ─────────────────────────────────── */
+.blacklist-add-row { position: relative; margin: 10px 0; }
+.blacklist-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--input-bg, #1a1a2e); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); padding: 7px 10px;
+  font-size: 0.88rem; outline: none;
+}
+.blacklist-input:focus { border-color: var(--accent, #a78bfa); }
+.blacklist-suggestions {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+  background: var(--card-bg, #1e1e3a); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 6px 6px;
+  max-height: 200px; overflow-y: auto;
+}
+.blacklist-suggestion {
+  padding: 6px 10px; cursor: pointer; font-size: 0.88rem; color: var(--text);
+}
+.blacklist-suggestion:hover { background: rgba(255,255,255,0.06); }
+.blacklist-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-top: 4px; }
+.blacklist-chip {
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(255,255,255,0.07); border: 1px solid var(--border);
+  border-radius: 20px; padding: 3px 8px 3px 10px; font-size: 0.83rem; color: var(--text);
+}
+.blacklist-chip-remove {
+  background: none; border: none; color: var(--ink-3); cursor: pointer;
+  padding: 0 0 0 2px; font-size: 0.78rem; line-height: 1;
+}
+.blacklist-chip-remove:hover { color: #ff5555; }
+
+/* ── Hotkey clear button ────────────────────────────────── */
+.hotkey-clear-btn {
+  background: none; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--ink-3); cursor: pointer; padding: 3px 9px; font-size: 0.83rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+.hotkey-clear-btn:hover { color: #ff5555; border-color: #ff5555; }
+
 .enemy-color { color: var(--enemy-bright); }
 .ally-color  { color: var(--ally-bright); }
 
