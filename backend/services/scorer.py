@@ -57,11 +57,14 @@ def get_synergy_breakdown(
     for ally in allies:
         key = (ally["champion"].lower(), "ally")
         if key in matchup_data:
+            n = matchup_n.get(key, 0)
+            if n == 0:
+                continue
             found.append({
                 "champion": ally["champion"],
                 "role": ally["role"],
                 "delta": _fmt(matchup_data[key]),
-                "n": matchup_n.get(key, 0),
+                "n": n,
             })
         else:
             missing.append(ally["champion"])
@@ -77,11 +80,14 @@ def get_counter_breakdown(
     for enemy in enemies:
         key = (enemy["champion"].lower(), "enemy")
         if key in matchup_data:
+            n = matchup_n.get(key, 0)
+            if n == 0:
+                continue
             found.append({
                 "champion": enemy["champion"],
                 "role": enemy["role"],
                 "delta": _fmt(matchup_data[key]),
-                "n": matchup_n.get(key, 0),
+                "n": n,
             })
         else:
             missing.append(enemy["champion"])

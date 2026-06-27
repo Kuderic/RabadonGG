@@ -127,6 +127,8 @@ export default function OverlayApp() {
   const allRecsRef = useRef([])
   const allPoolRef = useRef([])
   const intentRecRef = useRef(null) // raw intent champion rec, for rank recalc on sort change
+  const draftRoleRef = useRef(null)
+  draftRoleRef.current = draft?.role ?? null
   const [overlaySort, setOverlaySort] = useState(
     () => localStorage.getItem('rabadon-overlay-sort') || 'wr_delta'
   )
@@ -205,10 +207,12 @@ export default function OverlayApp() {
     panelRef.current.classList.toggle('overlay-panel--opaque', !overlayTransparent)
   }, [overlayTransparent])
 
-  // Re-sort existing results when the sort mode or role changes — no re-fetch needed.
+  // Re-sort existing results when the sort mode changes — no re-fetch needed.
+  // Does NOT run on role change: allRecsRef holds data for the previous role until
+  // the debounced fetch completes, so re-sorting early would apply wrong-role data.
   useEffect(() => {
     if (!allRecsRef.current.length) return
-    const currentRole = draft?.role || 'adc'
+    const currentRole = draftRoleRef.current || 'adc'
     const score = makeDeltaScore(overlaySort, currentRole)
     setRecommendations([...allRecsRef.current].sort((a, b) => score(b) - score(a)).slice(0, 5))
     setPoolPicks([...allPoolRef.current].sort((a, b) => score(b) - score(a)).slice(0, 5))
@@ -217,7 +221,7 @@ export default function OverlayApp() {
       const rank = allRecsRef.current.filter(r => score(r) > intentScore).length + 1
       setYourPick(prev => prev ? { ...prev, rank } : prev)
     }
-  }, [overlaySort, draft?.role])
+  }, [overlaySort]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restore saved position on mount + persist on drag.
   useEffect(() => {

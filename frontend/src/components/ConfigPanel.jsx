@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import TierSelector from './TierSelector'
-import ChampionPoolPanel from './ChampionPoolPanel'
+import ChampionPoolPanel, { ChampionPicker } from './ChampionPoolPanel'
 import CustomModifiersPanel from './CustomModifiersPanel'
+import { champIconUrl } from '../utils/champion'
 
 const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
 
@@ -90,8 +91,6 @@ export default function ConfigPanel({
 }) {
   const [viewRole, setViewRole] = useState('adc')
   const [blacklistRole, setBlacklistRole] = useState('top')
-  const [blacklistInput, setBlacklistInput] = useState('')
-  const [blacklistSuggestions, setBlacklistSuggestions] = useState([])
   const weights = config.roleWeights?.[viewRole] || {}
   const allySlots = ALLY_SLOTS[viewRole] || []
 
@@ -338,61 +337,39 @@ export default function ConfigPanel({
             <button
               key={r}
               className={`config-role-tab ${blacklistRole === r ? 'config-role-tab--active' : ''}`}
-              onClick={() => { setBlacklistRole(r); setBlacklistInput(''); setBlacklistSuggestions([]) }}
+              onClick={() => setBlacklistRole(r)}
             >{ROLE_LABEL[r]}</button>
           ))}
         </div>
-        <div className="blacklist-add-row">
-          <input
-            type="text"
-            className="blacklist-input"
-            placeholder="Search champion to blacklist…"
-            value={blacklistInput}
-            onChange={e => {
-              const v = e.target.value
-              setBlacklistInput(v)
-              if (v.length < 2) { setBlacklistSuggestions([]); return }
-              const lower = v.toLowerCase()
-              const already = new Set((champBlacklist[blacklistRole] || []).map(c => c.toLowerCase()))
-              setBlacklistSuggestions(
-                champions.filter(c => c.toLowerCase().includes(lower) && !already.has(c.toLowerCase())).slice(0, 8)
-              )
-            }}
-            onBlur={() => setTimeout(() => setBlacklistSuggestions([]), 150)}
+        <div className="pool-lane-addrow" style={{ marginBottom: 8 }}>
+          <ChampionPicker
+            key={blacklistRole}
+            champions={champions}
+            exclude={new Set((champBlacklist[blacklistRole] || []).map(c => c.toLowerCase()))}
+            placeholder={`Add champion to ${ROLE_LABEL[blacklistRole]} blacklist…`}
+            onPick={name => onChampBlacklistChange({
+              ...champBlacklist,
+              [blacklistRole]: [...(champBlacklist[blacklistRole] || []), name]
+            })}
           />
-          {blacklistSuggestions.length > 0 && (
-            <div className="blacklist-suggestions">
-              {blacklistSuggestions.map(c => (
-                <div key={c} className="blacklist-suggestion" onMouseDown={() => {
-                  onChampBlacklistChange({
+        </div>
+        {(champBlacklist[blacklistRole] || []).length === 0
+          ? <span className="config-hint">No champions blacklisted for {ROLE_LABEL[blacklistRole]}.</span>
+          : (champBlacklist[blacklistRole] || []).map(c => (
+              <div className="pool-byrole-row" key={c}>
+                <img src={champIconUrl(c)} alt="" onError={e => { e.target.style.visibility = 'hidden' }} />
+                <span className="pool-byrole-row-name">{c}</span>
+                <button
+                  className="pool-byrole-row-x"
+                  onClick={() => onChampBlacklistChange({
                     ...champBlacklist,
-                    [blacklistRole]: [...(champBlacklist[blacklistRole] || []), c]
-                  })
-                  setBlacklistInput('')
-                  setBlacklistSuggestions([])
-                }}>
-                  {c}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="blacklist-chips">
-          {(champBlacklist[blacklistRole] || []).length === 0
-            ? <span className="config-hint">No champions blacklisted for {ROLE_LABEL[blacklistRole]}.</span>
-            : (champBlacklist[blacklistRole] || []).map(c => (
-                <div key={c} className="blacklist-chip">
-                  {c}
-                  <button className="blacklist-chip-remove" onClick={() => {
-                    onChampBlacklistChange({
-                      ...champBlacklist,
-                      [blacklistRole]: (champBlacklist[blacklistRole] || []).filter(x => x !== c)
-                    })
-                  }}>✕</button>
-                </div>
-              ))
-          }
-        </div>
+                    [blacklistRole]: (champBlacklist[blacklistRole] || []).filter(x => x !== c)
+                  })}
+                  aria-label={`Remove ${c} from blacklist`}
+                >✕</button>
+              </div>
+            ))
+        }
       </div>
 
       {/* ── Display ─────────────────────────────────────────── */}

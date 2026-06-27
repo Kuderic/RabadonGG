@@ -268,7 +268,7 @@ async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
             "champions": names,
             "games_by_slug": games_by_slug,
         }
-        db.write_pool(lane, patch, tkey, pool_data)
+        await asyncio.to_thread(db.write_pool, lane, patch, tkey, pool_data)
         games_key = f"{tkey}:{patch}:{lane}"
         _games_by_slug_cache[games_key] = games_by_slug
         logger.info(f"Pool for {role} ({tkey}): {len(names)} champions")
@@ -361,7 +361,7 @@ async def get_matchup_data(
                     _fetch("build-team", lane, api_slug, patch, tier, days),
                 )
                 team_map = team_resp.get("team", {})
-                db.write_matchup(cand_slug, patch, tkey, lane, counter_list, team_map, win_rate, 0)
+                await asyncio.to_thread(db.write_matchup, cand_slug, patch, tkey, lane, counter_list, team_map, win_rate, 0)
                 logger.info(f"Fetched and cached: {candidate} ({lane}, {patch}, {tkey})")
             except Exception as e:
                 logger.warning(f"lolalytics fetch failed for {candidate}: {e}")

@@ -257,13 +257,18 @@ async fn get_lcu_session(
 
     // theirTeam — assignedPosition is unreliable for enemies; role assignment
     // is handled by champPrimaryRole on the frontend.
+    // Fall through to championPickIntent when championId is 0 (hovering but not locked)
+    // so enemies appear during BAN_PICK the same way allies do.
     if let Some(their_team) = session["theirTeam"].as_array() {
         for member in their_team {
             let champ_id = member["championId"].as_u64().unwrap_or(0);
-            let champ_name = champ_map
-                .get(&champ_id)
-                .cloned()
-                .unwrap_or_default();
+            let pick_intent = member["championPickIntent"].as_u64().unwrap_or(0);
+            let effective_id = if champ_id > 0 { champ_id } else { pick_intent };
+            let champ_name = if effective_id > 0 {
+                champ_map.get(&effective_id).cloned().unwrap_or_default()
+            } else {
+                String::new()
+            };
 
             if !champ_name.is_empty() {
                 enemies.push(json!({ "champion": champ_name }));

@@ -594,13 +594,17 @@ export default function App() {
   const { connected: lcuConnected, session: lcuSession } = useLCUSession()
   const prevLcuPhaseRef = useRef(null)
   const prevLcuSessionPhaseRef = useRef(null)
+  const overlayEnabledRef = useRef(overlayEnabled)
+  overlayEnabledRef.current = overlayEnabled
+  const champBlacklistRef = useRef(champBlacklist)
+  champBlacklistRef.current = champBlacklist
 
   // Auto-fill draft form when the LCU session changes.
   // Role must be applied first so ally slots are rebuilt for the correct role
   // before champions are filled in — otherwise role-based slot matching fails.
   useEffect(() => {
     if (!lcuConnected || !lcuSession) {
-      prevLcuSessionPhaseRef.current = null
+      if (!lcuSession) prevLcuSessionPhaseRef.current = null
       return
     }
 
@@ -714,7 +718,7 @@ export default function App() {
     if (!IS_TAURI) return
     const phase = lcuSession?.phase ?? null
     if (phase !== prevLcuPhaseRef.current) {
-      if (phase && overlayEnabled && !localStorage.getItem('rabadon-overlay-dismissed')) {
+      if (phase && overlayEnabledRef.current && !localStorage.getItem('rabadon-overlay-dismissed')) {
         window.__TAURI__.core.invoke('control_overlay', { action: 'show' }).catch(() => {})
       } else if (prevLcuPhaseRef.current) {
         window.__TAURI__.core.invoke('control_overlay', { action: 'hide' }).catch(() => {})
@@ -758,6 +762,12 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('rabadon_champ_blacklist', JSON.stringify(champBlacklist))
   }, [champBlacklist])
+
+  useEffect(() => {
+    if (selectedRec === null || !recommendations[selectedRec]) return
+    const bl = new Set((champBlacklist[role] || []).map(c => c.toLowerCase()))
+    if (bl.has(recommendations[selectedRec].champion.toLowerCase())) setSelectedRec(null)
+  }, [champBlacklist, role]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     localStorage.setItem('rabadon_overlay_enabled', String(overlayEnabled))
@@ -1103,11 +1113,12 @@ export default function App() {
       }
       setSelectedPoolRec(null)
 
-      // Restore the open breakdown to the same champion if it's still in the new list
+      // Restore the open breakdown to the same champion if it's still in the new list and not blacklisted
       if (prevIdx !== null && prevRecs[prevIdx]) {
         const prevChamp = prevRecs[prevIdx].champion
+        const bl = new Set((champBlacklistRef.current[role] || []).map(c => c.toLowerCase()))
         const newIdx = newRecs.findIndex(r => r.champion === prevChamp)
-        setSelectedRec(newIdx >= 0 ? newIdx : null)
+        setSelectedRec(newIdx >= 0 && !bl.has(prevChamp.toLowerCase()) ? newIdx : null)
       }
     } catch (err) {
       setError('Failed to get recommendations. Is the backend running?')
@@ -1320,6 +1331,10 @@ export default function App() {
                 setSelectedRec(null)
                 setSelectedPoolRec(null)
                 setError(null)
+                setManualOverrides(new Set())
+                setLookupChampion(null)
+                setLookupResult(null)
+                setDraftOverview(null)
               }}
               lcuConnected={lcuConnected}
               lcuSession={lcuSession}

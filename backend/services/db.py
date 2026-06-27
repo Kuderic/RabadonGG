@@ -16,10 +16,18 @@ DB_PATH = Path(__file__).parent.parent / "data" / "rabadon_cache.db"
 logger = logging.getLogger(__name__)
 
 
+def _connect() -> sqlite3.Connection:
+    """Open a connection with WAL journal mode and a generous busy timeout."""
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
+
 def init_db() -> None:
     """Create tables if they do not exist. Call once at startup."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -64,7 +72,7 @@ def _is_stale(fetched_at: str) -> bool:
 
 def read_matchup(champion: str, patch: str, tier: str, lane: str) -> Optional[dict]:
     """Return stored matchup dict or None if missing/stale (>1 day old)."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -104,7 +112,7 @@ def write_matchup(
 ) -> None:
     """Upsert matchup data."""
     fetched_at = datetime.date.today().isoformat()
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -138,7 +146,7 @@ def write_matchup(
 
 def read_pool(lane: str, patch: str, tier: str) -> Optional[dict]:
     """Return pool dict or None if missing/stale (>1 day old)."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -163,7 +171,7 @@ def read_pool(lane: str, patch: str, tier: str) -> Optional[dict]:
 def write_pool(lane: str, patch: str, tier: str, pool: dict) -> None:
     """Upsert pool data."""
     fetched_at = datetime.date.today().isoformat()
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -184,12 +192,10 @@ def write_pool(lane: str, patch: str, tier: str, pool: dict) -> None:
 
 def load_all_valid_pools() -> list:
     """Return all non-stale pool rows as list of dicts (for warm_cache)."""
-    today = datetime.date.today().isoformat()
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = _connect()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT lane, patch, tier, pool_json FROM pool_cache WHERE fetched_at = ?",
-        (today,),
+        "SELECT lane, patch, tier, pool_json FROM pool_cache WHERE fetched_at >= date('now', '-1 day')",
     )
     rows = cursor.fetchall()
     conn.close()
@@ -201,14 +207,12 @@ def load_all_valid_pools() -> list:
 
 def load_all_valid_matchups() -> list:
     """Return all non-stale matchup rows as list of dicts (for warm_cache)."""
-    today = datetime.date.today().isoformat()
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = _connect()
     cursor = conn.cursor()
 
     cursor.execute(
         "SELECT champion, patch, tier, lane, counters, team, win_rate, total_games, fetched_at "
-        "FROM matchup_cache WHERE fetched_at = ?",
-        (today,),
+        "FROM matchup_cache WHERE fetched_at >= date('now', '-1 day')",
     )
     rows = cursor.fetchall()
     conn.close()

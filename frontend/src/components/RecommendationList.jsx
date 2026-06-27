@@ -304,7 +304,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
 
   const lookupRank = useMemo(() => {
     if (!lookupResult || !recommendations.length) return null
-    const score = r => computeAdjustedScore(r, 'rating', config, playerRole, wrModifiers)
+    const score = r => computeAdjustedScore(r, 'wr_delta', config, playerRole, wrModifiers)
     // Prefer using the recommendations version of the champion to avoid pool_picks
     // scoring discrepancies that can make rank exceed field.
     const inRecs = recommendations.find(
