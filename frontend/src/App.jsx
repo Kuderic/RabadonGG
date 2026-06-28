@@ -806,9 +806,10 @@ export default function App() {
         tier,
         pool: championPool,
         intentChamp: lcuSession?.intent_champ ?? null,
+        lockedChamp: lcuSession?.my_locked_champ ?? null,
       }))
     } catch (_) {}
-  }, [role, allies, enemies, patch, tier, lcuSession?.phase, lcuSession?.intent_champ])
+  }, [role, allies, enemies, patch, tier, lcuSession?.phase, lcuSession?.intent_champ, lcuSession?.my_locked_champ])
 
   useEffect(() => {
     if (!IS_TAURI) return

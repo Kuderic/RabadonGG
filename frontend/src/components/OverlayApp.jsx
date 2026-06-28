@@ -34,7 +34,7 @@ export function hasLowSample(rec) {
     .some(b => b.n > 0 && b.n < thr)
 }
 
-function PickRow({ rec, rank, role, onFocus, you }) {
+function PickRow({ rec, rank, role, onFocus, you, locked }) {
   const { synContrib, ctrContrib, totalDelta, customOffset } = computeComponents(rec, DEFAULT_CONFIG, role)
   const adjusted = totalDelta + customOffset
   const lowN = hasLowSample(rec)
@@ -43,6 +43,7 @@ function PickRow({ rec, rank, role, onFocus, you }) {
     'overlay-pick',
     rank === 1 && !you ? 'overlay-pick--best' : '',
     you ? 'overlay-pick--you overlay-pick--clickable' : 'overlay-pick--clickable',
+    locked ? 'overlay-pick--locked' : '',
   ].filter(Boolean).join(' ')
 
   const rankClass = [
@@ -56,7 +57,7 @@ function PickRow({ rec, rank, role, onFocus, you }) {
       onClick={onFocus}
       title={you ? 'Click to open lookup in Rabadon.GG' : 'Click to open full breakdown in Rabadon.GG'}
     >
-      <span className={rankClass}>{rank}</span>
+      <span className={rankClass}>{locked ? '🔒' : rank}</span>
       <img className="overlay-icon" src={champIconUrl(rec.champion)} alt={rec.champion} onError={hideImg} />
       <div className="overlay-mid">
         <span className="overlay-name">{rec.champion}</span>
@@ -360,6 +361,8 @@ export default function OverlayApp() {
   const role = draft?.role || 'adc'
   const enemies = draft?.enemies || []
   const patch = draft?.patch ?? '16.11'
+  const lockedChamp = draft?.lockedChamp ?? null
+  const isLocked = !!(lockedChamp && yourPick && yourPick.champion.toLowerCase() === lockedChamp.toLowerCase())
 
   const statusText = !lcuConnected ? 'Waiting for League client'
     : !hasSession ? 'League client connected'
@@ -411,17 +414,19 @@ export default function OverlayApp() {
               ))}
             </div>
             {yourPick ? (
-              <div className="overlay-yourpick">
+              <div className={`overlay-yourpick${isLocked ? ' overlay-yourpick--locked' : ''}`}>
                 <div className="overlay-yourpick-head">
-                  <span className="l">Your pick</span>
+                  <span className="l">Your pick{isLocked ? ' · LOCKED' : ''}</span>
                   {yourPick.rank === 1
                     ? <span className="cmp best">✓ best available</span>
                     : <span className="cmp">#{yourPick.rank} of {yourPick.field}</span>}
                 </div>
-                <PickRow rec={yourPick} rank={yourPick.rank} role={role} you onFocus={yourPick.rank > 10 ? () => handleFocusChamp(yourPick.champion) : undefined} />
+                <PickRow rec={yourPick} rank={yourPick.rank} role={role} you locked={isLocked} onFocus={() => handleFocusChamp(yourPick.champion)} />
               </div>
             ) : hasSession && (
-              <div className="overlay-yourpick-empty">Hover a champion to compare</div>
+              lockedChamp
+                ? <div className="overlay-yourpick-empty">Fetching your pick…</div>
+                : <div className="overlay-yourpick-empty">Hover a champion to compare</div>
             )}
           </>
         )}

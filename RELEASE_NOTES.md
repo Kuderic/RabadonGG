@@ -1,3 +1,9 @@
+## What's new in 1.2.12
+
+### Changes
+- **Overlay shows your locked pick** — after you lock in your champion, the overlay now displays a dedicated "Your Pick" section with a 🔒 indicator, showing your champion's win rate, synergy, and counter stats. Recommendations continue showing alongside it so you can see how your pick compares.
+- **Your Pick is always clickable** — clicking your locked champion in the overlay opens the full breakdown in the main app, regardless of where it ranked.
+
 ## What's new in 1.2.11
 
 ### Bug fixes
