@@ -1,3 +1,9 @@
+## What's new in 1.2.14
+
+### Changes
+- **Draft Advantage in the overlay** — a new "Draft Overview" section appears below your top picks during champion select. It shows each team's summed draft delta, the net advantage (Allied / Enemy / Even), and a tug-of-war meter that fills toward whichever side holds the edge. The section is hidden until at least one champion is locked so it doesn't clutter an empty draft.
+- **"Details ›" link in the overlay** — clicking the button next to "Draft Overview" focuses the main app and jumps straight to the Draft tab, so you can inspect the full per-champion breakdown without alt-tabbing to find it.
+
 ## What's new in 1.2.13
 
 ### Changes

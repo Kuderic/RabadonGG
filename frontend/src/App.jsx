@@ -4,6 +4,7 @@ import TitleBar from './components/TitleBar'
 import { getRecommendations, getChampions, getPatches, getDraftOverview } from './api/client'
 import { useLCUSession } from './services/lcu'
 import { champPrimaryRole, champSecondaryRole, champIconUrl } from './utils/champion'
+import { computeComponents } from './utils/scoring'
 import releaseNotesRaw from '../../RELEASE_NOTES.md?raw'
 import { TIER_OPTIONS } from './components/TierSelector'
 
@@ -835,24 +836,46 @@ export default function App() {
   useEffect(() => {
     if (!IS_DESKTOP) return
     const handler = e => {
-      if (e.key !== 'rabadon-overlay-focus') return
-      const champion = e.newValue
-      if (!champion) return
-      setActiveTab('draft')
-      const overlaySort = localStorage.getItem('rabadon-overlay-sort')
-      if (overlaySort === 'delta' || overlaySort === 'wr_delta') setSortMode(overlaySort)
-      const recs = recommendationsRef.current
-      const idx = recs.findIndex(r => r.champion.toLowerCase() === champion.toLowerCase())
-      if (idx !== -1) {
-        setSelectedRec(idx)
-        setSelectedPoolRec(null)
-      } else {
-        setLookupChampion(champion)
+      if (e.key === 'rabadon-overlay-focus') {
+        const champion = e.newValue
+        if (!champion) return
+        setActiveTab('draft')
+        const overlaySort = localStorage.getItem('rabadon-overlay-sort')
+        if (overlaySort === 'delta' || overlaySort === 'wr_delta') setSortMode(overlaySort)
+        const recs = recommendationsRef.current
+        const idx = recs.findIndex(r => r.champion.toLowerCase() === champion.toLowerCase())
+        if (idx !== -1) {
+          setSelectedRec(idx)
+          setSelectedPoolRec(null)
+        } else {
+          setLookupChampion(champion)
+        }
+      } else if (e.key === 'rabadon-overlay-nav') {
+        const tab = e.newValue
+        if (tab === 'overview') setActiveTab('overview')
       }
     }
     window.addEventListener('storage', handler)
     return () => window.removeEventListener('storage', handler)
   }, [])
+
+  // Compute and publish draft advantage data for the overlay whenever draftOverview changes.
+  useEffect(() => {
+    if (!IS_DESKTOP) return
+    if (!draftOverview) {
+      try { localStorage.removeItem('rabadon-overlay-advantage') } catch {}
+      return
+    }
+    const allyDelta = draftOverview.ally.filter(s => s.locked && s.rec).reduce(
+      (sum, s) => sum + computeComponents(s.rec, config, s.role).totalDelta, 0)
+    const enemyDelta = draftOverview.enemy.filter(s => s.locked && s.rec).reduce(
+      (sum, s) => sum + computeComponents(s.rec, config, s.role).totalDelta, 0)
+    const allyLocked = draftOverview.ally.filter(s => s.locked).length
+    const enemyLocked = draftOverview.enemy.filter(s => s.locked).length
+    try {
+      localStorage.setItem('rabadon-overlay-advantage', JSON.stringify({ allyDelta, enemyDelta, allyLocked, enemyLocked }))
+    } catch {}
+  }, [draftOverview, config])
 
   useEffect(() => {
     if (!IS_TAURI) return

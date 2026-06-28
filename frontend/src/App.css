@@ -4332,3 +4332,80 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
   .ov-slot--enemy .ov-locked .ov-delta { justify-content: flex-end; }
   .ov-slot--enemy .ov-role { border-left: none; border-right: 1px solid var(--border-soft); }
 }
+
+/* ============================================================================
+   Draft Advantage — overlay banner (adv-* / advb-*)
+   Builds on existing hextech tokens. Inserted between picks and overlay footer.
+   ========================================================================== */
+
+/* ── shared tug-of-war meter ────────────────────────────────────────────── */
+.adv-track {
+  position: relative; height: 6px; border-radius: 3px;
+  background: rgba(0,0,0,0.45);
+  box-shadow: inset 0 0 0 1px rgba(26,35,54,0.9);
+  overflow: hidden;
+}
+.adv-track-center {
+  position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px;
+  background: var(--gold-deep); transform: translateX(-0.5px); z-index: 2;
+}
+.adv-fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.adv-fill--ally  { background: linear-gradient(90deg, rgba(65,185,220,0.25), var(--ally)); box-shadow: 0 0 8px var(--ally-glow); }
+.adv-fill--enemy { background: linear-gradient(90deg, var(--enemy), rgba(229,72,92,0.25)); box-shadow: 0 0 8px var(--enemy-glow); }
+
+/* readout text */
+.adv-num { font-variant-numeric: tabular-nums; font-weight: 700; }
+.adv-num--ally  { color: var(--ally-bright); }
+.adv-num--enemy { color: var(--enemy-bright); }
+.adv-num--even  { color: var(--ink-3); }
+
+/* the "go to overview" affordance */
+.adv-details {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-stat); font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--gold-mid); text-decoration: none; cursor: pointer;
+  border: 1px solid var(--gold-deep); border-radius: 2px;
+  background: rgba(200,155,60,0.06);
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+  white-space: nowrap;
+}
+.adv-details:hover { background: rgba(200,155,60,0.14); border-color: var(--gold); color: var(--gold-bright); }
+.adv-details .arw { font-weight: 400; }
+
+/* ── banner variant (VariantBanner) ─────────────────────────────────────── */
+.advb {
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 9px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.22);
+  border-bottom: 1px solid rgba(26,35,54,0.8);
+}
+.advb-side { display: flex; flex-direction: column; line-height: 1; gap: 3px; min-width: 30px; }
+.advb-side--enemy { align-items: flex-end; }
+.advb-side-lbl { font-size: 8px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-4); }
+.advb-side-val { font-size: 11px; }
+.advb-mid { display: flex; flex-direction: column; gap: 4px; }
+.advb-readout { display: flex; align-items: baseline; justify-content: center; gap: 5px; }
+.advb-cap { font-size: 8px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-4); }
+.advb-lead { font-size: 13px; }
+.advb-who { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-3); }
+
+.advb--bottom {
+  border-bottom: none;
+  border-top: 1px solid rgba(200,155,60,0.16);
+  background: rgba(0,0,0,0.28);
+}
+
+/* Draft Overview section wrapper: header row + banner */
+.adv-sec { border-top: 1px solid rgba(200,155,60,0.16); background: rgba(0,0,0,0.22); }
+.adv-sec-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px 3px;
+}
+.adv-sec-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--gold-mid); white-space: nowrap;
+}
+.adv-sec-btn { padding: 2px 8px; font-size: 8px; }
+.adv-sec .advb { border: none; background: none; padding: 2px 10px 9px; }

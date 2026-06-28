@@ -28,6 +28,51 @@ function getTauriWindow() {
 export const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}`
 const hideImg = e => { e.target.style.visibility = 'hidden' }
 
+const ADV_MAX = 30
+
+function DraftAdvantage({ advantage, onViewDetails }) {
+  if (!advantage) return null
+  const { allyDelta, enemyDelta, allyLocked, enemyLocked } = advantage
+  if (allyLocked + enemyLocked === 0) return null
+
+  const net = allyDelta - enemyDelta
+  const lead = Math.abs(net) < 0.5 ? 'even' : (net > 0 ? 'ally' : 'enemy')
+  const whoLabel = lead === 'even' ? 'Even' : (lead === 'ally' ? 'Allied' : 'Enemy')
+  const mag = Math.min(Math.abs(net) / ADV_MAX, 1) * 50
+  const fillLeft = lead === 'ally' ? 50 - mag : 50
+
+  return (
+    <div className="adv-sec">
+      <div className="adv-sec-head">
+        <span className="adv-sec-title">Draft Overview</span>
+        <button className="adv-details adv-sec-btn" onClick={onViewDetails}>Details <span className="arw">›</span></button>
+      </div>
+      <div className="advb advb--bottom">
+        <div className="advb-side advb-side--ally">
+          <span className="advb-side-lbl">Ally</span>
+          <span className="advb-side-val adv-num adv-num--ally">{fmt(allyDelta)}</span>
+        </div>
+        <div className="advb-mid">
+          <div className="advb-readout">
+            <span className="advb-cap">Adv</span>
+            <span className={`advb-lead adv-num adv-num--${lead}`}>{lead === 'even' ? '—' : fmt(Math.abs(net))}</span>
+            <span className="advb-who">{whoLabel}</span>
+          </div>
+          <div className="adv-track">
+            <div className="adv-track-center" />
+            {lead !== 'even' &&
+              <div className={`adv-fill adv-fill--${lead}`} style={{ left: `${fillLeft}%`, width: `${mag}%` }} />}
+          </div>
+        </div>
+        <div className="advb-side advb-side--enemy">
+          <span className="advb-side-lbl">Enemy</span>
+          <span className="advb-side-val adv-num adv-num--enemy">{fmt(enemyDelta)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function hasLowSample(rec) {
   const thr = DEFAULT_CONFIG.penalizeThreshold
   return [...(rec.synergy_breakdown || []), ...(rec.counter_breakdown || [])]
@@ -134,6 +179,11 @@ export default function OverlayApp() {
   const overlaySortRef = useRef(overlaySort)
   overlaySortRef.current = overlaySort
 
+  const [advantage, setAdvantage] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('rabadon-overlay-advantage') || 'null') }
+    catch { return null }
+  })
+
   useEffect(() => {
     try { localStorage.setItem('rabadon-overlay-sort', overlaySort) } catch {}
   }, [overlaySort])
@@ -164,6 +214,8 @@ export default function OverlayApp() {
         setOverlayTransparent(e.newValue !== 'false')
       } else if (e.key === 'rabadon-overlay-sort') {
         setOverlaySort(e.newValue || 'wr_delta')
+      } else if (e.key === 'rabadon-overlay-advantage') {
+        try { setAdvantage(JSON.parse(e.newValue || 'null')) } catch {}
       }
     }
     window.addEventListener('storage', handler)
@@ -247,6 +299,11 @@ export default function OverlayApp() {
 
   const handleFocusChamp = useCallback((champion) => {
     try { localStorage.setItem('rabadon-overlay-focus', champion) } catch (_) {}
+    if (IS_TAURI) window.__TAURI__.core.invoke('focus_main').catch(() => {})
+  }, [])
+
+  const handleViewOverview = useCallback(() => {
+    try { localStorage.setItem('rabadon-overlay-nav', 'overview') } catch (_) {}
     if (IS_TAURI) window.__TAURI__.core.invoke('focus_main').catch(() => {})
   }, [])
 
@@ -428,6 +485,7 @@ export default function OverlayApp() {
                 ? <div className="overlay-yourpick-empty">Fetching your pick…</div>
                 : <div className="overlay-yourpick-empty">Hover a champion to compare</div>
             )}
+            <DraftAdvantage advantage={advantage} onViewDetails={handleViewOverview} />
           </>
         )}
 
