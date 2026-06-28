@@ -127,8 +127,6 @@ export default function OverlayApp() {
   const allRecsRef = useRef([])
   const allPoolRef = useRef([])
   const intentRecRef = useRef(null) // raw intent champion rec, for rank recalc on sort change
-  const draftRoleRef = useRef(null)
-  draftRoleRef.current = draft?.role ?? null
   const [overlaySort, setOverlaySort] = useState(
     () => localStorage.getItem('rabadon-overlay-sort') || 'wr_delta'
   )
@@ -144,6 +142,8 @@ export default function OverlayApp() {
 
   // Draft state written by the main window on every relevant change.
   const [draft, setDraft] = useState(readDraft)
+  const draftRoleRef = useRef(null)
+  draftRoleRef.current = draft?.role ?? null
 
   // Overlay appearance settings — read from localStorage, react to changes from main window.
   const [overlayScale, setOverlayScale] = useState(
