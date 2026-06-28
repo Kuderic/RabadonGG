@@ -1,3 +1,10 @@
+## What's new in 1.2.13
+
+### Changes
+- **"Your Pick" input in the Draft tab** — the grayed-out slot in your team is now a real champion input. Type any champion to see how they score against the current draft, or just leave it empty for normal recommendations. Works great for theorycrafting outside of champion select.
+- **Auto-fills when you lock in** — during champion select, the "Your Pick" slot automatically fills with your locked champion the moment you lock in.
+- **Your Pick card in results** — once you've entered a champion in "Your Pick," a pinned card appears above the recommendation list showing their synergy, counter stats, and rank vs. the full field.
+
 ## What's new in 1.2.12
 
 ### Changes

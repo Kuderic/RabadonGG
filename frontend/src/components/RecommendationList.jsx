@@ -269,7 +269,7 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {} }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null }) {
   const [recTab, setRecTab] = useState('overall')
   const [sortOverall, setSortOverall] = useState(() => externalSort || 'wr_delta')
   const [sortPool, setSortPool]       = useState(() => externalSort || 'wr_delta')
@@ -287,6 +287,9 @@ export default function RecommendationList({ recommendations, loading, refreshin
   }, [externalSort])
   const [visibleCount, setVisibleCount] = useState(10)
 
+  const [myPickSelected, setMyPickSelected] = useState(false)
+  const myPickBreakdownRef = useRef(null)
+
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
 
@@ -301,6 +304,22 @@ export default function RecommendationList({ recommendations, loading, refreshin
   useEffect(() => {
     setVisibleCount(10)
   }, [playerRole])
+
+  useEffect(() => {
+    setMyPickSelected(false)
+  }, [myPickRec?.champion])
+
+  const myPickRank = useMemo(() => {
+    if (!myPickRec || !recommendations.length) return null
+    const score = r => computeAdjustedScore(r, 'wr_delta', config, playerRole, wrModifiers)
+    const inRecs = recommendations.find(r => r.champion.toLowerCase() === myPickRec.champion.toLowerCase())
+    const refScore = score(inRecs ?? myPickRec)
+    const rank = recommendations.filter(r =>
+      r.champion.toLowerCase() !== myPickRec.champion.toLowerCase() && score(r) > refScore
+    ).length + 1
+    const field = inRecs ? recommendations.length : recommendations.length + 1
+    return { rank, field }
+  }, [myPickRec, recommendations, config, playerRole, wrModifiers])
 
   const lookupRank = useMemo(() => {
     if (!lookupResult || !recommendations.length) return null
@@ -494,6 +513,33 @@ export default function RecommendationList({ recommendations, loading, refreshin
           ) : !refreshing && (
             <div className="lookup-no-data">{lookupChampion} has no data for this role — they may not be played here.</div>
           )}
+        </div>
+      )}
+
+      {recTab === 'overall' && myPickRec && playerRole === youRole && (
+        <div className="your-pick-section">
+          <div className="your-pick-head">
+            <span className="your-pick-label">Your Pick</span>
+            {myPickRank?.rank === 1
+              ? <span className="your-pick-rank best">✓ best available</span>
+              : myPickRank && <span className="your-pick-rank">#{myPickRank.rank} of {myPickRank.field}</span>}
+          </div>
+          <RecCard
+            rec={myPickRec}
+            rank={myPickRank?.rank ?? '?'}
+            isSelected={myPickSelected}
+            onSelect={() => setMyPickSelected(s => !s)}
+            config={config}
+            playerRole={playerRole}
+            wrModifiers={wrModifiers}
+            sortMode={sortMode}
+            breakdownRef={myPickSelected ? myPickBreakdownRef : null}
+            inPool={poolChampions.has(myPickRec.champion.toLowerCase())}
+            tier={tier}
+            patch={patch}
+            onAddToPool={onAddToPool}
+            onRemoveFromPool={onRemoveFromPool}
+          />
         </div>
       )}
 

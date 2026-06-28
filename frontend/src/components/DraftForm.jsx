@@ -33,18 +33,7 @@ function RolePill({ role, side }) {
   )
 }
 
-function YouRow({ role }) {
-  return (
-    <div className="champ-row champ-row--you">
-      <RolePill role={role} side="ally" />
-      <div className="champ-input-wrap">
-        <input type="text" value="" placeholder="— your pick —" disabled readOnly className="you-input" />
-      </div>
-    </div>
-  )
-}
-
-function ChampionRow({ role, value, onChange, disabled, side, champions, onEnterSubmit, dragging = false, dragHandle = null }) {
+function ChampionRow({ role, value, onChange, disabled, side, champions, onEnterSubmit, dragging = false, dragHandle = null, isYou = false }) {
   const [open, setOpen] = useState(false)
   const [filtered, setFiltered] = useState([])
   const [cursor, setCursor] = useState(0)
@@ -134,7 +123,7 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
   }
 
   return (
-    <div className={`champ-row champ-row--${side}`} ref={wrapRef}>
+    <div className={`champ-row champ-row--${side}${isYou ? ' champ-row--you' : ''}`} ref={wrapRef}>
       {dragHandle}
       <RolePill role={role} side={side} />
       <div className="champ-input-wrap">
@@ -148,7 +137,7 @@ function ChampionRow({ role, value, onChange, disabled, side, champions, onEnter
         )}
         <input
           type="text"
-          placeholder={`${role.charAt(0).toUpperCase() + role.slice(1)} champion`}
+          placeholder={isYou ? 'Your pick (optional)' : `${role.charAt(0).toUpperCase() + role.slice(1)} champion`}
           value={value}
           onChange={e => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -348,6 +337,8 @@ export default function DraftForm({
   onClear,
   lcuConnected = false,
   lcuSession = null,
+  myPick = '',
+  onMyPickChange,
 }) {
   const patchLabel = patch === '30' ? '30 Days' : `Patch ${patch}`
 
@@ -394,7 +385,19 @@ export default function DraftForm({
         <div className="draft-team">
           <div className="draft-team-title ally-title">Allied Team</div>
           {ROLES.map(r => {
-            if (r === role) return <YouRow key={r} role={r} />
+            if (r === role) return (
+              <ChampionRow
+                key={r}
+                role={r}
+                value={myPick}
+                onChange={val => onMyPickChange?.(val)}
+                disabled={loading}
+                side="ally"
+                isYou={true}
+                champions={champions}
+                onEnterSubmit={!loading ? onSubmit : undefined}
+              />
+            )
             const ally = allies.find(a => a.role === r)
             const idx = allies.findIndex(a => a.role === r)
             if (!ally) return null

@@ -568,6 +568,8 @@ export default function App() {
   })
   const [poolResults, setPoolResults] = useState([])
   const [selectedPoolRec, setSelectedPoolRec] = useState(null)
+  const [myPick, setMyPick] = useState('')
+  const [myPickResult, setMyPickResult] = useState(null)
   const [draftOverview, setDraftOverview] = useState(null)
   const [draftOverviewLoading, setDraftOverviewLoading] = useState(false)
   const [computeDraftRecs, setComputeDraftRecs] = useState(
@@ -590,6 +592,8 @@ export default function App() {
   championPoolRef.current = championPool
   const lookupChampionRef = useRef(lookupChampion)
   lookupChampionRef.current = lookupChampion
+  const myPickRef = useRef(myPick)
+  myPickRef.current = myPick
 
   const { connected: lcuConnected, session: lcuSession } = useLCUSession()
   const prevLcuPhaseRef = useRef(null)
@@ -709,7 +713,14 @@ export default function App() {
       setError(null)
       setDraftOverview(null)
       setDraftOverviewLoading(false)
+      setMyPick('')
+      setMyPickResult(null)
       try { localStorage.removeItem('rabadon-overlay-dismissed') } catch {}
+    }
+
+    // Auto-fill "Your Pick" from LCU when the player locks their champion.
+    if (lcuSession.my_locked_champ) {
+      setMyPick(lcuSession.my_locked_champ)
     }
   }, [lcuSession, lcuConnected]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1092,6 +1103,10 @@ export default function App() {
       if (currentLookup && !poolForRole.some(c => c.toLowerCase() === currentLookup.toLowerCase())) {
         poolForRole.push(currentLookup)
       }
+      const currentMyPick = myPickRef.current?.trim() || ''
+      if (currentMyPick && !poolForRole.some(c => c.toLowerCase() === currentMyPick.toLowerCase())) {
+        poolForRole.push(currentMyPick)
+      }
       const result = await getRecommendations(
         viewRole,
         alliesForView.filter(a => a.champion.trim()),
@@ -1103,6 +1118,13 @@ export default function App() {
       const newRecs = result.recommendations || []
       setRecommendations(newRecs)
       const allPoolPicks = result.pool_picks || []
+      // Extract "Your Pick" result
+      if (currentMyPick) {
+        const mpRec = allPoolPicks.find(p => p.champion.toLowerCase() === currentMyPick.toLowerCase())
+        setMyPickResult(mpRec ?? null)
+      } else {
+        setMyPickResult(null)
+      }
       const currentLookupName = lookupChampionRef.current
       if (currentLookupName) {
         const lr = allPoolPicks.find(p => p.champion.toLowerCase() === currentLookupName.toLowerCase())
@@ -1143,7 +1165,7 @@ export default function App() {
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(handleSubmit, 600)
     return () => clearTimeout(debounceRef.current)
-  }, [handleSubmit, hasValidChampion, lookupChampion])
+  }, [handleSubmit, hasValidChampion, lookupChampion, myPick])
 
   // Draft overview: fetch whenever the draft changes (debounced 800ms)
   useEffect(() => {
@@ -1336,9 +1358,13 @@ export default function App() {
                 setLookupChampion(null)
                 setLookupResult(null)
                 setDraftOverview(null)
+                setMyPick('')
+                setMyPickResult(null)
               }}
               lcuConnected={lcuConnected}
               lcuSession={lcuSession}
+              myPick={myPick}
+              onMyPickChange={setMyPick}
             />
 
             {(recommendations.length > 0 || loading) && (
@@ -1375,6 +1401,7 @@ export default function App() {
                     sortMode={sortMode}
                     onSortModeChange={setSortMode}
                     champBlacklist={champBlacklist}
+                    myPickRec={myPickResult}
                   />
                 </Suspense>
               </div>
