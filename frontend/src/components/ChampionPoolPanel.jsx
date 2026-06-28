@@ -16,7 +16,7 @@ const ROLE_ICON = {
 
 const _imgErr = e => { e.target.style.visibility = 'hidden' }
 
-function ChampionPicker({ champions, exclude = new Set(), placeholder, onPick, autoFocus }) {
+export function ChampionPicker({ champions, exclude = new Set(), placeholder, onPick, autoFocus }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
