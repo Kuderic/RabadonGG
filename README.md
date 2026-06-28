@@ -58,7 +58,7 @@ Rating = Base WR + Counter Δ + Synergy Δ
 
 Each delta is multiplied by `min(n / 1000, 1.0)` before summing, so low-sample matchups are down-weighted rather than treated equally to high-confidence data.
 
-Data is sourced from lolalytics, queried across all five `vslane` values to capture ~161 matchups per champion. All deltas are from real match outcomes — no tier lists, no editorial opinion.
+Matchup data is queried across all five `vslane` values to capture ~161 matchups per champion. All deltas are from real match outcomes — no tier lists, no editorial opinion.
 
 ---
 
@@ -70,7 +70,7 @@ Data is sourced from lolalytics, queried across all five `vslane` values to capt
 | Desktop shell | Tauri 2 (Rust) |
 | Backend | FastAPI (Python) |
 | Cache | SQLite (1-day TTL) |
-| Data source | lolalytics |
+| Data source | Real match data (aggregated win rates) |
 | Hosting | AWS EC2 (nginx + systemd) |
 
 ---
