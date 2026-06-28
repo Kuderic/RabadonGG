@@ -1,3 +1,8 @@
+## What's new in 1.2.11
+
+### Bug fixes
+- **Overlay works again** — a crash introduced in 1.2.10 caused the overlay to show a blank striped window instead of your picks. Fixed.
+
 ## What's new in 1.2.10
 
 ### Bug fixes
