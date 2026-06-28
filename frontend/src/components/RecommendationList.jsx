@@ -287,8 +287,6 @@ export default function RecommendationList({ recommendations, loading, refreshin
   }, [externalSort])
   const [visibleCount, setVisibleCount] = useState(10)
 
-  const [myPickSelected, setMyPickSelected] = useState(false)
-  const myPickBreakdownRef = useRef(null)
 
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
@@ -304,10 +302,6 @@ export default function RecommendationList({ recommendations, loading, refreshin
   useEffect(() => {
     setVisibleCount(10)
   }, [playerRole])
-
-  useEffect(() => {
-    setMyPickSelected(false)
-  }, [myPickRec?.champion])
 
   const myPickRank = useMemo(() => {
     if (!myPickRec || !recommendations.length) return null
@@ -524,21 +518,14 @@ export default function RecommendationList({ recommendations, loading, refreshin
               ? <span className="your-pick-rank best">✓ best available</span>
               : myPickRank && <span className="your-pick-rank">#{myPickRank.rank} of {myPickRank.field}</span>}
           </div>
-          <RecCard
+          <BreakdownPanel
             rec={myPickRec}
             rank={myPickRank?.rank ?? '?'}
-            isSelected={myPickSelected}
-            onSelect={() => setMyPickSelected(s => !s)}
-            config={config}
+            settings={config}
             playerRole={playerRole}
-            wrModifiers={wrModifiers}
-            sortMode={sortMode}
-            breakdownRef={myPickSelected ? myPickBreakdownRef : null}
-            inPool={poolChampions.has(myPickRec.champion.toLowerCase())}
+            modifiers={wrModifiers}
             tier={tier}
             patch={patch}
-            onAddToPool={onAddToPool}
-            onRemoveFromPool={onRemoveFromPool}
           />
         </div>
       )}

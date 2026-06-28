@@ -1200,9 +1200,13 @@ export default function App() {
         // Build full 5-slot ally array (player's own slot is always open)
         const isSpectating = !!(lcuSession?.spectating)
         const myLockedChamp = lcuSession?.my_locked_champ ?? null
+        const myPickChamp = myPickRef.current?.trim() || null
         const allySlots = ROLES.map(r => {
-          // Player's own slot: include their locked-in champion if they've locked; otherwise open
-          if (r === role && !isSpectating) return { role: r, champion: myLockedChamp, locked: !!myLockedChamp }
+          // Player's own slot: LCU lock-in takes priority; fall back to manual "Your Pick" input
+          if (r === role && !isSpectating) {
+            const champ = myLockedChamp || myPickChamp
+            return { role: r, champion: champ, locked: !!champ }
+          }
           const a = allies.find(x => x.role === r)
           let champ = a?.champion?.trim() || null
           // Spectate: the "your role" champion lives in lcuSession.allies (not the allies state)
@@ -1229,7 +1233,7 @@ export default function App() {
       }
     }, 800)
     return () => clearTimeout(overviewDebounceRef.current)
-  }, [allies, enemies, patch, tier, role, hasValidChampion, computeDraftRecs, lcuSession?.spectating, lcuSession?.my_locked_champ]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [allies, enemies, patch, tier, role, hasValidChampion, computeDraftRecs, myPick, lcuSession?.spectating, lcuSession?.my_locked_champ]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep URL in sync with draft state so any URL can be shared
   useEffect(() => {

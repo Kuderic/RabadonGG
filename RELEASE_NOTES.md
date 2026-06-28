@@ -1,3 +1,12 @@
+## What's new in 1.2.15
+
+### Bug fixes
+- **Your Pick now appears in Draft Overview** — typing a champion into the "Your Pick" field in the Recommend tab now fills your slot in the Draft tab as well, so the advantage scoreline and per-champion breakdown include your pick immediately. Previously only LCU lock-ins populated that slot.
+
+### Changes
+- **Your Pick card always shows the full breakdown** — the card no longer collapses behind a "▼ details" button. It opens immediately in the same always-expanded style as the champion lookup card.
+- **Scrollbar moves to the window edge on full-screen desktop** — the scrollbar was appearing partway across the screen (at the content column's right edge) instead of the far right of the window. Fixed by making the document element the scroll container rather than the body.
+
 ## What's new in 1.2.14
 
 ### Changes
