@@ -102,7 +102,7 @@ function PickRow({ rec, rank, role, onFocus, you, locked }) {
       onClick={onFocus}
       title={you ? 'Click to open lookup in Rabadon.GG' : 'Click to open full breakdown in Rabadon.GG'}
     >
-      <span className={rankClass}>{locked ? '🔒' : rank}</span>
+      <span className={rankClass}>{rank}</span>
       <img className="overlay-icon" src={champIconUrl(rec.champion)} alt={rec.champion} onError={hideImg} />
       <div className="overlay-mid">
         <span className="overlay-name">{rec.champion}</span>
@@ -267,8 +267,8 @@ export default function OverlayApp() {
     if (!allRecsRef.current.length) return
     const currentRole = draftRoleRef.current || 'adc'
     const score = makeDeltaScore(overlaySort, currentRole)
-    setRecommendations([...allRecsRef.current].sort((a, b) => score(b) - score(a)).slice(0, 5))
-    setPoolPicks([...allPoolRef.current].sort((a, b) => score(b) - score(a)).slice(0, 5))
+    setRecommendations([...allRecsRef.current].sort((a, b) => score(b) - score(a)).slice(0, 10))
+    setPoolPicks([...allPoolRef.current].sort((a, b) => score(b) - score(a)).slice(0, 10))
     if (intentRecRef.current) {
       const intentScore = score(intentRecRef.current)
       const rank = allRecsRef.current.filter(r => score(r) > intentScore).length + 1
@@ -347,8 +347,8 @@ export default function OverlayApp() {
       allRecsRef.current = allRecs
       allPoolRef.current = poolFiltered
       const score = makeDeltaScore(overlaySortRef.current, role)
-      setRecommendations([...allRecs].sort((a, b) => score(b) - score(a)).slice(0, 5))
-      setPoolPicks([...poolFiltered].sort((a, b) => score(b) - score(a)).slice(0, 5))
+      setRecommendations([...allRecs].sort((a, b) => score(b) - score(a)).slice(0, 10))
+      setPoolPicks([...poolFiltered].sort((a, b) => score(b) - score(a)).slice(0, 10))
 
       // Pin "your pick" section if there's an intent champion
       if (intentChamp) {
@@ -483,7 +483,7 @@ export default function OverlayApp() {
             ) : hasSession && (
               lockedChamp
                 ? <div className="overlay-yourpick-empty">Fetching your pick…</div>
-                : <div className="overlay-yourpick-empty">Hover a champion to compare</div>
+                : null
             )}
             <DraftAdvantage advantage={advantage} onViewDetails={handleViewOverview} />
           </>

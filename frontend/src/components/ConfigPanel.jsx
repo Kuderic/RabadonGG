@@ -86,7 +86,6 @@ export default function ConfigPanel({
   champions = [], playerRole,
   wrModifiers = {}, onModifierChange,
   computeDraftRecs = false, onComputeDraftRecsChange,
-  sortMode = 'wr_delta', onSortModeChange,
   champBlacklist = {}, onChampBlacklistChange,
 }) {
   const [viewRole, setViewRole] = useState('adc')
@@ -309,19 +308,6 @@ export default function ConfigPanel({
               />
               Show recommendations
             </label>
-          </div>
-          <div className="config-row config-row--spaced" style={{ marginTop: 8, marginBottom: 0 }}>
-            <span className="config-check-label" style={{ cursor: 'default' }}>Sort by</span>
-            <div className="ov-sort-toggle">
-              <button
-                className={`ov-sort-btn${sortMode === 'wr_delta' ? ' active' : ''}`}
-                onClick={() => onSortModeChange('wr_delta')}
-              >WR + Δ</button>
-              <button
-                className={`ov-sort-btn${sortMode === 'delta' ? ' active' : ''}`}
-                onClick={() => onSortModeChange('delta')}
-              >Δ only</button>
-            </div>
           </div>
         </div>
       </div>

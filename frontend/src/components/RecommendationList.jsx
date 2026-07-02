@@ -294,7 +294,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
   useEffect(() => {
     if (selectedIndex !== null && breakdownRef.current) {
       requestAnimationFrame(() => {
-        breakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+        breakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
       })
     }
   }, [selectedIndex])
@@ -305,7 +305,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
 
   const myPickRank = useMemo(() => {
     if (!myPickRec || !recommendations.length) return null
-    const score = r => computeAdjustedScore(r, 'wr_delta', config, playerRole, wrModifiers)
+    const score = r => computeAdjustedScore(r, sortMode, config, playerRole, wrModifiers)
     const inRecs = recommendations.find(r => r.champion.toLowerCase() === myPickRec.champion.toLowerCase())
     const refScore = score(inRecs ?? myPickRec)
     const rank = recommendations.filter(r =>
@@ -313,11 +313,11 @@ export default function RecommendationList({ recommendations, loading, refreshin
     ).length + 1
     const field = inRecs ? recommendations.length : recommendations.length + 1
     return { rank, field }
-  }, [myPickRec, recommendations, config, playerRole, wrModifiers])
+  }, [myPickRec, recommendations, config, playerRole, wrModifiers, sortMode])
 
   const lookupRank = useMemo(() => {
     if (!lookupResult || !recommendations.length) return null
-    const score = r => computeAdjustedScore(r, 'wr_delta', config, playerRole, wrModifiers)
+    const score = r => computeAdjustedScore(r, sortMode, config, playerRole, wrModifiers)
     // Prefer using the recommendations version of the champion to avoid pool_picks
     // scoring discrepancies that can make rank exceed field.
     const inRecs = recommendations.find(
@@ -329,7 +329,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
     ).length + 1
     const field = inRecs ? recommendations.length : recommendations.length + 1
     return { rank, field }
-  }, [lookupResult, recommendations, config, playerRole, wrModifiers])
+  }, [lookupResult, recommendations, config, playerRole, wrModifiers, sortMode])
 
   const { sorted, penalizedCount } = useMemo(() => {
     if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
@@ -560,7 +560,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
           {visibleCount < sorted.length && (
             <button
               className="show-more-btn"
-              onClick={() => setVisibleCount(v => Math.min(v + 10, 30))}
+              onClick={() => setVisibleCount(v => v + 10)}
             >
               Show more · {Math.min(sorted.length - visibleCount, 10)} more picks
             </button>

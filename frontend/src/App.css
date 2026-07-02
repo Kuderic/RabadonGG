@@ -1048,12 +1048,7 @@ body {
 }
 .your-pick-rank { font-size: 10px; color: var(--ink-3); }
 .your-pick-rank.best { color: var(--pos); }
-.your-pick-section .recommendation-card {
-  border: none; border-radius: 0;
-  background: transparent;
-}
-.your-pick-section .recommendation-card:hover { background: rgba(200,155,60,0.06); }
-.your-pick-section .card-selected { background: rgba(200,155,60,0.08); }
+.your-pick-section .bp-close { display: none; }
 
 .lookup-result-section { margin-bottom: 12px; }
 .lookup-rank-line {
@@ -3593,13 +3588,13 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 }
 .overlay-picks-head .l { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-mid); white-space: nowrap; }
 .overlay-picks-head .r { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-4); white-space: nowrap; }
-.overlay-tabs { display: flex; gap: 6px; align-items: baseline; }
-.overlay-tab { background: none; border: none; padding: 0; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-4); cursor: pointer; }
-.overlay-tab--active { color: var(--gold-mid); }
-.overlay-tab:hover:not(.overlay-tab--active) { color: var(--ink-2); }
+.overlay-tabs { display: flex; gap: 4px; align-items: center; }
+.overlay-tab { background: var(--panel-inset); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-3); cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.overlay-tab--active { border-color: var(--gold); color: var(--gold-bright); background: rgba(200,155,60,0.08); }
+.overlay-tab:hover:not(.overlay-tab--active) { border-color: var(--gold-deep); color: var(--ink-2); }
 
 /* ── Pick rows ──────────────────────────────────────────────────────────── */
-.overlay-picks { padding: 0 8px 7px; display: flex; flex-direction: column; gap: 4px; }
+.overlay-picks { padding: 0 8px 7px; display: flex; flex-direction: column; gap: 4px; max-height: 243px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(200,155,60,0.35) transparent; }
 .overlay-pick {
   display: grid; grid-template-columns: 22px 30px minmax(0,1fr) max-content;
   align-items: center; gap: 8px;

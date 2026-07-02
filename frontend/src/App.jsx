@@ -1112,9 +1112,15 @@ export default function App() {
     try {
       // Build allies as seen from viewRole: all roles except viewRole, carrying
       // whatever champion is known (including your own role slot, left empty).
+      const currentMyPick = myPickRef.current?.trim() || ''
       const allAllies = {}
       allies.forEach(a => { allAllies[a.role] = a.champion })
-      allAllies[role] = allAllies[role] ?? ''
+      // When viewing another role, the player's locked champion is a known ally
+      if (viewRole !== role && currentMyPick) {
+        allAllies[role] = currentMyPick
+      } else {
+        allAllies[role] = allAllies[role] ?? ''
+      }
       const alliesForView = ROLES
         .filter(r => r !== viewRole)
         .map(r => ({ role: r, champion: allAllies[r] || '' }))
@@ -1126,8 +1132,8 @@ export default function App() {
       if (currentLookup && !poolForRole.some(c => c.toLowerCase() === currentLookup.toLowerCase())) {
         poolForRole.push(currentLookup)
       }
-      const currentMyPick = myPickRef.current?.trim() || ''
-      if (currentMyPick && !poolForRole.some(c => c.toLowerCase() === currentMyPick.toLowerCase())) {
+      // Only add myPick to pool when scoring the player's own role (otherwise it's an ally)
+      if (viewRole === role && currentMyPick && !poolForRole.some(c => c.toLowerCase() === currentMyPick.toLowerCase())) {
         poolForRole.push(currentMyPick)
       }
       const result = await getRecommendations(
@@ -1448,7 +1454,6 @@ export default function App() {
               tier={tier}
               computeDraftRecs={computeDraftRecs}
               onComputeDraftRecsChange={setComputeDraftRecs}
-              sortMode={sortMode}
             />
           </Suspense>
         )}
@@ -1489,8 +1494,6 @@ export default function App() {
               onModifierChange={handleModifierChange}
               computeDraftRecs={computeDraftRecs}
               onComputeDraftRecsChange={setComputeDraftRecs}
-              sortMode={sortMode}
-              onSortModeChange={setSortMode}
               champBlacklist={champBlacklist}
               onChampBlacklistChange={setChampBlacklist}
             />

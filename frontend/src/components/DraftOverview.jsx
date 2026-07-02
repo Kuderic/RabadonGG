@@ -244,8 +244,15 @@ function OvLoadingSlot({ role, side }) {
 }
 
 // ── main view ──────────────────────────────────────────────────────────────
-export default function DraftOverview({ overviewData, loading, youRole, config, patch, tier, computeDraftRecs, onComputeDraftRecsChange, sortMode = 'wr_delta' }) {
+export default function DraftOverview({ overviewData, loading, youRole, config, patch, tier, computeDraftRecs, onComputeDraftRecsChange }) {
   const [breakdown, setBreakdown] = useState(null)
+  const [sortMode, setSortMode] = useState(
+    () => localStorage.getItem('rabadon_ov_sort_mode') || 'delta'
+  )
+
+  useEffect(() => {
+    try { localStorage.setItem('rabadon_ov_sort_mode', sortMode) } catch {}
+  }, [sortMode])
 
   const handleOpenBreakdown = (payload) => setBreakdown(payload)
   const handleCloseBreakdown = () => setBreakdown(null)
@@ -291,6 +298,18 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
           />
           Show recommendations
         </label>
+        {computeDraftRecs && (
+          <div className="ov-sort-toggle">
+            <button
+              className={`ov-sort-btn${sortMode === 'delta' ? ' active' : ''}`}
+              onClick={() => setSortMode('delta')}
+            >Δ only</button>
+            <button
+              className={`ov-sort-btn${sortMode === 'wr_delta' ? ' active' : ''}`}
+              onClick={() => setSortMode('wr_delta')}
+            >WR + Δ</button>
+          </div>
+        )}
         <span className="ov-compute-hint">⏱ may take up to 20s</span>
       </div>
 

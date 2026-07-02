@@ -1,3 +1,15 @@
+## What's new in 1.2.16
+
+### Changes
+- **Sort button moved into Draft Overview** — the Δ / WR+Δ sort toggle now lives right next to the "Show recommendations" checkbox in the Draft tab, instead of buried in Settings. Your preference is remembered between sessions. The setting has been removed from the Settings page.
+- **Overlay shows up to 10 picks** — the picks list in the overlay can now scroll to show all 10 recommended champions. The panel stays the same size; just scroll down to see more.
+- **"Your Pick" rank in overlay** — the locked-in indicator on your pick row now shows the champion's actual rank number again instead of a 🔒 icon. The gold border already makes it clear it's locked.
+- **Your Pick improves recommendations when browsing other roles** — if you've locked in a champion and switch to a teammate's role in the Recommend tab, your champion is now included as a known ally so synergy calculations are accurate.
+
+### Bug fixes
+- **Scrolling works on the sides of the fullscreen desktop app** — hovering over the left or right margin of the window and scrolling the mouse wheel now scrolls the page normally.
+- **"Show more" no longer stops at 30** — the Show more button in the recommendation list was capped at 30 champions. It now reveals all available picks in groups of 10.
+
 ## What's new in 1.2.15
 
 ### Bug fixes
