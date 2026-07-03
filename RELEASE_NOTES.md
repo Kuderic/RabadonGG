@@ -1,3 +1,8 @@
+## What's new in 1.2.17
+
+### Bug fixes
+- **Champion pool cap removed** — you can now add more than 20 champions to your pool.
+
 ## What's new in 1.2.16
 
 ### Changes
