@@ -123,12 +123,46 @@ function PickRow({ rec, rank, role, onFocus, you, locked }) {
   )
 }
 
-function MatchupStrip({ role, enemies }) {
+function MatchupStrip({ role, enemies, onRoleSwap }) {
   // enemies is already role-resolved by the main app; index by role directly.
+  const [dragFrom, setDragFrom] = useState(null)
+  const [dragOver, setDragOver] = useState(null)
   const byRole = {}
   for (const e of enemies || []) {
     if (e.champion && e.role) byRole[e.role] = e.champion
   }
+
+  // HTML5 drag-and-drop doesn't work in Tauri WebView2 windows (dragDropEnabled
+  // intercepts it), so slot reassignment is done with raw pointer events.
+  const roleFromPoint = (x, y) =>
+    document.elementFromPoint(x, y)?.closest?.('[data-slot-role]')?.dataset.slotRole ?? null
+
+  const startDrag = (fromRole) => (e) => {
+    if (!byRole[fromRole] || e.button !== 0) return
+    e.preventDefault()
+    const startX = e.clientX, startY = e.clientY
+    let started = false
+    const onMove = (ev) => {
+      if (!started && Math.hypot(ev.clientX - startX, ev.clientY - startY) < 4) return
+      started = true
+      setDragFrom(fromRole)
+      const over = roleFromPoint(ev.clientX, ev.clientY)
+      setDragOver(over && over !== fromRole ? over : null)
+    }
+    const onUp = (ev) => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      if (started) {
+        const target = roleFromPoint(ev.clientX, ev.clientY)
+        if (target && target !== fromRole) onRoleSwap(fromRole, target)
+      }
+      setDragFrom(null)
+      setDragOver(null)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
   return (
     <div className="overlay-matchup">
       <span className="overlay-myrole">
@@ -137,10 +171,19 @@ function MatchupStrip({ role, enemies }) {
       </span>
       <span className="overlay-vs">VS</span>
       <span className="overlay-enemies">
-        {ROLE_ORDER.map(r => byRole[r]
-          ? <img key={r} className="overlay-enemy" src={champIconUrl(byRole[r])} alt={byRole[r]} title={byRole[r]} onError={hideImg} />
-          : <span key={r} className="overlay-enemy overlay-enemy--empty"><img src={ROLE_ICON[r]} alt="" onError={hideImg} /></span>
-        )}
+        {ROLE_ORDER.map(r => {
+          const cls = [
+            'overlay-enemy',
+            byRole[r] ? 'overlay-enemy--grab' : 'overlay-enemy--empty',
+            dragFrom === r ? 'overlay-enemy--dragging' : '',
+            dragOver === r ? 'overlay-enemy--droptarget' : '',
+          ].filter(Boolean).join(' ')
+          return byRole[r]
+            ? <img key={r} data-slot-role={r} className={cls} src={champIconUrl(byRole[r])}
+                alt={byRole[r]} title={`${byRole[r]} (${ROLE_LABEL[r]}) — drag to another lane to fix the role`}
+                draggable={false} onPointerDown={startDrag(r)} onError={hideImg} />
+            : <span key={r} data-slot-role={r} className={cls}><img src={ROLE_ICON[r]} alt="" onError={hideImg} /></span>
+        })}
       </span>
     </div>
   )
@@ -297,14 +340,26 @@ export default function OverlayApp() {
     getTauriWindow()?.hide()
   }
 
+  // ts field: storage events only fire when the value changes, so repeated
+  // identical messages (same champion, same tab) need a changing payload.
   const handleFocusChamp = useCallback((champion) => {
-    try { localStorage.setItem('rabadon-overlay-focus', champion) } catch (_) {}
+    try { localStorage.setItem('rabadon-overlay-focus', JSON.stringify({ champion, ts: Date.now() })) } catch (_) {}
     if (IS_TAURI) window.__TAURI__.core.invoke('focus_main').catch(() => {})
   }, [])
 
   const handleViewOverview = useCallback(() => {
-    try { localStorage.setItem('rabadon-overlay-nav', 'overview') } catch (_) {}
+    try { localStorage.setItem('rabadon-overlay-nav', JSON.stringify({ tab: 'overview', ts: Date.now() })) } catch (_) {}
     if (IS_TAURI) window.__TAURI__.core.invoke('focus_main').catch(() => {})
+  }, [])
+
+  // Ask the main window to swap two enemy role slots. The main app applies the
+  // swap to its draft state (pinning manual overrides so LCU polling doesn't
+  // undo it), re-publishes rabadon-overlay-draft, and both windows re-fetch.
+  // ts makes repeated identical swaps still fire a storage event.
+  const handleRoleSwap = useCallback((from, to) => {
+    try {
+      localStorage.setItem('rabadon-overlay-roleswap', JSON.stringify({ from, to, ts: Date.now() }))
+    } catch (_) {}
   }, [])
 
   const fetchRecs = useCallback(async (role, allies, enemies, patch, tier, pool, intentChamp) => {
@@ -441,7 +496,7 @@ export default function OverlayApp() {
           <button className="overlay-close" onClick={handleClose} title="Hide overlay">✕</button>
         </div>
 
-        {hasSession && <MatchupStrip role={role} enemies={enemies} />}
+        {hasSession && <MatchupStrip role={role} enemies={enemies} onRoleSwap={handleRoleSwap} />}
 
         {!hasSession ? (
           <div className="overlay-empty">Waiting for champion select…</div>

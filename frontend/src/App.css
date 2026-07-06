@@ -2343,6 +2343,13 @@ html[data-desktop] .app-container {
   min-height: 0;
   overflow-y: scroll;
   overflow-x: hidden;
+  /* Span full width so native scroll covers the gutters too.
+     Replace max-width + margin:auto with symmetric padding that centres the
+     1152px content column (1200px max-width − 2×24px side padding). */
+  max-width: none;
+  margin: 0;
+  padding-left: max(24px, calc((100% - 1152px) / 2));
+  padding-right: max(24px, calc((100% - 1152px) / 2));
 }
 
 .titlebar {
@@ -3580,6 +3587,10 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 .overlay-enemy { width: 22px; height: 22px; border-radius: 2px; border: 1px solid rgba(229,72,92,0.45); object-fit: cover; }
 .overlay-enemy--empty { background: var(--panel-inset); border: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: center; }
 .overlay-enemy--empty img { width: 12px; height: 12px; opacity: 0.45; border: none; }
+.overlay-enemy--grab { cursor: grab; touch-action: none; }
+.overlay-enemy--grab:hover { border-color: rgba(229,72,92,0.9); }
+.overlay-enemy--dragging { opacity: 0.35; cursor: grabbing; }
+.overlay-enemy--droptarget { border-color: var(--gold-bright); box-shadow: 0 0 5px rgba(200,170,110,0.7); }
 
 /* ── Picks header (labels the hero columns once) ────────────────────────── */
 .overlay-picks-head {

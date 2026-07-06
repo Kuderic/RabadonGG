@@ -1,3 +1,12 @@
+## What's new in 1.2.18
+
+### Changes
+- **Drag enemy icons in the overlay to fix roles** — if the overlay guessed an enemy's lane wrong, drag their icon in the matchup strip onto the correct lane slot. The fix syncs to the main app instantly, sticks for the rest of champion select, and recommendations refresh automatically in both windows.
+
+### Bug fixes
+- **"Details ›" in the overlay works again** — clicking Details next to Draft Overview now reliably opens the Draft tab in the main app. Previously it only worked the very first time it was ever clicked.
+- **Re-clicking the same pick in the overlay works** — clicking a champion you'd already clicked before now opens their breakdown in the main app again instead of doing nothing.
+
 ## What's new in 1.2.17
 
 ### Bug fixes

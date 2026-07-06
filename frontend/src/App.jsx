@@ -317,7 +317,7 @@ function DownloadPanel() {
         <p className="download-hero-sub">It reads your champion select straight from the League client. No typing — your draft fills in live as picks and bans lock, and recommendations update in real time.</p>
         <a href="https://github.com/Kuderic/RabadonGG/releases" className="download-cta-btn" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>{IC.download} Download for Windows</a>
         <div className="download-meta">
-          <span><strong>v1.2.17</strong></span>
+          <span><strong>v1.2.18</strong></span>
           <span>4.3 MB</span>
           <span>Installer (.exe)</span>
           <span><a href="https://github.com/Kuderic/RabadonGG/releases" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>Release notes &amp; checksums</a></span>
@@ -595,6 +595,9 @@ export default function App() {
   lookupChampionRef.current = lookupChampion
   const myPickRef = useRef(myPick)
   myPickRef.current = myPick
+  // Enemies ref: lets the overlay storage listener resolve roles → slot indices
+  const enemiesRef = useRef(enemies)
+  enemiesRef.current = enemies
 
   const { connected: lcuConnected, session: lcuSession } = useLCUSession()
   const prevLcuPhaseRef = useRef(null)
@@ -837,7 +840,9 @@ export default function App() {
     if (!IS_DESKTOP) return
     const handler = e => {
       if (e.key === 'rabadon-overlay-focus') {
-        const champion = e.newValue
+        if (!e.newValue) return
+        let champion
+        try { champion = JSON.parse(e.newValue).champion } catch { return }
         if (!champion) return
         setActiveTab('draft')
         const overlaySort = localStorage.getItem('rabadon-overlay-sort')
@@ -851,8 +856,20 @@ export default function App() {
           setLookupChampion(champion)
         }
       } else if (e.key === 'rabadon-overlay-nav') {
-        const tab = e.newValue
-        if (tab === 'overview') setActiveTab('overview')
+        if (!e.newValue) return
+        try {
+          if (JSON.parse(e.newValue).tab === 'overview') setActiveTab('overview')
+        } catch (_) {}
+      } else if (e.key === 'rabadon-overlay-roleswap') {
+        // Overlay dragged an enemy icon to a different lane slot
+        if (!e.newValue) return
+        try {
+          const { from, to } = JSON.parse(e.newValue)
+          const slots = enemiesRef.current
+          const fromIdx = slots.findIndex(s => s.role === from)
+          const toIdx = slots.findIndex(s => s.role === to)
+          if (fromIdx !== -1 && toIdx !== -1 && fromIdx !== toIdx) handleEnemySwap(fromIdx, toIdx)
+        } catch (_) {}
       }
     }
     window.addEventListener('storage', handler)
