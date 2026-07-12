@@ -269,7 +269,7 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null, focusRequest = null }) {
   const [recTab, setRecTab] = useState('overall')
   const [sortOverall, setSortOverall] = useState(() => externalSort || 'wr_delta')
   const [sortPool, setSortPool]       = useState(() => externalSort || 'wr_delta')
@@ -290,6 +290,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
 
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
+  const yourPickRef = useRef(null)
 
   useEffect(() => {
     if (selectedIndex !== null && breakdownRef.current) {
@@ -298,6 +299,14 @@ export default function RecommendationList({ recommendations, loading, refreshin
       })
     }
   }, [selectedIndex])
+
+  useEffect(() => {
+    if (selectedPoolRec !== null && poolBreakdownRef.current) {
+      requestAnimationFrame(() => {
+        poolBreakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      })
+    }
+  }, [selectedPoolRec])
 
   useEffect(() => {
     setVisibleCount(10)
@@ -364,6 +373,42 @@ export default function RecommendationList({ recommendations, loading, refreshin
       computeAdjustedScore(a, sortMode, config, playerRole, wrModifiers)
     )
   }, [poolResults, sortMode, config, playerRole, wrModifiers])
+
+  // Overlay → main "open this champion's breakdown" requests. Resolved here
+  // (not in App) because the Overall/My Champions tab state and the sorted pool
+  // order both live in this component. Checks, in order: the overall list
+  // (via `sorted` so blacklisted champions fall through), the pinned Your Pick
+  // card, the pool list, then falls back to the lookup input.
+  useEffect(() => {
+    if (!focusRequest?.champion) return
+    const champ = focusRequest.champion.toLowerCase()
+
+    const sortedPos = sorted.findIndex(({ rec }) => rec.champion.toLowerCase() === champ)
+    if (sortedPos !== -1) {
+      setRecTab('overall')
+      setVisibleCount(v => Math.max(v, sortedPos + 1))
+      onSelect(sorted[sortedPos].origIdx)
+      return
+    }
+
+    if (myPickRec && playerRole === youRole && myPickRec.champion.toLowerCase() === champ) {
+      setRecTab('overall')
+      // Double rAF: the tab switch must commit and paint before the section exists
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        yourPickRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }))
+      return
+    }
+
+    const poolPos = sortedPool.findIndex(p => p.champion.toLowerCase() === champ)
+    if (poolPos !== -1) {
+      setRecTab('pool')
+      onSelectPoolRec(poolPos)
+      return
+    }
+
+    onLookupChange(focusRequest.champion)
+  }, [focusRequest]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -511,7 +556,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
       )}
 
       {recTab === 'overall' && myPickRec && playerRole === youRole && (
-        <div className="your-pick-section">
+        <div className="your-pick-section" ref={yourPickRef}>
           <div className="your-pick-head">
             <span className="your-pick-label">Your Pick</span>
             {myPickRank?.rank === 1

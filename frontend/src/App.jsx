@@ -317,7 +317,7 @@ function DownloadPanel() {
         <p className="download-hero-sub">It reads your champion select straight from the League client. No typing — your draft fills in live as picks and bans lock, and recommendations update in real time.</p>
         <a href="https://github.com/Kuderic/RabadonGG/releases" className="download-cta-btn" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>{IC.download} Download for Windows</a>
         <div className="download-meta">
-          <span><strong>v1.2.18</strong></span>
+          <span><strong>v1.2.19</strong></span>
           <span>4.3 MB</span>
           <span>Installer (.exe)</span>
           <span><a href="https://github.com/Kuderic/RabadonGG/releases" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>Release notes &amp; checksums</a></span>
@@ -569,6 +569,8 @@ export default function App() {
   })
   const [poolResults, setPoolResults] = useState([])
   const [selectedPoolRec, setSelectedPoolRec] = useState(null)
+  // Overlay "open this champion's breakdown" request; resolved by RecommendationList
+  const [focusRequest, setFocusRequest] = useState(null)
   const [myPick, setMyPick] = useState('')
   const [myPickResult, setMyPickResult] = useState(null)
   const [draftOverview, setDraftOverview] = useState(null)
@@ -847,19 +849,18 @@ export default function App() {
         setActiveTab('draft')
         const overlaySort = localStorage.getItem('rabadon-overlay-sort')
         if (overlaySort === 'delta' || overlaySort === 'wr_delta') setSortMode(overlaySort)
-        const recs = recommendationsRef.current
-        const idx = recs.findIndex(r => r.champion.toLowerCase() === champion.toLowerCase())
-        if (idx !== -1) {
-          setSelectedRec(idx)
-          setSelectedPoolRec(null)
-        } else {
-          setLookupChampion(champion)
-        }
+        // Resolution happens in RecommendationList, which owns the Overall/My
+        // Champions tab state and the sorted pool order needed to reveal the card.
+        setFocusRequest({ champion, ts: Date.now() })
       } else if (e.key === 'rabadon-overlay-nav') {
         if (!e.newValue) return
         try {
           if (JSON.parse(e.newValue).tab === 'overview') setActiveTab('overview')
         } catch (_) {}
+      } else if (e.key === 'rabadon-overlay-scale') {
+        // Overlay corner-drag resize — keep the Settings slider in sync
+        const v = parseInt(e.newValue || '', 10)
+        if (!Number.isNaN(v)) setOverlayScale(v)
       } else if (e.key === 'rabadon-overlay-roleswap') {
         // Overlay dragged an enemy icon to a different lane slot
         if (!e.newValue) return
@@ -1422,6 +1423,7 @@ export default function App() {
                     recommendations={recommendations}
                     loading={loading}
                     refreshing={refreshing}
+                    focusRequest={focusRequest}
                     selectedIndex={selectedRec}
                     onSelect={(idx) => { setSelectedRec(idx); if (idx !== null) setSelectedPoolRec(null) }}
                     config={config}

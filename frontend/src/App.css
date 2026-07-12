@@ -3584,13 +3584,25 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 .overlay-myrole span { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--gold-bright); }
 .overlay-vs { font-size: 8px; letter-spacing: 1.5px; color: var(--ink-4); flex-shrink: 0; }
 .overlay-enemies { display: flex; gap: 3px; margin-left: auto; }
-.overlay-enemy { width: 22px; height: 22px; border-radius: 2px; border: 1px solid rgba(229,72,92,0.45); object-fit: cover; }
+.overlay-enemy { width: 33px; height: 33px; border-radius: 2px; border: 1px solid rgba(229,72,92,0.45); object-fit: cover; }
 .overlay-enemy--empty { background: var(--panel-inset); border: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: center; }
-.overlay-enemy--empty img { width: 12px; height: 12px; opacity: 0.45; border: none; }
+.overlay-enemy--empty img { width: 18px; height: 18px; opacity: 0.45; border: none; }
 .overlay-enemy--grab { cursor: grab; touch-action: none; }
 .overlay-enemy--grab:hover { border-color: rgba(229,72,92,0.9); }
 .overlay-enemy--dragging { opacity: 0.35; cursor: grabbing; }
 .overlay-enemy--droptarget { border-color: var(--gold-bright); box-shadow: 0 0 5px rgba(200,170,110,0.7); }
+
+/* Corner resize grip — drags the overlay's zoom scale */
+.overlay-resize {
+  position: absolute; right: 0; bottom: 0;
+  width: 14px; height: 14px;
+  cursor: nwse-resize; touch-action: none;
+  background:
+    linear-gradient(135deg, transparent 0 62%, rgba(200,170,110,0.55) 62% 70%, transparent 70% 78%, rgba(200,170,110,0.55) 78% 86%, transparent 86%);
+  opacity: 0.55;
+  z-index: 5;
+}
+.overlay-resize:hover { opacity: 1; }
 
 /* ── Picks header (labels the hero columns once) ────────────────────────── */
 .overlay-picks-head {

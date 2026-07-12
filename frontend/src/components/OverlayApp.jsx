@@ -340,6 +340,36 @@ export default function OverlayApp() {
     getTauriWindow()?.hide()
   }
 
+  // Corner resize grip: drags the zoom scale (the window itself auto-sizes to
+  // fit the scaled panel). screenX is used because clientX coordinates shift
+  // when zoom changes mid-drag. Pointer capture keeps move events flowing when
+  // the cursor is outside the (still-growing) window. Range matches the
+  // Settings slider (70–150). Persisted on release so Settings stays in sync.
+  const handleResizeStart = useCallback((e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const panel = panelRef.current
+    if (!panel) return
+    const grip = e.currentTarget
+    try { grip.setPointerCapture(e.pointerId) } catch (_) {}
+    const startScale = overlayScale
+    const startX = e.screenX
+    const startW = panel.offsetWidth * (startScale / 100)
+    let latest = startScale
+    const onMove = (ev) => {
+      const next = Math.round(startScale * ((startW + ev.screenX - startX) / startW))
+      latest = Math.min(150, Math.max(70, next))
+      setOverlayScale(latest)
+    }
+    const onUp = () => {
+      grip.removeEventListener('pointermove', onMove)
+      grip.removeEventListener('pointerup', onUp)
+      try { localStorage.setItem('rabadon-overlay-scale', String(latest)) } catch (_) {}
+    }
+    grip.addEventListener('pointermove', onMove)
+    grip.addEventListener('pointerup', onUp)
+  }, [overlayScale])
+
   // ts field: storage events only fire when the value changes, so repeated
   // identical messages (same champion, same tab) need a changing payload.
   const handleFocusChamp = useCallback((champion) => {
@@ -548,6 +578,7 @@ export default function OverlayApp() {
           <span className={`overlay-foot-dot ${statusCls}`} />
           <span>{statusText}</span>
         </div>
+        <div className="overlay-resize" onPointerDown={handleResizeStart} title="Drag to resize" />
       </div>
     </div>
   )

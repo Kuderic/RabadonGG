@@ -1,3 +1,12 @@
+## What's new in 1.2.19
+
+### Changes
+- **Resize the overlay by dragging its corner** — a new grip in the bottom-right corner of the overlay lets you drag it between 70% and 150% size. The Settings → Size slider stays in sync with what you drag.
+- **Bigger enemy icons in the overlay** — the enemy champion icons in the matchup strip are 50% larger, which also makes them easier to drag when fixing lane assignments.
+
+### Bug fixes
+- **Clicking overlay picks now always opens the right card** — clicking a champion in the overlay's My Pool tab or the "Your pick" row now opens that champion's actual breakdown in the main app, switching to the correct Overall / My Champions tab and scrolling to the card. Previously the click could do nothing (if the main app was on a different tab) or dump the name into the lookup box instead.
+
 ## What's new in 1.2.18
 
 ### Changes
