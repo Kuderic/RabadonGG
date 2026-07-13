@@ -291,9 +291,16 @@ export default function RecommendationList({ recommendations, loading, refreshin
   const breakdownRef = useRef(null)
   const poolBreakdownRef = useRef(null)
   const yourPickRef = useRef(null)
+  // Scroll to the opened breakdown only for user-initiated selections (card
+  // click, overlay focus). Programmatic restores — handleSubmit re-selecting
+  // the same champion at a new index after every refresh — must not move the view.
+  const scrollRecRef = useRef(false)
+  const scrollPoolRef = useRef(false)
 
   useEffect(() => {
-    if (selectedIndex !== null && breakdownRef.current) {
+    const should = scrollRecRef.current
+    scrollRecRef.current = false
+    if (should && selectedIndex !== null && breakdownRef.current) {
       requestAnimationFrame(() => {
         breakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
       })
@@ -301,7 +308,9 @@ export default function RecommendationList({ recommendations, loading, refreshin
   }, [selectedIndex])
 
   useEffect(() => {
-    if (selectedPoolRec !== null && poolBreakdownRef.current) {
+    const should = scrollPoolRef.current
+    scrollPoolRef.current = false
+    if (should && selectedPoolRec !== null && poolBreakdownRef.current) {
       requestAnimationFrame(() => {
         poolBreakdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
       })
@@ -387,6 +396,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
     if (sortedPos !== -1) {
       setRecTab('overall')
       setVisibleCount(v => Math.max(v, sortedPos + 1))
+      scrollRecRef.current = true
       onSelect(sorted[sortedPos].origIdx)
       return
     }
@@ -403,6 +413,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
     const poolPos = sortedPool.findIndex(p => p.champion.toLowerCase() === champ)
     if (poolPos !== -1) {
       setRecTab('pool')
+      scrollPoolRef.current = true
       onSelectPoolRec(poolPos)
       return
     }
@@ -587,6 +598,7 @@ export default function RecommendationList({ recommendations, loading, refreshin
                 isSelected={selectedIndex === origIdx}
                 onSelect={() => {
                   if (selectedIndex !== origIdx) trackEvent('view_breakdown', { category: 'engagement', label: rec.champion })
+                  scrollRecRef.current = selectedIndex !== origIdx
                   onSelect(selectedIndex === origIdx ? null : origIdx)
                 }}
                 config={config}
@@ -629,7 +641,10 @@ export default function RecommendationList({ recommendations, loading, refreshin
                   rank={idx + 1}
                   isPool
                   isSelected={selectedPoolRec === idx}
-                  onSelect={() => onSelectPoolRec(selectedPoolRec === idx ? null : idx)}
+                  onSelect={() => {
+                    scrollPoolRef.current = selectedPoolRec !== idx
+                    onSelectPoolRec(selectedPoolRec === idx ? null : idx)
+                  }}
                   config={config}
                   playerRole={playerRole}
                   wrModifiers={wrModifiers}

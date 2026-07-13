@@ -1,3 +1,8 @@
+## What's new in 1.2.20
+
+### Bug fixes
+- **Refreshing recommendations no longer yanks the view down to the open card** — when the draft changes and recommendations refresh, the open breakdown card stays open but your scroll position is left alone. The view now only scrolls to a card when you actually click one (in the app or the overlay).
+
 ## What's new in 1.2.19
 
 ### Changes
