@@ -304,7 +304,8 @@ body {
   pointer-events: none;
 }
 .sticky-nav--visible { transform: translateY(0); pointer-events: auto; }
-html[data-desktop] .sticky-nav { top: var(--titlebar-h); }
+/* z-index below the titlebar (50) so the banner always stacks under it */
+html[data-desktop] .sticky-nav { top: var(--titlebar-h); z-index: 40; }
 /* The desktop banner starts below the titlebar, so the hidden state must also
    clear the titlebar's height (plus shadow) or it parks on top of it. */
 html[data-desktop] .sticky-nav:not(.sticky-nav--visible) {

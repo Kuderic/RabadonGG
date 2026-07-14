@@ -9,8 +9,8 @@ import { ExternalLink } from './ChampionShared'
 
 const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
 
+// Fallback only — the live tier comes from the draft the main app publishes.
 const TIER = 'emerald_plus'
-const TIER_OPT = TIER_OPTIONS.find(t => t.value === TIER) || TIER_OPTIONS[1]
 
 const ROLE_ORDER = ['top', 'jungle', 'mid', 'adc', 'support']
 const ROLE_LABEL = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP' }
@@ -504,6 +504,8 @@ export default function OverlayApp() {
   const role = draft?.role || 'adc'
   const enemies = draft?.enemies || []
   const patch = draft?.patch ?? '16.11'
+  const tier = draft?.tier ?? TIER
+  const tierOpt = TIER_OPTIONS.find(t => t.value === tier) || TIER_OPTIONS[1]
   const lockedChamp = draft?.lockedChamp ?? null
   const isLocked = !!(lockedChamp && yourPick && yourPick.champion.toLowerCase() === lockedChamp.toLowerCase())
 
@@ -519,9 +521,9 @@ export default function OverlayApp() {
           <span className="overlay-logo" data-tauri-drag-region />
           <span className="overlay-word" data-tauri-drag-region>RABADON.GG</span>
           <span className="overlay-head-spacer" data-tauri-drag-region />
-          <span className="overlay-tier-badge" title={TIER_OPT.label}>
-            {TIER_OPT.icon && <img src={TIER_OPT.icon} alt="" className="overlay-tier-icon" onError={e => { e.target.style.display = 'none' }} />}
-            <span>{TIER_OPT.label}</span>
+          <span className="overlay-tier-badge" title={tierOpt.label}>
+            {tierOpt.icon && <img src={tierOpt.icon} alt="" className="overlay-tier-icon" onError={e => { e.target.style.display = 'none' }} />}
+            <span>{tierOpt.label}</span>
           </span>
           <span className="overlay-patch">{patch === '30' ? '30d' : patch}</span>
           <button className="overlay-close" onClick={handleClose} title="Hide overlay">✕</button>
@@ -561,7 +563,7 @@ export default function OverlayApp() {
                 <div className="overlay-yourpick-head">
                   <span className="l">
                     Your pick{isLocked ? ' · LOCKED' : ''}
-                    {isLocked && <ExternalLink champion={yourPick.champion} tier={TIER} patch={patch} lane={role} />}
+                    {isLocked && <ExternalLink champion={yourPick.champion} tier={tier} patch={patch} lane={role} />}
                   </span>
                   {yourPick.rank === 1
                     ? <span className="cmp best">✓ best available</span>

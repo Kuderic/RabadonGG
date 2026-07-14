@@ -1,3 +1,9 @@
+## What's new in 1.2.24
+
+### Bug fixes
+- **Overlay tier badge now matches your Settings** — the overlay's population badge was hardcoded to Emerald+ even when Settings had a different tier selected. Recommendations were always computed with your real setting; the badge (and the lolalytics link) now show it correctly too.
+- **Quick nav banner stacks below the title bar** — the banner's z-order is now under the desktop title bar so it can never overlap it, even mid-animation.
+
 ## What's new in 1.2.23
 
 ### Changes
