@@ -1,6 +1,6 @@
 [package]
 name = "rabadon-desktop"
-version = "1.2.20"
+version = "1.2.21"
 description = "Rabadon.GG desktop shell"
 edition = "2021"
 

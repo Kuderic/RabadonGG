@@ -1,3 +1,8 @@
+## What's new in 1.2.21
+
+### Changes
+- **Quick navigation bar when scrolling** — when you scroll down past the main tab bar, a compact banner slides in at the top with Recommend and Draft shortcuts. Clicking one switches the view and takes you back to the top of the page.
+
 ## What's new in 1.2.20
 
 ### Bug fixes

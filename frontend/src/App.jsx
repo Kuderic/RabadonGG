@@ -317,7 +317,7 @@ function DownloadPanel() {
         <p className="download-hero-sub">It reads your champion select straight from the League client. No typing — your draft fills in live as picks and bans lock, and recommendations update in real time.</p>
         <a href="https://github.com/Kuderic/RabadonGG/releases" className="download-cta-btn" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>{IC.download} Download for Windows</a>
         <div className="download-meta">
-          <span><strong>v1.2.20</strong></span>
+          <span><strong>v1.2.21</strong></span>
           <span>4.3 MB</span>
           <span>Installer (.exe)</span>
           <span><a href="https://github.com/Kuderic/RabadonGG/releases" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>Release notes &amp; checksums</a></span>
@@ -571,6 +571,9 @@ export default function App() {
   const [selectedPoolRec, setSelectedPoolRec] = useState(null)
   // Overlay "open this champion's breakdown" request; resolved by RecommendationList
   const [focusRequest, setFocusRequest] = useState(null)
+  // Sticky top nav: shown when the real tab-nav is scrolled out of view
+  const [showStickyNav, setShowStickyNav] = useState(false)
+  const tabNavRef = useRef(null)
   const [myPick, setMyPick] = useState('')
   const [myPickResult, setMyPickResult] = useState(null)
   const [draftOverview, setDraftOverview] = useState(null)
@@ -1050,6 +1053,24 @@ export default function App() {
     setSelectedPoolRec(null)
   }, [])
 
+  // Show the sticky nav whenever the real tab-nav leaves the viewport.
+  // IntersectionObserver accounts for ancestor clipping, so this works for both
+  // scroll modes: document scrolling (web) and .app-container scrolling (desktop).
+  useEffect(() => {
+    const el = tabNavRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([entry]) => setShowStickyNav(!entry.isIntersecting))
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  const handleStickyNav = useCallback((tab) => {
+    setActiveTab(tab)
+    // Scroll whichever container scrolls: .app-container on desktop, the document on web
+    document.querySelector('.app-container')?.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   const handleAllyChange = (index, champion) => {
     const norm = s => s.trim().toLowerCase()
     const champNorm = norm(champion)
@@ -1299,6 +1320,19 @@ export default function App() {
   return (
     <>
       {IS_DESKTOP && <TitleBar lcuConnected={lcuConnected} lcuSession={lcuSession} version={__APP_VERSION__} onShowChangelog={() => setShowChangelog(true)} />}
+      <div className={`sticky-nav${showStickyNav ? ' sticky-nav--visible' : ''}`} aria-hidden={!showStickyNav}>
+        <img src="/rabadon.png" alt="" className="sticky-nav-logo" />
+        <button
+          className={`sticky-nav-btn ${activeTab === 'draft' ? 'sticky-nav-btn--active' : ''}`}
+          onClick={() => handleStickyNav('draft')}
+          tabIndex={showStickyNav ? 0 : -1}
+        >Recommend</button>
+        <button
+          className={`sticky-nav-btn ${activeTab === 'overview' ? 'sticky-nav-btn--active' : ''}`}
+          onClick={() => handleStickyNav('overview')}
+          tabIndex={showStickyNav ? 0 : -1}
+        >Draft</button>
+      </div>
       <div className="app-container" data-fx="refined" data-detail={lowDetail ? 'low' : undefined}>
       <div style={IS_TAURI ? { zoom: zoomLevel } : undefined}>
       {updateInfo && (
@@ -1356,7 +1390,7 @@ export default function App() {
         <p>Real-time champion select analysis</p>
       </header>
 
-      <nav className="tab-nav">
+      <nav className="tab-nav" ref={tabNavRef}>
         <button
           className={`tab-btn ${activeTab === 'draft' ? 'tab-btn--active' : ''}`}
           onClick={() => setActiveTab('draft')}

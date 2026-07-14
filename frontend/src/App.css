@@ -285,6 +285,53 @@ body {
 .tab-btn--active { color: var(--gold-bright); }
 .tab-btn--active::after { transform: translateX(-50%) scaleX(1); }
 
+/* ── Sticky nav (appears when the tab-nav scrolls out of view) ────────────── */
+.sticky-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 16px;
+  background: linear-gradient(180deg, rgba(13,18,32,0.97), rgba(10,14,26,0.97));
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--gold-deep) 22%, var(--gold) 50%, var(--gold-deep) 78%, transparent) 1;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  transform: translateY(-110%);
+  transition: transform 0.22s ease;
+  pointer-events: none;
+}
+.sticky-nav--visible { transform: translateY(0); pointer-events: auto; }
+html[data-desktop] .sticky-nav { top: var(--titlebar-h); }
+.sticky-nav-logo { width: 20px; height: 20px; margin-right: 8px; }
+.sticky-nav-btn {
+  position: relative;
+  background: none;
+  border: none;
+  padding: 8px 22px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+.sticky-nav-btn:hover { color: var(--ink-2); }
+.sticky-nav-btn--active { color: var(--gold-bright); }
+.sticky-nav-btn--active::after {
+  content: "";
+  position: absolute;
+  left: 50%; bottom: 2px;
+  transform: translateX(-50%);
+  width: 60%; height: 2px;
+  background: var(--grad-gold-flat);
+  box-shadow: 0 0 12px rgba(200,155,60,0.5);
+}
+
 /* ── Draft section ────────────────────────────────────────────────────────── */
 .draft-section {
   padding: 22px 26px;
