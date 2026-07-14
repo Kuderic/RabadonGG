@@ -1,3 +1,8 @@
+## What's new in 1.2.25
+
+### Bug fixes
+- **Lolalytics links work for mid-lane champions** — links passed `lane=mid` but lolalytics expects `lane=middle`, so mid-lane build pages opened broken. Fixed everywhere the link appears: recommendation cards, breakdown panels, and the overlay's locked-pick link.
+
 ## What's new in 1.2.24
 
 ### Bug fixes

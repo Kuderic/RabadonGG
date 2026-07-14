@@ -7,7 +7,7 @@ export function RankBadge({ rank }) {
   return <span className={cls}><span className="rank-num">{rank}</span></span>
 }
 
-const LANE_MAP = { adc: 'bottom', top: 'top', jungle: 'jungle', mid: 'mid', support: 'support' }
+const LANE_MAP = { adc: 'bottom', top: 'top', jungle: 'jungle', mid: 'middle', support: 'support' }
 
 export function ExternalLink({ champion, tier, patch, lane }) {
   const params = new URLSearchParams()
