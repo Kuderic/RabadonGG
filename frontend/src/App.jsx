@@ -317,7 +317,7 @@ function DownloadPanel() {
         <p className="download-hero-sub">It reads your champion select straight from the League client. No typing — your draft fills in live as picks and bans lock, and recommendations update in real time.</p>
         <a href="https://github.com/Kuderic/RabadonGG/releases" className="download-cta-btn" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>{IC.download} Download for Windows</a>
         <div className="download-meta">
-          <span><strong>v1.2.21</strong></span>
+          <span><strong>v1.2.22</strong></span>
           <span>4.3 MB</span>
           <span>Installer (.exe)</span>
           <span><a href="https://github.com/Kuderic/RabadonGG/releases" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>Release notes &amp; checksums</a></span>

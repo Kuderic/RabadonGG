@@ -305,6 +305,11 @@ body {
 }
 .sticky-nav--visible { transform: translateY(0); pointer-events: auto; }
 html[data-desktop] .sticky-nav { top: var(--titlebar-h); }
+/* The desktop banner starts below the titlebar, so the hidden state must also
+   clear the titlebar's height (plus shadow) or it parks on top of it. */
+html[data-desktop] .sticky-nav:not(.sticky-nav--visible) {
+  transform: translateY(calc(-100% - var(--titlebar-h) - 12px));
+}
 .sticky-nav-logo { width: 20px; height: 20px; margin-right: 8px; }
 .sticky-nav-btn {
   position: relative;

@@ -1,3 +1,8 @@
+## What's new in 1.2.22
+
+### Bug fixes
+- **Quick nav banner no longer covers the title bar** — in the desktop app, the collapsed navigation banner was invisibly parked on top of the custom title bar, blocking the minimize/maximize/close buttons. It now slides fully out of view when hidden and appears below the title bar when shown.
+
 ## What's new in 1.2.21
 
 ### Changes
