@@ -5,6 +5,7 @@ import { getRecommendations } from '../api/client'
 import { useLCUSession } from '../services/lcu'
 import { DEFAULT_CONFIG } from '../App'
 import { TIER_OPTIONS } from './TierSelector'
+import { ExternalLink } from './ChampionShared'
 
 const IS_TAURI = typeof window !== 'undefined' && window.__TAURI__ != null
 
@@ -558,7 +559,10 @@ export default function OverlayApp() {
             {yourPick ? (
               <div className={`overlay-yourpick${isLocked ? ' overlay-yourpick--locked' : ''}`}>
                 <div className="overlay-yourpick-head">
-                  <span className="l">Your pick{isLocked ? ' · LOCKED' : ''}</span>
+                  <span className="l">
+                    Your pick{isLocked ? ' · LOCKED' : ''}
+                    {isLocked && <ExternalLink champion={yourPick.champion} tier={TIER} patch={patch} lane={role} />}
+                  </span>
                   {yourPick.rank === 1
                     ? <span className="cmp best">✓ best available</span>
                     : <span className="cmp">#{yourPick.rank} of {yourPick.field}</span>}

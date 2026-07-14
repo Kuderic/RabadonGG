@@ -3722,7 +3722,9 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 }
 .overlay-yourpick-head .l {
   font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-mid);
+  display: inline-flex; align-items: center; gap: 6px;
 }
+.overlay-yourpick-head .bp-lola-link svg { width: 10px; height: 10px; }
 .overlay-yourpick-head .cmp { font-size: 9px; letter-spacing: 0.3px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .overlay-yourpick-head .cmp.best { color: var(--pos); }
 .overlay-pick--you { border-color: rgba(200,155,60,0.55); background: rgba(200,155,60,0.10); }

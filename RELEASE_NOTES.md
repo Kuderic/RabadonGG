@@ -1,3 +1,8 @@
+## What's new in 1.2.23
+
+### Changes
+- **Lolalytics link in the overlay** — after you lock in your champion, the "Your pick · LOCKED" header in the overlay shows an external-link icon that opens that champion's lolalytics build page in your browser, with the same tier, patch, and lane filters the main app uses.
+
 ## What's new in 1.2.22
 
 ### Bug fixes
