@@ -1,3 +1,8 @@
+## What's new in 1.2.26
+
+### Bug fixes
+- **Reopening the Recommend tab no longer scrolls you to an old card** — if you had clicked a pick in the overlay earlier, returning to the Recommend tab could replay that click and drag the view down to the champion's card. Overlay clicks now scroll exactly once, when they happen.
+
 ## What's new in 1.2.25
 
 ### Bug fixes

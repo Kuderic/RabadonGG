@@ -269,7 +269,7 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null, focusRequest = null }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null, focusRequest = null, onFocusResolved = null }) {
   const [recTab, setRecTab] = useState('overall')
   const [sortOverall, setSortOverall] = useState(() => externalSort || 'wr_delta')
   const [sortPool, setSortPool]       = useState(() => externalSort || 'wr_delta')
@@ -390,6 +390,10 @@ export default function RecommendationList({ recommendations, loading, refreshin
   // card, the pool list, then falls back to the lookup input.
   useEffect(() => {
     if (!focusRequest?.champion) return
+    // Consume the request immediately: it must resolve exactly once. Without
+    // this, leaving and reopening the Recommend tab remounts this component
+    // and replays the stale request — re-scrolling to a long-ago clicked card.
+    onFocusResolved?.()
     const champ = focusRequest.champion.toLowerCase()
 
     const sortedPos = sorted.findIndex(({ rec }) => rec.champion.toLowerCase() === champ)
