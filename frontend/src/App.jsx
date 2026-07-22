@@ -317,7 +317,7 @@ function DownloadPanel() {
         <p className="download-hero-sub">It reads your champion select straight from the League client. No typing — your draft fills in live as picks and bans lock, and recommendations update in real time.</p>
         <a href="https://github.com/Kuderic/RabadonGG/releases" className="download-cta-btn" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>{IC.download} Download for Windows</a>
         <div className="download-meta">
-          <span><strong>v1.2.26</strong></span>
+          <span><strong>v1.2.27</strong></span>
           <span>4.3 MB</span>
           <span>Installer (.exe)</span>
           <span><a href="https://github.com/Kuderic/RabadonGG/releases" target="_blank" rel="noopener noreferrer" onClick={handleExternalLink}>Release notes &amp; checksums</a></span>
@@ -661,8 +661,20 @@ export default function App() {
     const knownRoles = ['top','jungle','mid','adc','support']
     const filledSlots = {}
 
+    // Champions the user manually pinned to a slot (e.g. dragged in the overlay)
+    // are already placed — exclude them from auto-assignment entirely so they
+    // don't consume the slot they were dragged OUT of, keeping that role free
+    // for other hovers/lock-ins. On a new session overrides are stale (about to
+    // be reset below), so nothing is excluded.
+    const pinnedByUser = isNewSession ? new Set() : new Set(
+      enemies
+        .filter(s => manualOverrides.has(`enemy.${s.role}`) && s.champion.trim())
+        .map(s => s.champion.toLowerCase())
+    )
+
     // Pass 1: enemies with explicit known roles — no overwriting; slot collision defers to pass 2
     for (const e of lcuSession.enemies) {
+      if (pinnedByUser.has(e.champion.toLowerCase())) continue
       if (e.role && e.role !== 'fill' && knownRoles.includes(e.role) && !filledSlots[e.role]) {
         filledSlots[e.role] = e.champion
       }
@@ -672,6 +684,7 @@ export default function App() {
     const placed = new Set(Object.values(filledSlots))
     for (const e of lcuSession.enemies) {
       if (placed.has(e.champion)) continue
+      if (pinnedByUser.has(e.champion.toLowerCase())) continue
       // Fall back to the data-derived role (from lolalytics pick volume) when the
       // champion isn't in the hardcoded map — avoids silently defaulting to top.
       const primary = champPrimaryRole(e.champion) || championRoles[e.champion] || null

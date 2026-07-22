@@ -1,3 +1,11 @@
+## What's new in 1.2.27
+
+### Changes
+- **Clicking "Your pick" in the overlay opens the Your Pick card** — it now takes you to the pinned Your Pick card at the top of the recommendations instead of scrolling down to the same champion's card in the list.
+
+### Bug fixes
+- **Dragging a champion out of a lane frees it for auto-fill again** — after moving an enemy to a different lane, their old lane now correctly picks up new hovers and lock-ins from champion select. Previously the moved champion invisibly blocked their original lane, which could also push other enemies into the wrong slots.
+
 ## What's new in 1.2.26
 
 ### Bug fixes

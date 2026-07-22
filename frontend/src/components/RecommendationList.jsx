@@ -396,21 +396,24 @@ export default function RecommendationList({ recommendations, loading, refreshin
     onFocusResolved?.()
     const champ = focusRequest.champion.toLowerCase()
 
-    const sortedPos = sorted.findIndex(({ rec }) => rec.champion.toLowerCase() === champ)
-    if (sortedPos !== -1) {
-      setRecTab('overall')
-      setVisibleCount(v => Math.max(v, sortedPos + 1))
-      scrollRecRef.current = true
-      onSelect(sorted[sortedPos].origIdx)
-      return
-    }
-
+    // The pinned Your Pick card wins over the champion's slot in the list —
+    // clicking "Your pick" in the overlay should land on the card at the top,
+    // not scroll down to the same champion's grid card.
     if (myPickRec && playerRole === youRole && myPickRec.champion.toLowerCase() === champ) {
       setRecTab('overall')
       // Double rAF: the tab switch must commit and paint before the section exists
       requestAnimationFrame(() => requestAnimationFrame(() => {
         yourPickRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
       }))
+      return
+    }
+
+    const sortedPos = sorted.findIndex(({ rec }) => rec.champion.toLowerCase() === champ)
+    if (sortedPos !== -1) {
+      setRecTab('overall')
+      setVisibleCount(v => Math.max(v, sortedPos + 1))
+      scrollRecRef.current = true
+      onSelect(sorted[sortedPos].origIdx)
       return
     }
 
