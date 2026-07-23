@@ -1,3 +1,8 @@
+## What's new in 1.2.28
+
+### Bug fixes
+- **Removed overlay hotkey stays removed** — if you cleared the show/hide overlay hotkey in Settings, it would come back as Ctrl+ArrowDown after the app restarted (most noticeably after updates). A removed hotkey now stays removed.
+
 ## What's new in 1.2.27
 
 ### Changes
