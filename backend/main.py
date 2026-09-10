@@ -230,8 +230,24 @@ async def startup_event():
     from services import db
     db.init_db()
     # Pre-warm in-process cache from database so first user requests are fast
-    from services.scraper import warm_cache, _id_to_slug, _ensure_champion_map, _get_patch
+    from services.scraper import (
+        warm_cache, warmer_loop, cleanup_loop, _id_to_slug, _ensure_champion_map, _get_patch,
+    )
     await warm_cache()
+
+    # Proactively keep the standard (patch, tier) combos hot so client requests
+    # never trigger a cold ~55s live scrape. Disable with RABADON_WARMER=0.
+    if os.getenv("RABADON_WARMER", "1") != "0":
+        interval = int(os.getenv("RABADON_WARM_INTERVAL", "21600"))
+        asyncio.create_task(warmer_loop(interval))
+        logger.info(f"Cache warmer started (every {interval}s)")
+
+    # Periodically prune old-patch/stale cache rows and compact the DB so the
+    # cache file doesn't grow unbounded. Disable with RABADON_CLEANUP=0.
+    if os.getenv("RABADON_CLEANUP", "1") != "0":
+        retention = int(os.getenv("RABADON_RETENTION_DAYS", "2"))
+        asyncio.create_task(cleanup_loop(retention_days=retention))
+        logger.info(f"Cache cleanup started (retention={retention}d, daily)")
 
     # Start the LCU watcher only in desktop builds
     if os.getenv("RABADON_DESKTOP"):

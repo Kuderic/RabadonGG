@@ -10,3 +10,23 @@ WorkingDirectory=/srv/rabadon/backend
 ExecStart=/srv/rabadon/backend/venv/bin/python prefetch_all.py
 StandardOutput=append:/srv/rabadon/backend/logs/cron.log
 StandardError=append:/srv/rabadon/backend/logs/cron.log
+
+# Resource guard rails, added after the 2026-09-04..09 incident (docs/ops.md).
+# The host is a t3.micro with 916 MB RAM: a runaway prefetch must die fast and
+# alone, not drag uvicorn/sshd/nginx into a 12-hour swap thrash. A healthy run
+# sits well under 100 MB; a run that hits the cap is broken, and killing it is
+# the correct outcome.
+#
+# Hard cap: exceeding it OOM-kills this unit only.
+MemoryMax=400M
+# No swap for this unit: exceed the cap and die, rather than page for hours.
+MemorySwapMax=0
+# In a global OOM the kernel picks this process first, never uvicorn or sshd.
+OOMScoreAdjust=500
+# Yield CPU and disk to the API server.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+# A healthy run is ~11.5 h. Type=oneshot has no start timeout by default, so a
+# stuck run would otherwise overlap the next day's timer. Kill it first.
+TimeoutStartSec=16h
