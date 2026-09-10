@@ -55,6 +55,17 @@ _current_patch: Optional[str] = None
 _matchup_mem_cache: Dict[str, dict] = {}  # "{tier}:{patch}:{slug}:{lane}" → {counters, team}
 _games_by_slug_cache: Dict[str, Dict[str, int]] = {}  # "{tier}:{patch}:{lane}" → {slug: games}
 
+# Stale-while-revalidate bookkeeping.
+_refreshing: set = set()   # cache keys with an in-flight background refresh (dedup guard)
+_bg_tasks: set = set()     # strong refs to background tasks so they aren't GC'd mid-flight
+
+
+def _spawn_bg(coro) -> None:
+    """Fire-and-forget a coroutine, keeping a strong ref so it isn't GC'd early."""
+    task = asyncio.ensure_future(coro)
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+
 
 # ---------------------------------------------------------------------------
 # Utility helpers
@@ -196,6 +207,91 @@ async def _fetch_counter_all_lanes(champ_slug: str, lane: str, patch: str, tier:
 
 
 # ---------------------------------------------------------------------------
+# Live fetchers + stale-while-revalidate refresh
+# ---------------------------------------------------------------------------
+
+async def _fetch_matchup_live(cand_slug: str, api_slug: str, lane: str, patch: str,
+                              tkey: str, tier: str, days: int) -> tuple:
+    """Fetch fresh matchup data from lolalytics and write through to SQLite + mem cache."""
+    (counter_list, win_rate), team_resp = await asyncio.gather(
+        _fetch_counter_all_lanes(api_slug, lane, patch, tier, days),
+        _fetch("build-team", lane, api_slug, patch, tier, days),
+    )
+    team_map = team_resp.get("team", {})
+    await asyncio.to_thread(db.write_matchup, cand_slug, patch, tkey, lane, counter_list, team_map, win_rate, 0)
+    _matchup_mem_cache[f"{tkey}:{patch}:{cand_slug}:{lane}"] = {
+        "counters": counter_list, "team": team_map,
+        "win_rate": win_rate, "fetched_at": _today(),
+    }
+    return counter_list, team_map, win_rate
+
+
+async def _refresh_matchup(key: str, cand_slug: str, api_slug: str, lane: str,
+                           patch: str, tkey: str, tier: str, days: int) -> None:
+    """Background stale-while-revalidate refresh of a single matchup entry."""
+    try:
+        await _fetch_matchup_live(cand_slug, api_slug, lane, patch, tkey, tier, days)
+        logger.info(f"SWR refresh: {cand_slug} ({lane}, {patch}, {tkey})")
+    except Exception as e:
+        logger.warning(f"SWR refresh failed for {cand_slug} ({lane}, {patch}, {tkey}): {e}")
+    finally:
+        _refreshing.discard(key)
+
+
+def _schedule_matchup_refresh(cand_slug: str, api_slug: str, lane: str, patch: str,
+                              tkey: str, tier: str, days: int) -> None:
+    """Kick off a background matchup refresh, deduped so one key refreshes at a time."""
+    key = f"{tkey}:{patch}:{cand_slug}:{lane}"
+    if key in _refreshing:
+        return
+    _refreshing.add(key)  # reserve synchronously to prevent a dogpile under load
+    _spawn_bg(_refresh_matchup(key, cand_slug, api_slug, lane, patch, tkey, tier, days))
+
+
+async def _fetch_pool_live(role: str, lane: str, patch: str, tkey: str,
+                           tier: str, days: int) -> List[str]:
+    """Fetch the fresh champion pool (tier list) and write through to SQLite + mem cache."""
+    data = await _fetch("list", lane, None, patch, tier, days)
+    entries = [
+        (int(cid), info)
+        for cid, info in data.get("cid", {}).items()
+        # Only champions lolalytics actually ranks in this lane (tier > 0).
+        if int(info.get("tier", 0)) > 0
+    ]
+    names = [_id_to_slug[cid] for cid, _ in entries if cid in _id_to_slug]
+    games_by_slug = {
+        _slug(_id_to_slug[cid]): int(info.get("games", 0))
+        for cid, info in entries if cid in _id_to_slug
+    }
+    await asyncio.to_thread(db.write_pool, lane, patch, tkey, {"champions": names, "games_by_slug": games_by_slug})
+    _games_by_slug_cache[f"{tkey}:{patch}:{lane}"] = games_by_slug
+    logger.info(f"Pool for {role} ({tkey}): {len(names)} champions")
+    return names
+
+
+async def _refresh_pool(key: str, role: str, lane: str, patch: str,
+                        tkey: str, tier: str, days: int) -> None:
+    """Background stale-while-revalidate refresh of a champion pool."""
+    try:
+        await _fetch_pool_live(role, lane, patch, tkey, tier, days)
+        logger.info(f"SWR pool refresh: {role} ({tkey})")
+    except Exception as e:
+        logger.warning(f"SWR pool refresh failed for {role} ({tkey}): {e}")
+    finally:
+        _refreshing.discard(key)
+
+
+def _schedule_pool_refresh(role: str, lane: str, patch: str, tkey: str,
+                           tier: str, days: int) -> None:
+    """Kick off a background pool refresh, deduped so one key refreshes at a time."""
+    key = f"pool:{tkey}:{patch}:{lane}"
+    if key in _refreshing:
+        return
+    _refreshing.add(key)
+    _spawn_bg(_refresh_pool(key, role, lane, patch, tkey, tier, days))
+
+
+# ---------------------------------------------------------------------------
 # Champion pool (tier list)
 # ---------------------------------------------------------------------------
 
@@ -221,6 +317,7 @@ async def warm_cache() -> None:
                 "counters": counters,
                 "team": json.loads(row["team"]),
                 "win_rate": row["win_rate"],
+                "fetched_at": row["fetched_at"],
             }
             loaded += 1
 
@@ -234,6 +331,106 @@ async def warm_cache() -> None:
     logger.info(f"Warm cache: loaded {loaded} champions into memory")
 
 
+# ---------------------------------------------------------------------------
+# Proactive cache warmer (keeps standard combos hot so no client hits a cold scrape)
+# ---------------------------------------------------------------------------
+
+def _warm_tiers() -> List[str]:
+    """Tier keys the warmer keeps hot. Defaults to the endpoint default (TIER);
+    override with RABADON_WARM_TIERS, e.g. "emerald_plus,platinum_plus"."""
+    import os
+    raw = os.getenv("RABADON_WARM_TIERS", "").strip()
+    if raw:
+        return [t.strip() for t in raw.split(",") if t.strip()]
+    return [TIER]
+
+
+async def warm_all(patch: Optional[str] = None) -> None:
+    """
+    Refresh the cache for every role across the standard (patch, tier) combos so
+    client requests never trigger a cold ~55s live scrape.
+
+    Runs off the request path. For each candidate it fetches only when the entry
+    is missing or stale, paced one at a time (the rate-limiting client throttles
+    further), keeping memory/CPU footprint low on small hosts.
+    """
+    patch = patch or PATCH
+    await _ensure_champion_map(patch)
+    refreshed = 0
+    for tier in _warm_tiers():
+        tkey = _tier_key(tier, 0)
+        for role, lane in ROLE_TO_LANE.items():
+            try:
+                pool = db.read_pool(lane, patch, tkey, allow_stale=True)
+                if not pool or pool.get("is_stale"):
+                    names = await _fetch_pool_live(role, lane, patch, tkey, tier, 0)
+                else:
+                    names = pool["champions"]
+                    _games_by_slug_cache.setdefault(
+                        f"{tkey}:{patch}:{lane}", pool.get("games_by_slug", {})
+                    )
+
+                for candidate in names:
+                    cand_slug = _slug(candidate)
+                    mkey = f"{tkey}:{patch}:{cand_slug}:{lane}"
+                    mem = _matchup_mem_cache.get(mkey)
+                    if mem and mem.get("counters") and mem["counters"][0].get("query_vslane") \
+                            and not _is_stale(mem):
+                        continue  # already hot and fresh in memory
+                    db_data = db.read_matchup(cand_slug, patch, tkey, lane, allow_stale=True)
+                    fresh = (
+                        db_data and "win_rate" in db_data
+                        and len(db_data.get("counters", [])) > 50
+                        and db_data["counters"] and db_data["counters"][0].get("query_vslane")
+                        and not db_data.get("is_stale")
+                    )
+                    if fresh:
+                        # Fresh on disk — load into mem so it stays hot; no network.
+                        _matchup_mem_cache[mkey] = {
+                            "counters": db_data["counters"], "team": db_data["team"],
+                            "win_rate": db_data["win_rate"], "fetched_at": db_data.get("fetched_at"),
+                        }
+                        continue
+                    # Missing or stale → refresh synchronously (paced by this loop).
+                    api_slug = _api_slug_map.get(cand_slug, cand_slug)
+                    await _fetch_matchup_live(cand_slug, api_slug, lane, patch, tkey, tier, 0)
+                    refreshed += 1
+            except Exception as e:
+                logger.warning(f"warm_all: {role}/{tkey} failed: {e}")
+    logger.info(
+        f"warm_all complete: patch={patch}, tiers={_warm_tiers()}, refreshed={refreshed}"
+    )
+
+
+async def warmer_loop(interval_seconds: int = 21600) -> None:
+    """Run warm_all now, then every `interval_seconds` (default 6h, well inside the 1-day TTL)."""
+    while True:
+        try:
+            await warm_all()
+        except Exception as e:
+            logger.warning(f"warmer_loop iteration failed: {e}")
+        await asyncio.sleep(interval_seconds)
+
+
+async def cleanup_loop(interval_seconds: int = 86400, retention_days: int = 2,
+                       initial_delay: int = 180) -> None:
+    """Periodically prune stale/old-patch cache rows and compact the DB file.
+
+    The blocking DELETE + VACUUM run in a thread executor so they never stall
+    request handling. The first pass is delayed so startup cache-warming finishes
+    before VACUUM takes its exclusive lock.
+    """
+    await asyncio.sleep(initial_delay)
+    loop = asyncio.get_running_loop()
+    while True:
+        try:
+            await loop.run_in_executor(None, db.prune_stale, retention_days)
+            await loop.run_in_executor(None, db.vacuum)
+        except Exception as e:
+            logger.warning(f"cleanup_loop iteration failed: {e}")
+        await asyncio.sleep(interval_seconds)
+
+
 async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
                            days: int = 0) -> List[str]:
     """
@@ -244,35 +441,20 @@ async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
     await _ensure_champion_map(patch)
 
     tkey = _tier_key(tier, days)
-    cached = db.read_pool(lane, patch, tkey)
+    cached = db.read_pool(lane, patch, tkey, allow_stale=True)
     if cached:
+        # Keep the games_by_slug mem cache warm for total-games lookups, even if stale.
+        gbs = cached.get("games_by_slug")
+        if gbs:
+            _games_by_slug_cache.setdefault(f"{tkey}:{patch}:{lane}", gbs)
+        # Stale-while-revalidate: serve the cached pool now, refresh in the background.
+        if cached.get("is_stale"):
+            _schedule_pool_refresh(role, lane, patch, tkey, tier, days)
         return cached["champions"]
 
+    # Cold miss: nothing cached at all → fetch synchronously (unavoidable).
     try:
-        data = await _fetch("list", lane, None, patch, tier, days)
-        entries = [
-            (int(cid), info)
-            for cid, info in data.get("cid", {}).items()
-            # Only champions lolalytics actually ranks in this lane (tier > 0).
-            # Without this, the pool is every champ with any games in the lane
-            # (~172), flooding recs with off-role noise; with it we match the
-            # site's displayed tier list (e.g. ~52 bottom).
-            if int(info.get("tier", 0)) > 0
-        ]
-        names = [_id_to_slug[cid] for cid, _ in entries if cid in _id_to_slug]
-        games_by_slug = {
-            _slug(_id_to_slug[cid]): int(info.get("games", 0))
-            for cid, info in entries if cid in _id_to_slug
-        }
-        pool_data = {
-            "champions": names,
-            "games_by_slug": games_by_slug,
-        }
-        await asyncio.to_thread(db.write_pool, lane, patch, tkey, pool_data)
-        games_key = f"{tkey}:{patch}:{lane}"
-        _games_by_slug_cache[games_key] = games_by_slug
-        logger.info(f"Pool for {role} ({tkey}): {len(names)} champions")
-        return names
+        return await _fetch_pool_live(role, lane, patch, tkey, tier, days)
     except Exception as e:
         logger.warning(f"Failed to fetch champion pool for {role}: {e}")
         return []
@@ -346,27 +528,36 @@ async def get_matchup_data(
         counter_list = mem_data["counters"]
         team_map = mem_data["team"]
         win_rate = mem_data.get("win_rate", 0.0)
+        # Stale-while-revalidate: serve the cached copy now, refresh for next time.
+        if _is_stale(mem_data):
+            _schedule_matchup_refresh(cand_slug, api_slug, lane, patch, tkey, tier, days)
     else:
-        db_data = db.read_matchup(cand_slug, patch, tkey, lane)
+        db_data = db.read_matchup(cand_slug, patch, tkey, lane, allow_stale=True)
         has_vslane = db_data and db_data.get("counters") and db_data["counters"][0].get("query_vslane")
         if db_data and "win_rate" in db_data and len(db_data.get("counters", [])) > 50 and has_vslane:
             counter_list = db_data["counters"]
             team_map = db_data["team"]
             win_rate = db_data["win_rate"]
-            logger.debug(f"Database cache hit: {candidate} ({lane}, {patch}, {tkey})")
+            _matchup_mem_cache[mem_key] = {
+                "counters": counter_list, "team": team_map,
+                "win_rate": win_rate, "fetched_at": db_data.get("fetched_at"),
+            }
+            # Stale-while-revalidate: serve the stale DB copy, refresh in the background.
+            if db_data.get("is_stale"):
+                logger.debug(f"Stale cache hit + bg refresh: {candidate} ({lane}, {patch}, {tkey})")
+                _schedule_matchup_refresh(cand_slug, api_slug, lane, patch, tkey, tier, days)
+            else:
+                logger.debug(f"Database cache hit: {candidate} ({lane}, {patch}, {tkey})")
         else:
+            # Cold miss: no cached copy at all → must fetch synchronously.
             try:
-                (counter_list, win_rate), team_resp = await asyncio.gather(
-                    _fetch_counter_all_lanes(api_slug, lane, patch, tier, days),
-                    _fetch("build-team", lane, api_slug, patch, tier, days),
+                counter_list, team_map, win_rate = await _fetch_matchup_live(
+                    cand_slug, api_slug, lane, patch, tkey, tier, days
                 )
-                team_map = team_resp.get("team", {})
-                await asyncio.to_thread(db.write_matchup, cand_slug, patch, tkey, lane, counter_list, team_map, win_rate, 0)
                 logger.info(f"Fetched and cached: {candidate} ({lane}, {patch}, {tkey})")
             except Exception as e:
                 logger.warning(f"lolalytics fetch failed for {candidate}: {e}")
                 return {}, {}, 0.0, 0, [f"{candidate}: data unavailable ({e})"]
-        _matchup_mem_cache[mem_key] = {"counters": counter_list, "team": team_map, "win_rate": win_rate}
 
     # Build O(1) lookup structures.
     # Primary: (cid, query_vslane) → entry for role-specific matchup lookup.

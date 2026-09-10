@@ -15,12 +15,17 @@ from typing import Optional
 DB_PATH = Path(__file__).parent.parent / "data" / "rabadon_cache.db"
 logger = logging.getLogger(__name__)
 
+# How long a connection waits for a held lock before raising "database is locked".
+# Kept generous so short writes and the periodic VACUUM don't collide under load.
+_BUSY_TIMEOUT_S = 30.0
+
 
 def _connect() -> sqlite3.Connection:
-    """Open a connection with WAL journal mode and a generous busy timeout."""
-    conn = sqlite3.connect(str(DB_PATH))
+    """Open a DB connection in WAL mode with a busy timeout, so concurrent readers
+    and writers (uvicorn + the nightly prefetch) and the cleanup VACUUM's exclusive
+    lock wait for each other instead of raising "database is locked"."""
+    conn = sqlite3.connect(str(DB_PATH), timeout=_BUSY_TIMEOUT_S)
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 
@@ -70,8 +75,15 @@ def _is_stale(fetched_at: str) -> bool:
         return True
 
 
-def read_matchup(champion: str, patch: str, tier: str, lane: str) -> Optional[dict]:
-    """Return stored matchup dict or None if missing/stale (>1 day old)."""
+def read_matchup(
+    champion: str, patch: str, tier: str, lane: str, allow_stale: bool = False
+) -> Optional[dict]:
+    """Return stored matchup dict or None if missing.
+
+    By default a row older than the 1-day TTL is treated as missing (returns None).
+    Pass allow_stale=True to return it anyway with an ``is_stale`` flag set — this
+    powers stale-while-revalidate: callers serve the stale copy and refresh async.
+    """
     conn = _connect()
     cursor = conn.cursor()
 
@@ -88,7 +100,8 @@ def read_matchup(champion: str, patch: str, tier: str, lane: str) -> Optional[di
 
     counters_json, team_json, win_rate, total_games, fetched_at = row
 
-    if _is_stale(fetched_at):
+    stale = _is_stale(fetched_at)
+    if stale and not allow_stale:
         return None
 
     return {
@@ -97,6 +110,7 @@ def read_matchup(champion: str, patch: str, tier: str, lane: str) -> Optional[di
         "win_rate": win_rate,
         "total_games": total_games,
         "fetched_at": fetched_at,
+        "is_stale": stale,
     }
 
 
@@ -144,8 +158,13 @@ def write_matchup(
     conn.close()
 
 
-def read_pool(lane: str, patch: str, tier: str) -> Optional[dict]:
-    """Return pool dict or None if missing/stale (>1 day old)."""
+def read_pool(lane: str, patch: str, tier: str, allow_stale: bool = False) -> Optional[dict]:
+    """Return pool dict or None if missing.
+
+    By default a row older than the 1-day TTL is treated as missing. Pass
+    allow_stale=True to return it anyway; the dict then carries ``is_stale`` and
+    ``fetched_at`` so callers can serve it now and refresh in the background.
+    """
     conn = _connect()
     cursor = conn.cursor()
 
@@ -162,10 +181,14 @@ def read_pool(lane: str, patch: str, tier: str) -> Optional[dict]:
 
     pool_json, fetched_at = row
 
-    if _is_stale(fetched_at):
+    stale = _is_stale(fetched_at)
+    if stale and not allow_stale:
         return None
 
-    return json.loads(pool_json)
+    pool = json.loads(pool_json)
+    pool["is_stale"] = stale
+    pool["fetched_at"] = fetched_at
+    return pool
 
 
 def write_pool(lane: str, patch: str, tier: str, pool: dict) -> None:
@@ -234,3 +257,48 @@ def load_all_valid_matchups() -> list:
             }
         )
     return result
+
+
+# ---------------------------------------------------------------------------
+# Maintenance: prune old rows + reclaim disk
+# ---------------------------------------------------------------------------
+
+def prune_stale(retention_days: int = 2) -> dict:
+    """Delete cache rows not refreshed within ``retention_days``.
+
+    Rows older than this are from superseded patches or abandoned (tier, patch)
+    combos — never served (TTL is 1 day) and only consuming disk. Actively-used
+    combos are kept fresh by the warmer / stale-while-revalidate, so they never
+    fall out of the window. ``fetched_at`` is an ISO date string, so a lexical
+    ``<`` comparison against the cutoff date is correct.
+
+    Returns {'matchup_deleted', 'pool_deleted', 'cutoff'}.
+    """
+    cutoff = (datetime.date.today() - datetime.timedelta(days=retention_days)).isoformat()
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM matchup_cache WHERE fetched_at < ?", (cutoff,))
+    matchup_deleted = cursor.rowcount
+    cursor.execute("DELETE FROM pool_cache WHERE fetched_at < ?", (cutoff,))
+    pool_deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+    logger.info(
+        f"prune_stale: deleted {matchup_deleted} matchup + {pool_deleted} pool "
+        f"rows older than {cutoff}"
+    )
+    return {"matchup_deleted": matchup_deleted, "pool_deleted": pool_deleted, "cutoff": cutoff}
+
+
+def vacuum() -> None:
+    """Rewrite the DB file to reclaim free pages left behind by deletes/updates.
+
+    VACUUM needs an exclusive lock and cannot run inside a transaction, so this
+    opens an autocommit connection. Blocking — callers in an async context should
+    offload it to a thread executor.
+    """
+    conn = _connect()
+    conn.isolation_level = None  # autocommit: VACUUM must not be inside a transaction
+    conn.execute("VACUUM")
+    conn.close()
+    logger.info("vacuum: database compacted")

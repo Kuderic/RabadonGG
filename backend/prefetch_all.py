@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from services.scraper import get_champion_pool, get_matchup_data
+from services.scraper import _matchup_mem_cache, get_champion_pool, get_matchup_data
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -95,6 +95,12 @@ async def prefetch_patch(patch: str, tiers: list[str]) -> tuple[int, int, dict]:
                 except Exception as e:
                     tier_err += 1
                     log.warning(f"    [{i}/{len(pool)}] {champ} SKIP: {e}")
+                # This process exists only to fill SQLite. get_matchup_data() also
+                # stores every result in the scraper's process-wide memory cache —
+                # right for the API server, but here it just accumulates the whole
+                # dataset (~660 MB by the end of a run: enough to OOM-thrash the
+                # t3.micro for 12h/day, see docs/ops.md incident 2026-09-04).
+                _matchup_mem_cache.clear()
                 await asyncio.sleep(DELAY_SECONDS)
 
         tier_elapsed = time.monotonic() - tier_start

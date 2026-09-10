@@ -78,6 +78,16 @@ installed, so don't try to add a crontab; use the timer).
 - Logs: stdout/stderr append to `backend/logs/cron.log`; the script also writes
   a per-run summary to `backend/logs/prefetch.log`. The run is long
   (~12s/champion across all 5 roles), so expect it to take a while.
+- **Resource guard rails** (added after the 2026-09-04 incident below): the unit
+  sets `MemoryMax=400M`, `MemorySwapMax=0`, `OOMScoreAdjust=500`, `Nice=10` and
+  `TimeoutStartSec=16h`. A healthy run sits well under 100 MB; one that hits the
+  cap is broken and *should* be killed — that is the unit failing alone instead
+  of the whole host thrashing. If `systemctl status rabadon-prefetch` shows
+  `oom-kill`, look for a memory leak in the prefetch path, don't raise the cap.
+- **The prefetch must never hold the dataset in memory.** `prefetch_all.py`
+  clears `scraper._matchup_mem_cache` after every champion. That cache is right
+  for uvicorn (it *is* the hot path) but the prefetch only exists to fill
+  SQLite, and on a 916 MB host there is no room for two copies.
 
 ### Common commands
 
@@ -154,3 +164,30 @@ This enforces the docs' "`main` is always deployable" invariant.
 - **Hardening added**: deploy pre-flight import gate (`deploy-backend.sh`),
   `ExecStartPre` import guard on the unit, and CI lint+import-smoke. Any one of
   these would have prevented the incident.
+
+## Incident 2026-09-04 → 09-09 (summary)
+
+- **Symptom**: site unreachable for ~12 h *every day* (roughly 11:00–23:00 UTC).
+  TCP handshakes on 22/80/443 succeeded but no daemon — sshd, nginx, even
+  sysstat — ever answered. Kernel alive, userspace fully blocked.
+- **Cause**: swap thrash on the t3.micro (916 MB RAM + 1 GB swapfile). uvicorn's
+  `warm_cache()` already holds ~0.9 GB (RSS + swap). The 01:00 prefetch calls
+  `scraper.get_matchup_data()`, which stores every result in the process-wide
+  `_matchup_mem_cache`, so the prefetch process accumulated the entire dataset
+  (~660 MB RSS) it never reads. Swap hit 100 % around 11:00, then `majflt`
+  400+/s, `iowait` 80 %, load 8+ on 2 vCPUs. Data growth (2 patches × 4 tiers)
+  tipped it over: Sep 1–3 already peaked at 97 % swap and only survived because
+  the run finished by 12:35 and freed memory.
+- **Recovery** (each day): the kernel OOM-killer eventually killed the prefetch
+  (`journalctl -k | grep "Out of memory"`), sometimes triggered by an SSH login
+  needing memory. No reboot ever happened. `prefetch.log` looked clean because
+  the summary is only written on completion — check `systemctl status
+  rabadon-prefetch` and the kernel log, not just the app logs.
+- **How it was diagnosed**: `uptime` (load avg + no reboot) → `journalctl -k`
+  (OOM kill with per-process RSS/swap table) → `sar -S/-B/-u/-q` and
+  `sar -f /var/log/sa/saDD` for prior days (10-min history; gaps in the samples
+  are themselves evidence) → `journalctl -u rabadon-prefetch` for the pattern.
+- **Fixes**: prefetch clears the mem cache per champion; guard rails on the
+  unit (see above). The box still has no headroom — uvicorn alone exceeds
+  physical RAM — so trimming `warm_cache()` or moving to a t3.small is the next
+  step, as is rotating `backend/logs/cron.log` (369 MB, root-owned, unrotated).
