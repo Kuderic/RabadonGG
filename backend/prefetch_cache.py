@@ -12,11 +12,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from services.scraper import get_champion_pool, get_matchup_data
+from services.scraper import _get_patch, _matchup_mem_cache, get_champion_pool, get_matchup_data
 
 ROLES = ["top", "jungle", "mid", "support", "adc"]
 TIERS = ["emerald_plus", "platinum_plus"]
-PATCH = "16.11"
 DAYS = 30
 DELAY_SECONDS = 15
 
@@ -31,21 +30,25 @@ log = logging.getLogger(__name__)
 async def main() -> None:
     total_fetched = 0
     total_errors = 0
+    patch = await _get_patch()
 
     for tier in TIERS:
         for role in ROLES:
             log.info(f"=== {tier.upper()} / {role.upper()} ===")
-            pool = await get_champion_pool(role, patch=PATCH, tier=tier, days=DAYS)
+            pool = await get_champion_pool(role, patch=patch, tier=tier, days=DAYS)
             log.info(f"  Pool: {len(pool)} champions")
 
             for i, champ in enumerate(pool, 1):
                 log.info(f"  [{i}/{len(pool)}] {champ} ...")
                 try:
-                    await get_matchup_data(champ, role, [], [], patch=PATCH, tier=tier, days=DAYS)
+                    await get_matchup_data(champ, role, [], [], patch=patch, tier=tier, days=DAYS)
                     total_fetched += 1
                 except Exception as e:
                     log.warning(f"  SKIP {champ}: {e}")
                     total_errors += 1
+                # Legacy prefetch: like prefetch_all.py, never let this process hoard
+                # the dataset in the scraper's mem cache (docs/ops.md, 2026-09-04).
+                _matchup_mem_cache.clear()
                 await asyncio.sleep(DELAY_SECONDS)
 
     log.info(f"Done. {total_fetched} champions fetched, {total_errors} skipped.")

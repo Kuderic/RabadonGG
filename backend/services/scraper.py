@@ -18,7 +18,10 @@ import asyncio
 import datetime
 import json
 import logging
+import os
 import re
+import time
+from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple
 
 import httpx
@@ -28,7 +31,11 @@ from .lolalytics_client import get_client
 
 LOLA_API = "https://a1.lolalytics.com/mega/"
 DD_VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json"
-PATCH = "16.11"
+# The rolling 30-day window is addressed with the patch token "30" (lolalytics
+# accepts it in place of a version). It's the frontend's default, so it is part
+# of the "hot" data set alongside the current patch. The current patch itself is
+# never hardcoded — see _get_patch().
+PATCH_30D = "30"
 TIER = "emerald_plus"
 QUEUE = "ranked"
 REGION = "all"
@@ -52,7 +59,44 @@ _id_to_slug: Dict[int, str] = {}
 #   "Wukong" → key "MonkeyKing" → api slug "monkeyking"
 _api_slug_map: Dict[str, str] = {}
 _current_patch: Optional[str] = None
-_matchup_mem_cache: Dict[str, dict] = {}  # "{tier}:{patch}:{slug}:{lane}" → {counters, team}
+_patch_checked_at: float = 0.0
+_PATCH_TTL_S = 3600  # re-check DDragon/lolalytics for a new patch at most hourly
+
+
+class _LRUCache(OrderedDict):
+    """A dict bounded to ``max_entries``; inserting past the bound evicts the
+    least recently used key. Reads through ``[]``/``get()`` refresh recency.
+
+    Why a bound: one parsed matchup entry is ~380 KB of Python objects (566
+    counter dicts + 4×171 team rows), so an unbounded cache of every patch/tier
+    combo reached 1.5 GB — more than the production host had (docs/ops.md,
+    incident 2026-09-04). SQLite on local disk is a sub-millisecond fallback,
+    so only the working set needs to live in memory."""
+
+    def __init__(self, max_entries: int):
+        super().__init__()
+        self.max_entries = max_entries
+
+    def __getitem__(self, key):
+        value = super().__getitem__(key)
+        self.move_to_end(key)
+        return value
+
+    def get(self, key, default=None):
+        return self[key] if key in self else default
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self.move_to_end(key)
+        while len(self) > self.max_entries:
+            self.popitem(last=False)
+
+
+# Default bound ≈ 450 MB: comfortably holds the hot set (current patch + 30-day
+# window for one tier ≈ 900 entries) with room for ad-hoc lookups. Raise it in
+# step with RABADON_WARM_TIERS (~450 entries per patch/tier combo).
+_MEM_CACHE_MAX = int(os.getenv("RABADON_MEM_CACHE_MAX", "1200"))
+_matchup_mem_cache: Dict[str, dict] = _LRUCache(_MEM_CACHE_MAX)  # "{tier}:{patch}:{slug}:{lane}" → {counters, team}
 _games_by_slug_cache: Dict[str, Dict[str, int]] = {}  # "{tier}:{patch}:{lane}" → {slug: games}
 
 # Stale-while-revalidate bookkeeping.
@@ -102,17 +146,76 @@ def _tier_key(tier: str, days: int) -> str:
 # Patch detection
 # ---------------------------------------------------------------------------
 
-async def _get_patch() -> str:
-    """Return the current LoL patch (e.g. '16.11'), cached in process memory."""
-    global _current_patch
-    if _current_patch:
-        return _current_patch
+async def _patch_has_lolalytics_data(patch: str) -> bool:
+    """Return True if lolalytics has live data for this patch (≥10 ranked champions)."""
+    from .lolalytics_client import get_client
+    try:
+        data = await get_client().fetch({
+            "ep": "list", "v": "1", "lane": "middle",
+            "tier": "emerald_plus", "patch": patch, "queue": "ranked", "region": "all",
+        })
+        ranked = sum(1 for info in data.get("cid", {}).values() if int(info.get("tier", 0)) > 0)
+        return ranked >= 10
+    except Exception:
+        return False
+
+
+async def _detect_patch() -> str:
+    """One DDragon + lolalytics round trip: the newest patch lolalytics has data for.
+
+    On patch day DDragon lists the new version hours before lolalytics has
+    enough games; defaulting to it would serve empty pools, so walk back to the
+    first of the three newest patches that lolalytics can actually serve.
+    """
     async with httpx.AsyncClient(timeout=5) as client:
         resp = await client.get(DD_VERSIONS_URL)
         versions = resp.json()
-    # versions[0] = "16.11.1" → "16.11"
-    parts = versions[0].split(".")
-    _current_patch = f"{parts[0]}.{parts[1]}"
+    candidates: List[str] = []  # "16.18.1" → "16.18"; newest first
+    for v in versions:
+        major_minor = ".".join(v.split(".")[:2])
+        if major_minor not in candidates:
+            candidates.append(major_minor)
+        if len(candidates) == 3:
+            break
+    for cand in candidates:
+        if await _patch_has_lolalytics_data(cand):
+            return cand
+    return candidates[0]
+
+
+_patch_refreshing = False
+
+
+async def _refresh_patch() -> None:
+    """Background re-check; on failure keep the last known patch and retry next TTL."""
+    global _current_patch, _patch_checked_at, _patch_refreshing
+    try:
+        patch = await _detect_patch()
+        if patch != _current_patch:
+            logger.info(f"Current patch: {patch} (was {_current_patch})")
+        _current_patch = patch
+    except Exception as e:
+        logger.warning(f"Patch check failed, keeping {_current_patch}: {e}")
+    finally:
+        _patch_checked_at = time.monotonic()
+        _patch_refreshing = False
+
+
+async def _get_patch() -> str:
+    """Return the current LoL patch as "major.minor" (e.g. "16.18").
+
+    Resolved synchronously once per process, then re-checked hourly
+    stale-while-revalidate: callers always get an answer immediately and never
+    pay the network round trip on the request path.
+    """
+    global _current_patch, _patch_checked_at, _patch_refreshing
+    if _current_patch is None:
+        _current_patch = await _detect_patch()
+        _patch_checked_at = time.monotonic()
+        logger.info(f"Current patch: {_current_patch}")
+    elif time.monotonic() - _patch_checked_at >= _PATCH_TTL_S and not _patch_refreshing:
+        _patch_refreshing = True
+        _spawn_bg(_refresh_patch())
     return _current_patch
 
 
@@ -125,6 +228,9 @@ async def _ensure_champion_map(patch: str) -> None:
     global _slug_to_id, _id_to_slug, _api_slug_map
     if _slug_to_id:
         return
+    if not re.fullmatch(r"\d+\.\d+", patch):
+        # e.g. the "30" day-window token — not a DDragon version; use the real patch.
+        patch = await _get_patch()
     dd_url = f"https://ddragon.leagueoflegends.com/cdn/{patch}.1/data/en_US/champion.json"
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(dd_url)
@@ -295,17 +401,34 @@ def _schedule_pool_refresh(role: str, lane: str, patch: str, tkey: str,
 # Champion pool (tier list)
 # ---------------------------------------------------------------------------
 
+def _warm_tiers() -> List[str]:
+    """Tier keys the warmer keeps hot. Defaults to the endpoint default (TIER);
+    override with RABADON_WARM_TIERS, e.g. "emerald_plus,platinum_plus"."""
+    raw = os.getenv("RABADON_WARM_TIERS", "").strip()
+    if raw:
+        return [t.strip() for t in raw.split(",") if t.strip()]
+    return [TIER]
+
+
+async def _hot_combos() -> Tuple[List[str], List[str]]:
+    """The (patches, tiers) worth holding in memory: the current patch and the
+    30-day window (the frontend default), for the warmed tiers. Everything else
+    is served from SQLite on demand and cached in the LRU while it's in use."""
+    return [await _get_patch(), PATCH_30D], _warm_tiers()
+
+
 async def warm_cache() -> None:
     """
-    Pre-load all on-disk cached champion data into process memory at startup.
-    This makes the first user request fast instead of paying file I/O per champion.
+    Pre-load the hot (patch, tier) combos from SQLite into process memory at
+    startup so the first user requests don't pay the parse cost per champion.
+    Deliberately *not* every cached combo: see _LRUCache for why.
     """
     patch = await _get_patch()
     await _ensure_champion_map(patch)  # must run before parallel requests touch _slug_to_id
     loaded = 0
 
-    # Load all valid (non-stale) matchups from SQLite into memory
-    rows = db.load_all_valid_matchups()
+    patches, tiers = await _hot_combos()
+    rows = db.load_all_valid_matchups(patches=patches, tiers=tiers)
     for row in rows:
         if len(row.get("counters", "")) > 50:  # Minimal validation
             counters = json.loads(row["counters"])
@@ -328,21 +451,15 @@ async def warm_cache() -> None:
             games_key = f"{row['tier']}:{row['patch']}:{row['lane']}"
             _games_by_slug_cache[games_key] = gbs
 
-    logger.info(f"Warm cache: loaded {loaded} champions into memory")
+    logger.info(
+        f"Warm cache: loaded {loaded} champions into memory "
+        f"(patches={patches}, tiers={tiers}, bound={_MEM_CACHE_MAX})"
+    )
 
 
 # ---------------------------------------------------------------------------
 # Proactive cache warmer (keeps standard combos hot so no client hits a cold scrape)
 # ---------------------------------------------------------------------------
-
-def _warm_tiers() -> List[str]:
-    """Tier keys the warmer keeps hot. Defaults to the endpoint default (TIER);
-    override with RABADON_WARM_TIERS, e.g. "emerald_plus,platinum_plus"."""
-    import os
-    raw = os.getenv("RABADON_WARM_TIERS", "").strip()
-    if raw:
-        return [t.strip() for t in raw.split(",") if t.strip()]
-    return [TIER]
 
 
 async def warm_all(patch: Optional[str] = None) -> None:
@@ -354,10 +471,12 @@ async def warm_all(patch: Optional[str] = None) -> None:
     is missing or stale, paced one at a time (the rate-limiting client throttles
     further), keeping memory/CPU footprint low on small hosts.
     """
-    patch = patch or PATCH
-    await _ensure_champion_map(patch)
+    patches, tiers = await _hot_combos()
+    if patch:
+        patches = [patch]
+    await _ensure_champion_map(patches[0])
     refreshed = 0
-    for tier in _warm_tiers():
+    for patch, tier in [(p, t) for p in patches for t in tiers]:
         tkey = _tier_key(tier, 0)
         for role, lane in ROLE_TO_LANE.items():
             try:
@@ -398,7 +517,7 @@ async def warm_all(patch: Optional[str] = None) -> None:
             except Exception as e:
                 logger.warning(f"warm_all: {role}/{tkey} failed: {e}")
     logger.info(
-        f"warm_all complete: patch={patch}, tiers={_warm_tiers()}, refreshed={refreshed}"
+        f"warm_all complete: patches={patches}, tiers={tiers}, refreshed={refreshed}"
     )
 
 
@@ -431,12 +550,13 @@ async def cleanup_loop(interval_seconds: int = 86400, retention_days: int = 2,
         await asyncio.sleep(interval_seconds)
 
 
-async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
+async def get_champion_pool(role: str, patch: Optional[str] = None, tier: str = TIER,
                            days: int = 0) -> List[str]:
     """
     Return champion names for this role sourced from the lolalytics tier list.
     Also caches total_games per champion slug for use in recommendations.
     """
+    patch = patch or await _get_patch()
     lane = ROLE_TO_LANE.get(role.lower(), "bottom")
     await _ensure_champion_map(patch)
 
@@ -460,9 +580,10 @@ async def get_champion_pool(role: str, patch: str = PATCH, tier: str = TIER,
         return []
 
 
-async def get_champion_total_games(champion: str, role: str, patch: str = PATCH, tier: str = TIER,
-                                   days: int = 0) -> int:
+async def get_champion_total_games(champion: str, role: str, patch: Optional[str] = None,
+                                   tier: str = TIER, days: int = 0) -> int:
     """Return the total games played for this champion/role from the cached pool."""
+    patch = patch or await _get_patch()
     lane = ROLE_TO_LANE.get(role.lower(), "bottom")
     tkey = _tier_key(tier, days)
     games_key = f"{tkey}:{patch}:{lane}"
@@ -485,7 +606,7 @@ async def get_matchup_data(
     role: str,
     allies: List[Dict[str, str]],
     enemies: List[Dict[str, str]],
-    patch: str = PATCH,
+    patch: Optional[str] = None,
     tier: str = TIER,
     days: int = 0,
 ) -> Tuple[Dict[Tuple[str, str], float], Dict[Tuple[str, str], int], float, int, List[str]]:
@@ -502,13 +623,15 @@ async def get_matchup_data(
         role: Player's role (adc, support, mid, jungle, top)
         allies: Ally dicts with 'champion' and 'role' keys
         enemies: Enemy dicts with 'champion' and 'role' keys
-        patch: Patch version (e.g. "16.11")
+        patch: Patch version (e.g. "16.18") or "30" for the 30-day window;
+               None = the current patch
         tier: Rank tier (e.g. "emerald_plus")
 
     Returns:
         matchup_data: {(champ.lower(), "ally"|"enemy"): d2/100.0}
         warnings: low sample size flags
     """
+    patch = patch or await _get_patch()
     await _ensure_champion_map(patch)
 
     lane = ROLE_TO_LANE.get(role.lower(), "bottom")

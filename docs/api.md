@@ -30,7 +30,7 @@ Base URL: `http://localhost:8000` (dev) / `https://www.rabadon.gg` (prod) — al
 | `role` | string | Player's role: `top \| jungle \| mid \| adc \| support` |
 | `allies` | array | Ally champions with roles; empty champion string → skip |
 | `enemies` | array | Enemy champions with roles; empty champion string → skip |
-| `patch` | string | Patch version e.g. `"16.11"` (default: current patch) |
+| `patch` | string | Patch version e.g. `"16.18"`, or `"30"` for the rolling 30-day window (default: the current patch — the newest one lolalytics has data for) |
 | `tier` | string | Rank tier: `emerald_plus \| diamond_plus \| platinum_plus \| gold_plus \| all` |
 | `pool` | array | Champion names in the user's personal pool (scored separately, capped at 20) |
 

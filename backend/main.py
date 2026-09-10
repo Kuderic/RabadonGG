@@ -60,18 +60,8 @@ app.include_router(lcu_router, prefix="/api", tags=["lcu"])
 app.include_router(draft_overview_router, prefix="/api", tags=["draft-overview"])
 
 
-async def _patch_has_lolalytics_data(patch: str) -> bool:
-    """Return True if lolalytics has live data for this patch (≥10 ranked champions)."""
-    from services.lolalytics_client import get_client
-    try:
-        data = await get_client().fetch({
-            "ep": "list", "v": "1", "lane": "middle",
-            "tier": "emerald_plus", "patch": patch, "queue": "ranked", "region": "all",
-        })
-        ranked = sum(1 for info in data.get("cid", {}).values() if int(info.get("tier", 0)) > 0)
-        return ranked >= 10
-    except Exception:
-        return False
+# Last successful /api/patches result, served if DDragon is unreachable.
+_last_patches: list[str] = []
 
 
 @app.get("/api/patches")
@@ -95,14 +85,20 @@ async def get_patches() -> dict:
                     break
 
         # Drop any leading candidates that DDragon listed before lolalytics has data
+        from services.scraper import _patch_has_lolalytics_data
         while len(candidates) > 1 and not await _patch_has_lolalytics_data(candidates[0]):
             logger.info(f"Patch {candidates[0]} not yet live on lolalytics — skipping")
             candidates.pop(0)
 
-        return {"patches": candidates[:5]}
+        global _last_patches
+        _last_patches = candidates[:5]
+        return {"patches": _last_patches}
     except Exception as e:
         logger.error(f"Failed to fetch patches from Data Dragon: {e}")
-        return {"patches": ["16.11", "16.10", "16.9", "16.8", "16.7"]}
+        if _last_patches:
+            return {"patches": _last_patches}
+        from services.scraper import _current_patch
+        return {"patches": [_current_patch] if _current_patch else []}
 
 
 # lolalytics lane strings → the role keys used everywhere else in the app

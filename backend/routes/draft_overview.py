@@ -20,7 +20,7 @@ from services.scorer import (
     get_synergy_breakdown,
     get_synergy_delta_string,
 )
-from services.scraper import PATCH, TIER, _ensure_champion_map, _get_patch, get_champion_pool, get_matchup_data
+from services.scraper import TIER, _ensure_champion_map, _get_patch, get_champion_pool, get_matchup_data
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ VALID_TIERS = {"emerald_plus", "diamond_plus", "platinum_plus", "gold_plus", "al
 
 @router.post("/draft-overview", response_model=DraftOverviewResponse)
 async def draft_overview(request: DraftOverviewRequest) -> DraftOverviewResponse:
-    patch = request.patch or PATCH
+    patch = request.patch or await _get_patch()
     tier = request.tier or TIER
 
     if tier not in VALID_TIERS:

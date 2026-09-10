@@ -228,15 +228,29 @@ def load_all_valid_pools() -> list:
     return result
 
 
-def load_all_valid_matchups() -> list:
-    """Return all non-stale matchup rows as list of dicts (for warm_cache)."""
+def load_all_valid_matchups(
+    patches: Optional[list] = None, tiers: Optional[list] = None
+) -> list:
+    """Return non-stale matchup rows as list of dicts (for warm_cache).
+
+    Optionally restrict to the given patches and/or tiers — warm_cache uses this
+    to load only the hot combos rather than every row on disk.
+    """
     conn = _connect()
     cursor = conn.cursor()
 
-    cursor.execute(
+    sql = (
         "SELECT champion, patch, tier, lane, counters, team, win_rate, total_games, fetched_at "
-        "FROM matchup_cache WHERE fetched_at >= date('now', '-1 day')",
+        "FROM matchup_cache WHERE fetched_at >= date('now', '-1 day')"
     )
+    params: list = []
+    if patches:
+        sql += f" AND patch IN ({','.join('?' * len(patches))})"
+        params += list(patches)
+    if tiers:
+        sql += f" AND tier IN ({','.join('?' * len(tiers))})"
+        params += list(tiers)
+    cursor.execute(sql, params)
     rows = cursor.fetchall()
     conn.close()
 
