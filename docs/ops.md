@@ -87,7 +87,24 @@ installed, so don't try to add a crontab; use the timer).
 - **The prefetch must never hold the dataset in memory.** `prefetch_all.py`
   clears `scraper._matchup_mem_cache` after every champion. That cache is right
   for uvicorn (it *is* the hot path) but the prefetch only exists to fill
-  SQLite, and on a 916 MB host there is no room for two copies.
+  SQLite, and on a small host there is no room for two copies.
+
+## Backend memory
+
+One parsed matchup entry is **~380 KB** of Python objects (4.7× its JSON), so
+the naive "load every cached row into memory" reached **1.5 GB** for 3,700 rows
+— more than a t3.micro has. Since 2026-09-10 uvicorn's mem cache is a bounded
+LRU and startup warms only the hot combos:
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `RABADON_MEM_CACHE_MAX` | `1200` | max cached entries (≈ 450 MB). ~450 entries per patch/tier combo |
+| `RABADON_WARM_TIERS` | `emerald_plus` | tiers warmed at startup and kept fresh by the warmer; raise `RABADON_MEM_CACHE_MAX` in step |
+| `RABADON_WARMER` / `RABADON_WARM_INTERVAL` | `1` / `21600` | background refresh of the hot combos (current patch + 30-day) |
+
+Expected resident size after startup: ~100 MB base + ~380 KB × hot-set rows
+(≈ 900 for one tier → ~450 MB total). Check with
+`systemctl show rabadon -p MemoryCurrent`.
 
 ### Common commands
 

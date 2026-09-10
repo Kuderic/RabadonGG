@@ -14,7 +14,11 @@ class RecommendRequest(BaseModel):
     role: str = Field(..., description="Player's role")
     allies: List[ChampionRole] = Field(..., description="Already-selected ally champions")
     enemies: List[ChampionRole] = Field(..., description="Already-selected enemy champions")
-    patch: str = Field(default="16.11", description="Patch version e.g. '16.11'")
+    patch: Optional[str] = Field(
+        default=None,
+        description="Patch version e.g. '16.18', or '30' for the rolling 30-day window. "
+                    "Omit for the current patch.",
+    )
     tier: str = Field(default="emerald_plus", description="Rank tier e.g. 'emerald_plus'")
     pool: List[str] = Field(default_factory=list, description="Champion names in user's pool")
 
@@ -62,7 +66,7 @@ class YouSpec(BaseModel):
 
 
 class DraftOverviewRequest(BaseModel):
-    patch: str = Field(default="16.11")
+    patch: Optional[str] = Field(default=None, description="Patch, '30', or omit for current")
     tier: str = Field(default="emerald_plus")
     you: Optional[YouSpec] = None
     ally: List[DraftSlot]

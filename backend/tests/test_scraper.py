@@ -323,3 +323,126 @@ class TestGetMatchupData:
         assert total_games == 0
         assert len(warnings) == 1
         assert "Caitlyn" in warnings[0]
+
+
+# ===========================================================================
+# Memory bound + dynamic patch (added after the 2026-09-04 OOM incident)
+# ===========================================================================
+
+class TestMemCacheBound:
+
+    async def test_lru_evicts_least_recently_used(self):
+        cache = scraper._LRUCache(max_entries=3)
+        cache["a"] = 1
+        cache["b"] = 2
+        cache["c"] = 3
+        assert cache.get("a") == 1          # touch "a" → "b" is now the oldest
+        cache["d"] = 4                      # over the bound → evict "b"
+        assert list(cache) == ["c", "a", "d"]
+        assert cache.get("b") is None
+        assert len(cache) == 3
+
+    async def test_module_cache_is_bounded(self):
+        assert isinstance(scraper._matchup_mem_cache, scraper._LRUCache)
+        assert scraper._matchup_mem_cache.max_entries == scraper._MEM_CACHE_MAX > 0
+
+
+class TestWarmCache:
+
+    def setup_method(self):
+        scraper._matchup_mem_cache.clear()
+
+    def teardown_method(self):
+        scraper._matchup_mem_cache.clear()
+
+    async def test_warm_cache_loads_only_hot_combos(self):
+        """warm_cache() asks the DB for just the current patch + 30-day window
+        of the warmed tiers, instead of every row on disk."""
+        row = {
+            "champion": "caitlyn", "patch": "30", "tier": TIER, "lane": "bottom",
+            "counters": "[" + ",".join(
+                '{"cid": %d, "d2": 1.0, "n": 300, "query_vslane": "bottom"}' % i for i in range(60)
+            ) + "]",
+            "team": "{}", "win_rate": 51.5, "total_games": 1000, "fetched_at": "2026-09-10",
+        }
+        with patch("services.scraper._get_patch", new=AsyncMock(return_value="16.18")), \
+             patch("services.scraper._ensure_champion_map", new=AsyncMock()), \
+             patch("services.scraper.db") as mock_db:
+            mock_db.load_all_valid_matchups.return_value = [row]
+            mock_db.load_all_valid_pools.return_value = []
+            await scraper.warm_cache()
+
+        mock_db.load_all_valid_matchups.assert_called_once_with(
+            patches=["16.18", scraper.PATCH_30D], tiers=[TIER]
+        )
+        assert f"{TIER}:30:caitlyn:bottom" in scraper._matchup_mem_cache
+
+
+class TestGetPatch:
+
+    def setup_method(self):
+        scraper._current_patch = None
+        scraper._patch_checked_at = 0.0
+        scraper._patch_refreshing = False
+
+    teardown_method = setup_method
+
+    @staticmethod
+    async def _drain_bg():
+        for t in list(scraper._bg_tasks):
+            await t
+
+    @staticmethod
+    def _ddragon(versions):
+        """Mock httpx.AsyncClient whose get() returns these DDragon versions."""
+        client = MagicMock()
+        client.get = AsyncMock(return_value=MagicMock(json=lambda: versions))
+        cm = MagicMock()
+        cm.__aenter__ = AsyncMock(return_value=client)
+        cm.__aexit__ = AsyncMock(return_value=False)
+        return cm
+
+    async def test_skips_patch_lolalytics_lacks(self):
+        """DDragon lists 16.18 first, but lolalytics only has 16.17 → 16.17 is current."""
+        cm = self._ddragon(["16.18.1", "16.17.1", "16.16.1", "16.15.1"])
+        with patch("services.scraper.httpx.AsyncClient", return_value=cm), \
+             patch("services.scraper._patch_has_lolalytics_data",
+                   new=AsyncMock(side_effect=lambda p: p == "16.17")):
+            assert await scraper._get_patch() == "16.17"
+            # Cached: a second call inside the TTL does not hit DDragon again.
+            assert await scraper._get_patch() == "16.17"
+        assert cm.__aenter__.await_count == 1
+
+    async def test_keeps_last_patch_when_check_fails(self):
+        scraper._current_patch = "16.17"
+        scraper._patch_checked_at = -1e9  # force a re-check
+        cm = MagicMock()
+        cm.__aenter__ = AsyncMock(side_effect=RuntimeError("ddragon down"))
+        cm.__aexit__ = AsyncMock(return_value=False)
+        with patch("services.scraper.httpx.AsyncClient", return_value=cm):
+            assert await scraper._get_patch() == "16.17"   # served immediately
+            await self._drain_bg()                          # background check fails…
+        assert scraper._current_patch == "16.17"            # …and the old patch is kept
+        assert scraper._patch_refreshing is False
+
+    async def test_refreshes_in_background_after_ttl(self):
+        """After the TTL the known patch is served at once; the re-check runs
+        off the request path and swaps in the new patch when it completes."""
+        scraper._current_patch = "16.17"
+        scraper._patch_checked_at = -1e9
+        cm = self._ddragon(["16.18.1", "16.17.1"])
+        with patch("services.scraper.httpx.AsyncClient", return_value=cm),              patch("services.scraper._patch_has_lolalytics_data", new=AsyncMock(return_value=True)):
+            assert await scraper._get_patch() == "16.17"
+            await self._drain_bg()
+            assert await scraper._get_patch() == "16.18"
+        assert cm.__aenter__.await_count == 1
+
+    async def test_default_patch_resolves_when_omitted(self):
+        """Callers that omit patch get the current one, not a hardcoded version."""
+        with patch("services.scraper._get_patch", new=AsyncMock(return_value="16.18")) as gp, \
+             patch("services.scraper._ensure_champion_map", new=AsyncMock()), \
+             patch("services.scraper.db") as mock_db:
+            mock_db.read_pool.return_value = {"champions": ["Caitlyn"], "is_stale": False}
+            assert await scraper.get_champion_pool("adc", tier=TIER) == ["Caitlyn"]
+        gp.assert_awaited()
+        mock_db.read_pool.assert_called_once_with("bottom", "16.18", TIER, allow_stale=True)

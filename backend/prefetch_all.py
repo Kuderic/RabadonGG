@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from services.scraper import _matchup_mem_cache, get_champion_pool, get_matchup_data
+from services.scraper import PATCH_30D, _matchup_mem_cache, get_champion_pool, get_matchup_data
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -122,10 +122,9 @@ async def prefetch(tiers: list[str], patch: str | None) -> None:
         from services.scraper import _get_patch
         patch = await _get_patch()
 
-    # Always prefetch both the current patch and the 30-day rolling window.
-    # "30" is the patch token the frontend/API uses for the 30-day mode
-    # (sends patch=30 to lolalytics, cached under a separate key from patch-specific data).
-    patches_to_run = [patch, "30"]
+    # Always prefetch both the current patch and the 30-day rolling window
+    # (cached under a separate key from patch-specific data).
+    patches_to_run = [patch, PATCH_30D]
 
     log.info(f"Starting prefetch — patches={patches_to_run}, tiers={tiers}, roles={ROLES}")
 

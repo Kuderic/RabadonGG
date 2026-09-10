@@ -13,7 +13,7 @@ from services.scorer import (
     get_synergy_breakdown,
     get_synergy_delta_string,
 )
-from services.scraper import PATCH, TIER, get_champion_pool, get_matchup_data
+from services.scraper import TIER, _get_patch, get_champion_pool, get_matchup_data
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ TIER_DISPLAY = {
 @router.post("/recommend", response_model=RecommendResponse)
 async def recommend(request: RecommendRequest) -> RecommendResponse:
     role = request.role.lower()
-    patch = request.patch or PATCH
+    patch = request.patch or await _get_patch()
     tier = request.tier or TIER
 
     if role not in VALID_ROLES:
