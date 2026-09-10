@@ -365,6 +365,12 @@ async def _fetch_pool_live(role: str, lane: str, patch: str, tkey: str,
         if int(info.get("tier", 0)) > 0
     ]
     names = [_id_to_slug[cid] for cid, _ in entries if cid in _id_to_slug]
+    if not names:
+        # lolalytics has no ranked data for this patch/lane (yet) — normal for
+        # the first hours after a patch lands. Caching the emptiness would make
+        # it a "fresh" fact for a day and blank the whole patch (2026-09-10);
+        # fail this fetch instead so the next request retries.
+        raise RuntimeError(f"lolalytics has no ranked champions for {lane}/{patch}/{tkey}")
     games_by_slug = {
         _slug(_id_to_slug[cid]): int(info.get("games", 0))
         for cid, info in entries if cid in _id_to_slug
