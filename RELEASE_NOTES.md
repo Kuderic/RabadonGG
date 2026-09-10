@@ -1,3 +1,12 @@
+## What's new in 1.2.29
+
+### Bug fixes
+- **Rabadon.GG stays up** — since September 4 the service had been going unresponsive for roughly twelve hours every day. The nightly data refresh on the server was exhausting its memory and taking the whole host down with it. The refresh now runs in a fraction of the memory, is hard-capped so it can only ever fail on its own, and the server's own cache is bounded (about 6× less memory than before) — so recommendations keep answering while the refresh runs.
+- **A brand-new patch no longer shows up empty for a day** — lolalytics publishes data a few hours after Riot ships a patch. If Rabadon asked during that gap it remembered "no champions" for 24 hours and returned no recommendations for the new patch. It now keeps retrying until the data is there.
+
+### Changes
+- **The current patch is detected automatically** — the API's default patch was pinned to 16.11. Requests that don't specify a patch now get the newest patch lolalytics has data for, re-checked hourly. The app's own patch selector is unaffected: it keeps sending the patch you choose.
+
 ## What's new in 1.2.28
 
 ### Bug fixes
