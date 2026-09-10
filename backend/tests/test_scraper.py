@@ -378,6 +378,18 @@ class TestWarmCache:
         assert f"{TIER}:30:caitlyn:bottom" in scraper._matchup_mem_cache
 
 
+class TestEmptyPoolNotCached:
+
+    async def test_empty_tier_list_is_not_written_to_db(self):
+        """A patch lolalytics has no games for yet must not be cached as an empty
+        pool — that would blank the patch for a day (seen on 2026-09-10)."""
+        unranked = {"cid": {str(CID_CAITLYN): {"tier": 0, "games": 0}}}
+        with patch("services.scraper.get_client", return_value=_make_client_mock(fetch_return=unranked)),              patch("services.scraper.db") as mock_db:
+            with pytest.raises(RuntimeError):
+                await scraper._fetch_pool_live("adc", "bottom", "16.18", TIER, TIER, 0)
+        mock_db.write_pool.assert_not_called()
+
+
 class TestGetPatch:
 
     def setup_method(self):
