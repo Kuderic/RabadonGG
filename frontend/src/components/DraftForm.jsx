@@ -59,17 +59,22 @@ function RatingChip({ slot, config }) {
 
 // The live #1 recommendation, shown in the YOU row while you haven't entered a
 // pick of your own. Clicking it opens that champion's breakdown in the list.
+// `source` is 'pool' while the results list is on the My Champions tab — then
+// it's the best champion from your own pool, not the best in the whole field.
 function TopPickTag({ topPick, onOpen }) {
+  const fromPool = topPick.source === 'pool'
   return (
     <button
       type="button"
-      className="you-pick-tag"
+      className={`you-pick-tag${fromPool ? ' you-pick-tag--pool' : ''}`}
       onClick={e => { e.stopPropagation(); onOpen?.() }}
-      title={`${topPick.champion} is the current #1 recommendation for your role — open its breakdown`}
+      title={fromPool
+        ? `${topPick.champion} is the best pick from your champion pool for this draft — open its breakdown`
+        : `${topPick.champion} is the current #1 recommendation for your role — open its breakdown`}
     >
       <img src={champIconUrl(topPick.champion)} alt="" onError={e => { e.target.style.visibility = 'hidden' }} />
       <span className="you-pick-name">{topPick.champion}</span>
-      <span className="you-pick-cap">Top pick</span>
+      <span className="you-pick-cap">{fromPool ? '★ Best in pool' : 'Top pick'}</span>
       <b>{topPick.rating.toFixed(1)}%</b>
     </button>
   )
@@ -495,8 +500,6 @@ export default function DraftForm({
               </button>
             ))}
           </div>
-          {lcuConnected && lcuSession && <span className="lcu-live-badge">&#x25cf; Live</span>}
-          {lcuConnected && !lcuSession && <span className="lcu-waiting-badge">&#x25cb; Waiting for champion select</span>}
         </div>
 
         {error && <span className="draft-error">{error}</span>}
@@ -514,11 +517,6 @@ export default function DraftForm({
               title="Copy link to this draft"
             >
               {shareCopied ? '✓ Copied' : '⎘ Share'}
-            </button>
-          )}
-          {onClear && (
-            <button className="clear-btn" onClick={onClear} title="Clear all champion inputs" disabled={loading}>
-              ✕ Clear
             </button>
           )}
         </div>
@@ -556,7 +554,19 @@ export default function DraftForm({
         />
       </div>
 
-      <div className="draft-drag-hint"><GripIcon /> Drag a grip to swap two champions' roles</div>
+      {(lcuConnected || onClear) && (
+        <div className="draft-footer">
+          <div className="draft-status" aria-live="polite">
+            {lcuConnected && lcuSession && <span className="lcu-live-badge">&#x25cf; Live</span>}
+            {lcuConnected && !lcuSession && <span className="lcu-waiting-badge">&#x25cb; Waiting for champion select</span>}
+          </div>
+          {onClear && (
+            <button className="clear-btn" onClick={onClear} title="Clear all champion inputs" disabled={loading}>
+              ✕ Clear
+            </button>
+          )}
+        </div>
+      )}
 
       <DraftVerdict adv={advantage} onOpenOverview={onOpenOverview} />
 

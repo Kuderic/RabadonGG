@@ -290,8 +290,10 @@ function SortHeaders({ sortMode, onSort }) {
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null, focusRequest = null, onFocusResolved = null }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null, focusRequest = null, onFocusResolved = null, onTabChange = null }) {
   const [recTab, setRecTab] = useState('overall')
+  // Tell App which tab is showing, so the YOU-row top pick can follow it.
+  useEffect(() => { onTabChange?.(recTab) }, [recTab]) // eslint-disable-line react-hooks/exhaustive-deps
   const [sortOverall, setSortOverall] = useState(() => externalSort || 'wr_delta')
   const [sortPool, setSortPool]       = useState(() => externalSort || 'wr_delta')
   const sortMode    = recTab === 'pool' ? sortPool : sortOverall
@@ -406,6 +408,19 @@ export default function RecommendationList({ recommendations, loading, refreshin
     // and replays the stale request — re-scrolling to a long-ago clicked card.
     onFocusResolved?.()
     const champ = focusRequest.champion.toLowerCase()
+
+    // A request that explicitly targets the pool (the YOU-row "Best in pool"
+    // tag) lands on the My Champions card even when the same champion also
+    // appears in the overall list.
+    if (focusRequest.prefer === 'pool') {
+      const pos = sortedPool.findIndex(p => p.champion.toLowerCase() === champ)
+      if (pos !== -1) {
+        setRecTab('pool')
+        scrollPoolRef.current = true
+        onSelectPoolRec(pos)
+        return
+      }
+    }
 
     // The pinned Your Pick card wins over the champion's slot in the list —
     // clicking "Your pick" in the overlay should land on the card at the top,

@@ -425,14 +425,19 @@ html[data-desktop] .sticky-nav:not(.sticky-nav--visible) {
   white-space: nowrap;
 }
 .lcu-waiting-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-stat);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 1px;
   color: var(--ink-3);
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.03);
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 2px;
+  white-space: nowrap;
 }
 
 .draft-role-selector select,
@@ -3569,6 +3574,15 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
    Overlay window — transparent always-on-top champion-select assistant
    =========================================================================== */
 
+/* The overlay window's page must itself be see-through. Without this the
+   panel's translucent background just composites over the app's opaque body
+   gradient, and the "Transparent background" setting has no visible effect. */
+html[data-overlay],
+html[data-overlay] body {
+  background-color: transparent;
+  background-image: none;
+}
+
 /* Fully transparent root: clicks pass through to League on the transparent area */
 .overlay-root {
   position: fixed;
@@ -4526,12 +4540,14 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 body.is-dragging .team-drag-handle { cursor: grabbing !important; }
 /* the YOU row is not draggable but keeps the grip column width so inputs align */
 .champ-row--you .team-drag-spacer { width: 24px; flex-shrink: 0; align-self: stretch; border-right: 1px solid rgba(200,155,60,0.18); }
-/* one shared hint under the whole grid, instead of one per team */
-.draft-drag-hint {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  margin-top: 6px; font-family: var(--font-stat); font-size: 11px; letter-spacing: 0.3px; color: var(--ink-3);
+/* footer strip under the grid: client status on the left, Clear on the right.
+   Both used to live in the header, which got crowded next to the role switch. */
+.draft-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 10px; min-height: 28px;
 }
-.draft-drag-hint svg { width: 12px; height: 14px; opacity: 0.7; }
+.draft-status { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.draft-footer .clear-btn { margin-left: auto; }
 
 /* ── §1.2 the YOU row surfaces the live #1 pick ─────────────────────────── */
 .you-pick-tag {
@@ -4555,6 +4571,8 @@ body.is-dragging .team-drag-handle { cursor: grabbing !important; }
   font-family: var(--font-stat); font-size: 12px; color: var(--pos);
   letter-spacing: 0; font-variant-numeric: tabular-nums;
 }
+/* while the results list is on My Champions, the tag shows the best pool pick */
+.you-pick-tag--pool .you-pick-cap { color: var(--gold-bright); }
 
 /* ── §1.4 rating chip inside each filled draft row ──────────────────────── */
 .champ-input-wrap input { min-width: 0; flex: 1; width: auto; }

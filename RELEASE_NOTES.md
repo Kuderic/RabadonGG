@@ -1,3 +1,13 @@
+## What's new in 1.3.1
+
+### Changes
+- **Cleaner draft board header** — the "Waiting for champion select" / "Live" client status and the Clear button moved out of the header into a slim row under the two teams, so the top of the board is just your role, the population and Share.
+- **Your top pick follows the My Champions tab** — with My Champions selected in the results, the pick shown in your own slot is the best champion *from your pool* for this draft, labelled "Best in pool". Clicking it opens that champion's card on the My Champions tab. On Overall it stays the #1 pick from the whole field.
+- **Removed the "Drag a grip to swap two champions' roles" hint** — the grips still work; the hint line is gone.
+
+### Bug fixes
+- **"Transparent background" in Settings → Overlay now actually does something** — the overlay window was painting the app's solid background behind the panel, so the transparent and opaque looks were identical. The overlay page is now see-through, so the panel blends into the client as intended.
+
 ## What's new in 1.3.0
 
 ### Changes

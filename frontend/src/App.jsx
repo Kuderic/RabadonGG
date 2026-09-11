@@ -577,6 +577,9 @@ export default function App() {
   const tabNavRef = useRef(null)
   const [myPick, setMyPick] = useState('')
   const [myPickResult, setMyPickResult] = useState(null)
+  // Which tab the results list is showing (Overall | My Champions). Owned by
+  // RecommendationList; mirrored here so the YOU-row top pick can follow it.
+  const [recTab, setRecTab] = useState('overall')
   const [draftOverview, setDraftOverview] = useState(null)
   const [draftOverviewLoading, setDraftOverviewLoading] = useState(false)
   const [computeDraftRecs, setComputeDraftRecs] = useState(
@@ -1281,17 +1284,39 @@ export default function App() {
 
   // The live #1 pick shown in the YOU row (design handoff v2 §1.2). Only when
   // the list is showing your own role — otherwise it isn't your pick.
+  // While the results list is on My Champions, it's the best pick from your
+  // own pool (source 'pool'); otherwise the best in the whole field.
   const topPick = useMemo(() => {
-    if (viewRole !== role || !recommendations.length) return null
+    if (viewRole !== role) return null
+    const rate = rec => rec.win_rate + computeComponents(rec, config, role, wrModifiers).totalDelta
+
+    if (recTab === 'pool' && poolResults.length) {
+      // pool_picks can also carry a lookup or a just-cleared "your pick"
+      // champion — only count champions that are actually in the pool for this role.
+      const inPool = new Set(
+        championPool
+          .filter(p => p.roles.length === 0 || p.roles.includes(role))
+          .map(p => p.champion.toLowerCase())
+      )
+      let best = null
+      poolResults.forEach(rec => {
+        if (!inPool.has(rec.champion.toLowerCase())) return
+        const rating = rate(rec)
+        if (!best || rating > best.rating) best = { champion: rec.champion, rating, source: 'pool' }
+      })
+      if (best) return best
+    }
+
+    if (!recommendations.length) return null
     const blacklisted = new Set((champBlacklist[role] || []).map(c => c.toLowerCase()))
     let best = null
     recommendations.forEach((rec, idx) => {
       if (blacklisted.has(rec.champion.toLowerCase())) return
-      const rating = rec.win_rate + computeComponents(rec, config, role, wrModifiers).totalDelta
-      if (!best || rating > best.rating) best = { champion: rec.champion, rating, idx }
+      const rating = rate(rec)
+      if (!best || rating > best.rating) best = { champion: rec.champion, rating, idx, source: 'overall' }
     })
     return best
-  }, [recommendations, config, role, viewRole, wrModifiers, champBlacklist])
+  }, [recommendations, poolResults, championPool, recTab, config, role, viewRole, wrModifiers, champBlacklist])
 
   // Auto-submit: debounce 600ms after any champion/patch/tier/role change
   useEffect(() => {
@@ -1523,6 +1548,12 @@ export default function App() {
               topPick={topPick}
               onOpenTopPick={() => {
                 if (!topPick) return
+                if (topPick.source === 'pool') {
+                  // The pool list is sorted inside RecommendationList, so let it
+                  // find the card — and tell it to prefer the My Champions tab.
+                  setFocusRequest({ champion: topPick.champion, prefer: 'pool', ts: Date.now() })
+                  return
+                }
                 setSelectedRec(topPick.idx)
                 setSelectedPoolRec(null)
               }}
@@ -1538,6 +1569,7 @@ export default function App() {
                     refreshing={refreshing}
                     focusRequest={focusRequest}
                     onFocusResolved={() => setFocusRequest(null)}
+                    onTabChange={setRecTab}
                     selectedIndex={selectedRec}
                     onSelect={(idx) => { setSelectedRec(idx); if (idx !== null) setSelectedPoolRec(null) }}
                     config={config}
