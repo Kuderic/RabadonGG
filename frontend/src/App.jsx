@@ -1025,6 +1025,30 @@ export default function App() {
     })
   }, [])
 
+  // Allied rows get the same grip-swap as enemies (design handoff v2 §1.3).
+  // Swapping two allies just exchanges their champion values; the player's own
+  // slot is not in `allies`, so it can never be a swap target.
+  const handleAllySwap = useCallback((fromIdx, toIdx) => {
+    setAllies(prev => {
+      const next = [...prev]
+      const fromChamp = next[fromIdx].champion
+      const toChamp = next[toIdx].champion
+      next[fromIdx] = { ...next[fromIdx], champion: toChamp }
+      next[toIdx] = { ...next[toIdx], champion: fromChamp }
+      // A swap is a manual edit: pin both slots so the next LCU poll doesn't
+      // auto-fill them back to the roles the client reported.
+      setManualOverrides(overrides => {
+        const nextOverrides = new Set(overrides)
+        if (toChamp.trim()) nextOverrides.add(`ally.${next[fromIdx].role}`)
+        else nextOverrides.delete(`ally.${next[fromIdx].role}`)
+        if (fromChamp.trim()) nextOverrides.add(`ally.${next[toIdx].role}`)
+        else nextOverrides.delete(`ally.${next[toIdx].role}`)
+        return nextOverrides
+      })
+      return next
+    })
+  }, [])
+
   const handleEnemySwap = useCallback((fromIdx, toIdx) => {
     setEnemies(prev => {
       const next = [...prev]
@@ -1239,6 +1263,36 @@ export default function App() {
            enemies.some(e => champSet.has(e.champion.trim().toLowerCase()))
   }, [allies, enemies, champions])
 
+  // ── Draft Advantage (design handoff v2 §1.5) ──────────────────────────────
+  // Same board payload the Draft Overview uses, so the verdict bar, the per-row
+  // rating chips and the Overview scoreline can never disagree. Compared as the
+  // MEAN (WR + Δ) per locked champion: summing would hand an edge to whichever
+  // team simply has more champions locked in.
+  const advantage = useMemo(() => {
+    if (!draftOverview) return null
+    const score = slots => slots
+      .filter(s => s.locked && s.rec)
+      .reduce((sum, s) => sum + s.rec.win_rate + computeComponents(s.rec, config, s.role).totalDelta, 0)
+    const count = slots => slots.filter(s => s.locked && s.rec).length
+    const nA = count(draftOverview.ally)
+    const nE = count(draftOverview.enemy)
+    return { ally: score(draftOverview.ally), enemy: score(draftOverview.enemy), nA, nE, n: nA + nE }
+  }, [draftOverview, config])
+
+  // The live #1 pick shown in the YOU row (design handoff v2 §1.2). Only when
+  // the list is showing your own role — otherwise it isn't your pick.
+  const topPick = useMemo(() => {
+    if (viewRole !== role || !recommendations.length) return null
+    const blacklisted = new Set((champBlacklist[role] || []).map(c => c.toLowerCase()))
+    let best = null
+    recommendations.forEach((rec, idx) => {
+      if (blacklisted.has(rec.champion.toLowerCase())) return
+      const rating = rec.win_rate + computeComponents(rec, config, role, wrModifiers).totalDelta
+      if (!best || rating > best.rating) best = { champion: rec.champion, rating, idx }
+    })
+    return best
+  }, [recommendations, config, role, viewRole, wrModifiers, champBlacklist])
+
   // Auto-submit: debounce 600ms after any champion/patch/tier/role change
   useEffect(() => {
     if (!hasValidChampion) return
@@ -1435,6 +1489,7 @@ export default function App() {
               champions={champions}
               onRoleChange={handleRoleChange}
               onAllyChange={handleAllyChange}
+              onAllySwap={handleAllySwap}
               onEnemyChange={handleEnemyChange}
               onEnemySwap={handleEnemySwap}
               onSubmit={handleSubmit}
@@ -1462,6 +1517,16 @@ export default function App() {
               lcuSession={lcuSession}
               myPick={myPick}
               onMyPickChange={setMyPick}
+              board={draftOverview}
+              config={config}
+              advantage={advantage}
+              topPick={topPick}
+              onOpenTopPick={() => {
+                if (!topPick) return
+                setSelectedRec(topPick.idx)
+                setSelectedPoolRec(null)
+              }}
+              onOpenOverview={() => setActiveTab('overview')}
             />
 
             {(recommendations.length > 0 || loading) && (
@@ -1479,7 +1544,6 @@ export default function App() {
                     playerRole={viewRole}
                     youRole={role}
                     onViewRoleChange={handleViewRoleChange}
-                    onTogglePenalty={() => setConfig(c => ({ ...c, penalize: !c.penalize }))}
                     poolResults={poolResults}
                     selectedPoolRec={selectedPoolRec}
                     onSelectPoolRec={(idx) => { setSelectedPoolRec(idx); if (idx !== null) setSelectedRec(null) }}

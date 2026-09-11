@@ -158,6 +158,7 @@ function LookupInput({ lookupChampion, champions, onLookupChange }) {
 function RecCard({ rec, rank, isPool, isSelected, onSelect, config, playerRole, wrModifiers, sortMode, breakdownRef, inPool, tier, patch, onAddToPool, onRemoveFromPool }) {
   const lowN = hasLowN(rec, config)
   const { adjSyn, adjCtr, totalDelta, customOffset } = computeComponents(rec, config, playerRole, wrModifiers)
+  const rating = rec.win_rate + customOffset + totalDelta
   const fmt = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
   const isLookup = rank === '?'
 
@@ -191,35 +192,40 @@ function RecCard({ rec, rank, isPool, isSelected, onSelect, config, playerRole, 
             <ExternalLink champion={rec.champion} tier={tier} patch={patch} lane={playerRole} />
           </span>
           <div className="card-stats">
-            <div className="card-wr-line">
+            <span
+              className={`card-rating ${sortMode !== 'delta' && sortMode !== 'synergy' && sortMode !== 'counter' ? 'card-rating--sorted' : ''}`}
+              title="Win rate + draft Δ"
+            >{rating.toFixed(1)}%</span>
+            <div className="card-wr-sub">
+              <span className="k">WR</span>
               <span className="card-win-rate">{rec.win_rate.toFixed(1)}%</span>
               <span className={`card-wr-delta ${totalDelta >= 0 ? 'positive' : 'negative'}`}>
                 {fmt(totalDelta)}
               </span>
-              {lowN && (
-                <span className="low-n-warning" title={`Some matchups have fewer than ${config?.penalizeThreshold} games — score is weighted down`}>⚠</span>
-              )}
-            </div>
-            {customOffset !== 0 && (
-              <div className="card-modifier-line">
+              {customOffset !== 0 && (
                 <span className="custom-modifier-badge" title={`Personal WR offset: ${customOffset > 0 ? '+' : ''}${customOffset}%`}>
                   ✎ {customOffset > 0 ? '+' : ''}{customOffset}%
                 </span>
-              </div>
-            )}
+              )}
+            </div>
             {rec.total_games > 0 && (
-              <span className="card-total-games">{(rec.total_games / 1000).toFixed(0)}K games</span>
+              <span className="card-total-games">
+                {(rec.total_games / 1000).toFixed(0)}K games
+                {lowN && (
+                  <span className="low-n-warning" title={`Some matchups have fewer than ${config?.penalizeThreshold} games — their Δ is weighted down`}>⚠</span>
+                )}
+              </span>
             )}
           </div>
         </div>
 
         <div className="card-deltas">
           <div className={`delta-cell ${sortMode === 'synergy' ? 'delta-cell--sorted' : ''}`}>
-            <div className="delta-label">Synergy{sortMode === 'synergy' ? ' ↓' : ''}</div>
+            <div className="delta-label">Synergy</div>
             <div className={`delta-value ${adjSyn >= 0 ? 'positive' : 'negative'}`}>{fmt(adjSyn)}</div>
           </div>
           <div className={`delta-cell ${sortMode === 'counter' ? 'delta-cell--sorted' : ''}`}>
-            <div className="delta-label">Counter{sortMode === 'counter' ? ' ↓' : ''}</div>
+            <div className="delta-label">Counter</div>
             <div className={`delta-value ${adjCtr >= 0 ? 'positive' : 'negative'}`}>{fmt(adjCtr)}</div>
           </div>
         </div>
@@ -246,30 +252,45 @@ function RecCard({ rec, rank, isPool, isSelected, onSelect, config, playerRole, 
   )
 }
 
+// Every column label is its own sort control (handoff v2 § 2.2). `wr_delta`
+// is the app-wide name for the rating column (WR + Δ) — kept as-is so the
+// stored preference and the overlay's sort stay in sync.
+function SortBtn({ mode, sortMode, onSort, title, children }) {
+  const active = sortMode === mode
+  return (
+    <button
+      type="button"
+      className={`rec-col-sort ${active ? 'rec-col-sort--active' : ''}`}
+      onClick={() => onSort(mode)}
+      title={title}
+      aria-sort={active ? 'descending' : 'none'}
+    >
+      {children} <span className="sort-caret">▼</span>
+    </button>
+  )
+}
+
 function SortHeaders({ sortMode, onSort }) {
   return (
     <div className="rec-col-headers" role="row">
       <div className="rec-col-head-pick">Pick</div>
       <div className="rec-col-deltas">
-        <button type="button"
-                className={`rec-col-sort ${sortMode === 'synergy' ? 'rec-col-sort--active' : ''}`}
-                onClick={() => onSort('synergy')}
-                title="Sort by synergy with your allies">
-          Synergy <span className="sort-caret">▼</span>
-        </button>
-        <button type="button"
-                className={`rec-col-sort ${sortMode === 'counter' ? 'rec-col-sort--active' : ''}`}
-                onClick={() => onSort('counter')}
-                title="Sort by counter vs. enemies">
-          Counter <span className="sort-caret">▼</span>
-        </button>
+        <SortBtn mode="synergy" sortMode={sortMode} onSort={onSort} title="Sort by synergy with your allies">
+          <i className="team-dot team-dot--ally" />Synergy
+        </SortBtn>
+        <SortBtn mode="counter" sortMode={sortMode} onSort={onSort} title="Sort by counter vs. enemies">
+          <i className="team-dot team-dot--enemy" />Counter
+        </SortBtn>
       </div>
-      <div className="rec-col-head-wr">Win rate</div>
+      <div className="rec-col-head-wr">
+        <SortBtn mode="delta" sortMode={sortMode} onSort={onSort} title="Sort by draft Δ only">Δ</SortBtn>
+        <SortBtn mode="wr_delta" sortMode={sortMode} onSort={onSort} title="Sort by win rate + draft Δ">WR + Δ</SortBtn>
+      </div>
     </div>
   )
 }
 
-export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, onTogglePenalty, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null, focusRequest = null, onFocusResolved = null }) {
+export default function RecommendationList({ recommendations, loading, refreshing, selectedIndex, onSelect, config, playerRole, youRole, onViewRoleChange, poolResults = [], selectedPoolRec, onSelectPoolRec, wrModifiers = {}, poolChampions = new Set(), tier, patch, champions = [], lookupChampion, lookupResult, onLookupChange, onAddToPool, onRemoveFromPool, sortMode: externalSort, onSortModeChange, champBlacklist = {}, myPickRec = null, focusRequest = null, onFocusResolved = null }) {
   const [recTab, setRecTab] = useState('overall')
   const [sortOverall, setSortOverall] = useState(() => externalSort || 'wr_delta')
   const [sortPool, setSortPool]       = useState(() => externalSort || 'wr_delta')
@@ -349,30 +370,20 @@ export default function RecommendationList({ recommendations, loading, refreshin
     return { rank, field }
   }, [lookupResult, recommendations, config, playerRole, wrModifiers, sortMode])
 
-  const { sorted, penalizedCount } = useMemo(() => {
-    if (!recommendations.length) return { sorted: [], penalizedCount: 0 }
-
-    let penalizedCount = 0
-    if (config?.penalize) {
-      for (const rec of recommendations) {
-        const all = [...(rec.synergy_breakdown || []), ...(rec.counter_breakdown || [])]
-        penalizedCount += all.filter(b => b.n > 0 && b.n < config.penalizeThreshold).length
-      }
-    }
+  const sorted = useMemo(() => {
+    if (!recommendations.length) return []
 
     const blacklistedForRole = new Set(
       (champBlacklist[playerRole] || []).map(c => c.toLowerCase())
     )
 
-    const sorted = [...recommendations]
+    return [...recommendations]
       .map((rec, origIdx) => ({ rec, origIdx }))
       .filter(({ rec }) => !blacklistedForRole.has(rec.champion.toLowerCase()))
       .sort((a, b) =>
         computeAdjustedScore(b.rec, sortMode, config, playerRole, wrModifiers) -
         computeAdjustedScore(a.rec, sortMode, config, playerRole, wrModifiers)
       )
-
-    return { sorted, penalizedCount }
   }, [recommendations, sortMode, config, playerRole, wrModifiers, champBlacklist])
 
   const sortedPool = useMemo(() => {
@@ -486,65 +497,29 @@ export default function RecommendationList({ recommendations, loading, refreshin
         </div>
       )}
 
-      {/* Overall / My Champions tabs */}
-      <div className="rec-main-tabs">
-        <button
-          className={`rec-main-tab ${recTab === 'overall' ? 'rec-main-tab--active' : ''}`}
-          onClick={() => setRecTab('overall')}
-        >Overall</button>
-        <button
-          className={`rec-main-tab ${recTab === 'pool' ? 'rec-main-tab--active' : ''}`}
-          onClick={() => setRecTab('pool')}
-        >
-          My Champions
-          {poolResults.length > 0 && (
-            <span className="rec-tab-count">{poolResults.length}</span>
-          )}
-        </button>
-      </div>
-
-      <div className="rec-toolbar">
-        <span className="rec-toolbar-label">Sort by</span>
-        <button
-          className={`sort-btn ${sortMode !== 'delta' && sortMode !== 'synergy' && sortMode !== 'counter' ? 'sort-btn--active' : ''}`}
-          onClick={() => setSortMode('wr_delta')}
-        >WR + Δ</button>
-        <button
-          className={`sort-btn ${sortMode === 'delta' ? 'sort-btn--active' : ''}`}
-          onClick={() => setSortMode('delta')}
-        >Δ only</button>
-        <div className="rec-toolbar-spacer" />
-
-        <label className="penalty-toggle" title="Weight matchups with fewer games than the threshold (configure in Settings)">
-          <input
-            type="checkbox"
-            checked={!!config?.penalize}
-            onChange={onTogglePenalty}
-          />
-          Penalize low sample
-        </label>
-        {config?.penalize && (
-          <span
-            className={`penalty-count ${penalizedCount > 0 ? 'penalty-count--active' : 'penalty-count--none'}`}
-            title={penalizedCount > 0
-              ? `${penalizedCount} matchup${penalizedCount !== 1 ? 's' : ''} weighted down (n < ${config.penalizeThreshold.toLocaleString()} games)`
-              : `All matchups have ≥ ${config.penalizeThreshold.toLocaleString()} games — penalty has no effect`}
+      {/* Row 1 of the chrome: tabs · refresh state · champion lookup.
+          The sort chips and the penalty toggle are gone — sorting moved into
+          the column headers, the penalty lives in Settings → Scoring. */}
+      <div className="rec-tabs-row">
+        <div className="rec-main-tabs">
+          <button
+            className={`rec-main-tab ${recTab === 'overall' ? 'rec-main-tab--active' : ''}`}
+            onClick={() => setRecTab('overall')}
+          >Overall</button>
+          <button
+            className={`rec-main-tab ${recTab === 'pool' ? 'rec-main-tab--active' : ''}`}
+            onClick={() => setRecTab('pool')}
           >
-            {penalizedCount > 0 ? `${penalizedCount} weighted` : 'no effect'}
-          </span>
-        )}
-
-      </div>
-
-      {refreshing && (
-        <div className="rec-analyzing-banner">
-          <span className="spinner" />
-          Analyzing draft…
+            My Champions
+            {poolResults.length > 0 && (
+              <span className="rec-tab-count">{poolResults.length}</span>
+            )}
+          </button>
         </div>
-      )}
-
-      <div className="lookup-row">
-        <LookupInput lookupChampion={lookupChampion} champions={champions} onLookupChange={onLookupChange} />
+        {refreshing && <span className="rec-refreshing">Updating…</span>}
+        <div className="lookup-row">
+          <LookupInput lookupChampion={lookupChampion} champions={champions} onLookupChange={onLookupChange} />
+        </div>
       </div>
 
       {lookupChampion && (

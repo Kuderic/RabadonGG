@@ -1,3 +1,17 @@
+## What's new in 1.3.0
+
+### Changes
+- **Redesigned draft board** — your role is now an icon selector instead of a dropdown, every champion you enter shows their win rate *in this draft* right in their row, and both teams have drag grips so you can swap any two champions' roles.
+- **Your top pick sits in your own slot** — the empty row for your role shows the current #1 recommendation and its rating. Click it to open the full breakdown.
+- **Draft Advantage bar** — a verdict strip under the draft shows which side is ahead, comparing the average win rate + draft Δ per locked champion on each team.
+- **Recommendations read at a glance** — the final rating (win rate + draft Δ) is now the headline number on each row, with the base win rate, Δ and game count beneath it. Sorting moved into the column headers: click Synergy, Counter, Δ or WR + Δ to sort by it.
+- **Sample-size weighting moved to Settings** — the "Penalize low sample" checkbox has left the results toolbar. It's now "Discount thin data" under Settings → Scoring, together with its threshold.
+- **Draft Overview shows averages** — each team's score is the average win rate + Δ per locked champion instead of a running total, so the two numbers are directly comparable and the advantage between them is the difference you can see.
+- **Settings rebuilt** — sections sit behind a side nav instead of one long scroll, every setting has a one-line explanation, and Scoring leads with three presets — Balanced, Lane first and Counter-pick — with the per-role weight sliders tucked behind an Advanced panel.
+
+### Bug fixes
+- **Ratings on the draft board can't be selected by accident** — dragging across a champion's name no longer sweeps their rating into the selection.
+
 ## What's new in 1.2.29
 
 ### Bug fixes

@@ -15,7 +15,7 @@ const ROLE_ICON = {
 const ROLE_SHORT = { top: 'TOP', jungle: 'JG', mid: 'MID', adc: 'BOT', support: 'SUP' }
 const ROLE_DISPLAY = { top: 'Top', jungle: 'Jungle', mid: 'Mid', adc: 'Bot', support: 'Support' }
 
-const OV_ADV_MAX = 12
+const OV_ADV_MAX = 6      // the meter saturates at ±6 points of mean WR+Δ
 const OV_DELTA_MAX = 6
 
 const imgErr = e => { e.target.style.visibility = 'hidden' }
@@ -156,8 +156,14 @@ function OvColumn({ side, slots, youRole, config, sortMode, computeDraftRecs, on
 }
 
 // ── scoreline ──────────────────────────────────────────────────────────────
-function OvScoreline({ allyDelta, enemyDelta, allyLocked, enemyLocked }) {
-  const advantage = allyDelta - enemyDelta
+function OvScoreline({ allyScore, enemyScore, allyDelta, enemyDelta, allyLocked, enemyLocked }) {
+  // Everything on this line is a per-locked-champion average, never a running
+  // total: a team that simply has more champions locked shouldn't read as ahead.
+  const allyMean = allyLocked ? allyScore / allyLocked : 0
+  const enemyMean = enemyLocked ? enemyScore / enemyLocked : 0
+  const allyMeanDelta = allyLocked ? allyDelta / allyLocked : 0
+  const enemyMeanDelta = enemyLocked ? enemyDelta / enemyLocked : 0
+  const advantage = (allyLocked && enemyLocked) ? allyMean - enemyMean : 0
   const lead = Math.abs(advantage) < 0.05 ? 'even' : (advantage > 0 ? 'ally' : 'enemy')
   const mag = Math.min(Math.abs(advantage) / OV_ADV_MAX, 1) * 50
   // ally leads → fill left of center (toward the ally column)
@@ -169,13 +175,16 @@ function OvScoreline({ allyDelta, enemyDelta, allyLocked, enemyLocked }) {
     <div className="ov-scoreline">
       <div className="ov-score-team ov-score-team--ally">
         <span className="ov-score-team-label"><span className="dot" /> Allied</span>
-        <span className="ov-score-num">{fmt(allyDelta)}</span>
-        <span className="ov-score-locked">{allyLocked} locked · summed Δ</span>
+        <span className="ov-score-num">{allyLocked ? allyMean.toFixed(1) : '—'}</span>
+        <span className="ov-score-locked">
+          avg WR+Δ · {allyLocked} locked · Δ{' '}
+          <b className={allyMeanDelta >= 0 ? 'positive' : 'negative'}>{fmt(allyMeanDelta)}</b>
+        </span>
       </div>
       <div className="ov-adv">
         <span className="ov-adv-caption">Draft Advantage</span>
         <div className={`ov-adv-readout lead-${lead}`}>
-          <span className="v">{lead === 'even' ? '—' : fmt(Math.abs(advantage))}</span>
+          <span className="v">{lead === 'even' ? '—' : `+${Math.abs(advantage).toFixed(1)}`}</span>
           <span className="who">{whoLabel}</span>
         </div>
         <div className="ov-adv-track">
@@ -187,11 +196,17 @@ function OvScoreline({ allyDelta, enemyDelta, allyLocked, enemyLocked }) {
             />
           )}
         </div>
+        <span className="ov-adv-note">
+          {(allyLocked && enemyLocked) ? 'avg WR+Δ per locked champion' : 'needs a locked champion on both teams'}
+        </span>
       </div>
       <div className="ov-score-team ov-score-team--enemy">
         <span className="ov-score-team-label">Enemy <span className="dot" /></span>
-        <span className="ov-score-num">{fmt(enemyDelta)}</span>
-        <span className="ov-score-locked">{enemyLocked} locked · summed Δ</span>
+        <span className="ov-score-num">{enemyLocked ? enemyMean.toFixed(1) : '—'}</span>
+        <span className="ov-score-locked">
+          avg WR+Δ · {enemyLocked} locked · Δ{' '}
+          <b className={enemyMeanDelta >= 0 ? 'positive' : 'negative'}>{fmt(enemyMeanDelta)}</b>
+        </span>
       </div>
     </div>
   )
@@ -259,16 +274,19 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
 
   const ROLES = ['top', 'jungle', 'mid', 'adc', 'support']
 
-  const allyDelta = overviewData
-    ? overviewData.ally.filter(s => s.locked && s.rec).reduce(
-        (sum, s) => sum + computeComponents(s.rec, config, s.role).totalDelta, 0)
-    : 0
-  const enemyDelta = overviewData
-    ? overviewData.enemy.filter(s => s.locked && s.rec).reduce(
-        (sum, s) => sum + computeComponents(s.rec, config, s.role).totalDelta, 0)
-    : 0
-  const allyLocked = overviewData ? overviewData.ally.filter(s => s.locked).length : 0
-  const enemyLocked = overviewData ? overviewData.enemy.filter(s => s.locked).length : 0
+  // Δ alone stays on the sub-line; the hero number is Σ (WR + Δ) over locked
+  // slots — the same figure the Draft tab's verdict bar averages.
+  const sumDelta = slots => slots.filter(s => s.locked && s.rec)
+    .reduce((sum, s) => sum + computeComponents(s.rec, config, s.role).totalDelta, 0)
+  const sumScore = slots => slots.filter(s => s.locked && s.rec)
+    .reduce((sum, s) => sum + s.rec.win_rate + computeComponents(s.rec, config, s.role).totalDelta, 0)
+  const allyDelta = overviewData ? sumDelta(overviewData.ally) : 0
+  const enemyDelta = overviewData ? sumDelta(overviewData.enemy) : 0
+  const allyScore = overviewData ? sumScore(overviewData.ally) : 0
+  const enemyScore = overviewData ? sumScore(overviewData.enemy) : 0
+  // Count only slots that actually carry a rec, so the mean matches the sum.
+  const allyLocked = overviewData ? overviewData.ally.filter(s => s.locked && s.rec).length : 0
+  const enemyLocked = overviewData ? overviewData.enemy.filter(s => s.locked && s.rec).length : 0
   const totalLocked = allyLocked + enemyLocked
 
   const patchLabel = patch === '30' ? '30 Days' : `Patch ${patch}`
@@ -315,8 +333,8 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
 
       {isEmpty && (
         <div className="ov-emptystate">
-          <h3>Waiting for champion select</h3>
-          <p>Enter champions in the Recommend tab or start champion select. As picks fill in, each champion's contribution appears here and the team deltas update automatically. Recommended picks fill every open slot.</p>
+          <h3>No champions in the draft yet</h3>
+          <p>Enter champions on the Draft tab (or connect the desktop app to champion select). Each locked champion's contribution appears here and the team scores update automatically.</p>
         </div>
       )}
 
@@ -348,6 +366,8 @@ export default function DraftOverview({ overviewData, loading, youRole, config, 
         <>
           {totalLocked > 0 && (
             <OvScoreline
+              allyScore={allyScore}
+              enemyScore={enemyScore}
               allyDelta={allyDelta}
               enemyDelta={enemyDelta}
               allyLocked={allyLocked}

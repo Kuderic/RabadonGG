@@ -4482,3 +4482,270 @@ body.is-dragging .enemy-drag-handle { cursor: grabbing !important; }
 }
 .adv-sec-btn { padding: 2px 8px; font-size: 8px; }
 .adv-sec .advb { border: none; background: none; padding: 2px 10px 9px; }
+
+/* ═════════════════════════════════════════════════════════════════════════
+   MAIN PAGE v2 — design handoff `design_handoff_main_page_v2`
+   Layered last so it wins over the base rules above.
+     §1 Draft tab: icon role switch · YOU-row top pick · grips on both teams ·
+        per-row rating chips · Draft Advantage verdict bar
+     §2 Results: chrome collapsed to two rows · headers are the sort control ·
+        rating (WR+Δ) is the hero number
+     §3 Draft Overview: scoreline reads Σ WR+Δ, advantage compares averages
+     §4 Settings: side nav, setting rows, scoring presets
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ── §1.1 role selector as a segmented icon control ─────────────────────── */
+.draft-role-selector { gap: 12px; }
+.draft-role-switch .rec-role-btn { padding: 6px 12px; }
+.draft-role-switch .rec-role-btn--active { background: rgba(200,155,60,0.20); }
+.draft-role-switch .rec-role-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── §1.3 grips on both teams (generalised from .enemy-drag-*) ──────────── */
+.team-drag-wrap { position: relative; width: 100%; }
+.team-drag-handle {
+  flex-shrink: 0; width: 24px; align-self: stretch;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-right: 1px solid var(--hairline);
+  color: var(--ink-4); background: none; cursor: grab; touch-action: none;
+  transition: color 0.12s, background 0.12s, border-color 0.12s, opacity 0.12s;
+  opacity: 0.45;
+}
+.team-drag-wrap.has-champ:hover .team-drag-handle,
+.team-drag-wrap.has-champ .team-drag-handle:focus-visible { opacity: 1; }
+.team-drag-handle:hover { color: var(--gold-mid); background: rgba(200,155,60,0.08); border-right-color: var(--gold-deep); }
+.team-drag-handle svg { width: 12px; height: 16px; display: block; }
+.team-drag-wrap:not(.has-champ) .team-drag-handle { opacity: 0; pointer-events: none; }
+.team-drag-wrap.has-champ .champ-input-wrap,
+.team-drag-wrap.has-champ input { cursor: text; }
+.team-drag-wrap .role-pill { cursor: default; }
+.team-drag-wrap.drag-source { opacity: 0.32; }
+.team-drag-wrap.drag-source .team-drag-handle { opacity: 1; color: var(--gold-mid); cursor: grabbing; }
+.team-drag-wrap.drag-over { background: rgba(200,155,60,0.10); outline: 2px dashed var(--gold); outline-offset: 2px; border-radius: 4px; }
+.team-drag-wrap.drag-over .role-pill { background: rgba(200,155,60,0.22); border-color: var(--gold); color: var(--gold-bright); }
+.team-drag-wrap.drag-over .team-drag-handle { opacity: 1; color: var(--gold-bright); }
+body.is-dragging .team-drag-handle { cursor: grabbing !important; }
+/* the YOU row is not draggable but keeps the grip column width so inputs align */
+.champ-row--you .team-drag-spacer { width: 24px; flex-shrink: 0; align-self: stretch; border-right: 1px solid rgba(200,155,60,0.18); }
+/* one shared hint under the whole grid, instead of one per team */
+.draft-drag-hint {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 6px; font-family: var(--font-stat); font-size: 11px; letter-spacing: 0.3px; color: var(--ink-3);
+}
+.draft-drag-hint svg { width: 12px; height: 14px; opacity: 0.7; }
+
+/* ── §1.2 the YOU row surfaces the live #1 pick ─────────────────────────── */
+.you-pick-tag {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  margin-right: 10px; padding: 3px 6px; background: none;
+  border: 1px solid transparent; border-radius: 2px; cursor: pointer;
+  font-family: var(--font-stat); font-size: 10px; font-weight: 700;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold-mid);
+  white-space: nowrap; transition: border-color 0.12s, background 0.12s;
+}
+.you-pick-tag:hover { border-color: var(--gold-deep); background: rgba(200,155,60,0.08); }
+.you-pick-tag img {
+  width: 28px; height: 28px; border-radius: 2px; border: 1px solid var(--gold-deep);
+  object-fit: cover; box-shadow: 0 0 8px rgba(200,155,60,0.25);
+}
+.you-pick-tag .you-pick-name {
+  font-family: var(--font-body); font-size: 14px; font-weight: 600;
+  letter-spacing: 0.2px; text-transform: none; color: var(--gold-bright);
+}
+.you-pick-tag b {
+  font-family: var(--font-stat); font-size: 12px; color: var(--pos);
+  letter-spacing: 0; font-variant-numeric: tabular-nums;
+}
+
+/* ── §1.4 rating chip inside each filled draft row ──────────────────────── */
+.champ-input-wrap input { min-width: 0; flex: 1; width: auto; }
+/* Not selectable: the chip sits inside the champion input, so dragging to
+   select the champion name would otherwise sweep the rating into the selection. */
+.rating-chip { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 3px; margin-right: 10px; flex-shrink: 0; -webkit-user-select: none; user-select: none; }
+.rating-chip-num { font-family: var(--font-stat); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; color: var(--ink-2); }
+.rating-chip--hi .rating-chip-num { color: var(--pos); }
+.rating-chip--lo .rating-chip-num { color: var(--neg); }
+.rating-chip-bar { position: relative; width: 56px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.45); box-shadow: inset 0 0 0 1px var(--hairline); overflow: hidden; }
+.rating-chip-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--ink-3); transition: width 0.3s; }
+.rating-chip--hi .rating-chip-fill { background: linear-gradient(90deg, rgba(74,222,128,0.35), var(--pos)); }
+.rating-chip--lo .rating-chip-fill { background: linear-gradient(90deg, rgba(229,72,92,0.35), var(--neg)); }
+.rating-chip-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--gold-deep); }
+
+/* ── §1.5 Draft Advantage verdict bar ───────────────────────────────────── */
+.draft-verdict {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px;
+  margin-top: 18px; padding: 12px 16px;
+  background: rgba(0,0,0,0.22); border: 1px solid var(--border-soft); border-radius: 2px;
+}
+.dv-side { display: flex; flex-direction: column; gap: 3px; line-height: 1; min-width: 64px; }
+.dv-side--enemy { align-items: flex-end; text-align: right; }
+.dv-side-lbl { font-family: var(--font-stat); font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-3); }
+.dv-side-val { font-family: var(--font-stat); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dv-side--ally .dv-side-val { color: var(--ally-bright); }
+.dv-side--enemy .dv-side-val { color: var(--enemy-bright); }
+.dv-side-sub { font-family: var(--font-stat); font-size: 10px; letter-spacing: 0.4px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.dv-mid { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dv-readout { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+.dv-cap { font-family: var(--font-display); font-size: 12px; letter-spacing: 2.2px; text-transform: uppercase; color: var(--gold-mid); }
+.dv-lead { font-family: var(--font-stat); font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dv-lead--ally { color: var(--ally-bright); }
+.dv-lead--enemy { color: var(--enemy-bright); }
+.dv-lead--even { color: var(--ink-2); }
+.dv-who { font-family: var(--font-stat); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-2); }
+.dv-track { position: relative; height: 6px; border-radius: 3px; background: rgba(0,0,0,0.45); box-shadow: inset 0 0 0 1px var(--hairline); overflow: hidden; }
+.dv-track-center { position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px; background: var(--gold-deep); z-index: 2; }
+.dv-fill { position: absolute; top: 0; bottom: 0; border-radius: 2px; transition: left 0.3s, width 0.3s; }
+.dv-fill--ally { background: linear-gradient(90deg, rgba(65,185,220,0.25), var(--ally)); box-shadow: 0 0 8px var(--ally-glow); }
+.dv-fill--enemy { background: linear-gradient(90deg, var(--enemy), rgba(229,72,92,0.25)); box-shadow: 0 0 8px var(--enemy-glow); }
+.dv-note { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); text-align: center; }
+.dv-link { background: none; border: none; padding: 0; font: inherit; font-family: var(--font-stat); font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; font-size: 10px; color: var(--gold-mid); cursor: pointer; }
+.dv-link:hover { color: var(--gold-bright); text-decoration: underline; }
+
+/* ── §2.1 results chrome: one row of tabs · state · lookup ──────────────── */
+.recommendations-list { gap: 14px; }
+.rec-tabs-row { display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border-soft); }
+.rec-tabs-row .rec-main-tabs { border-bottom: none; }
+.rec-tabs-row .lookup-row { margin-left: auto; padding: 0 0 6px; width: 260px; max-width: 45%; }
+.rec-refreshing { font-family: var(--font-stat); font-size: 11px; letter-spacing: 0.6px; color: var(--gold-mid); }
+
+/* ── §2.2 column headers are the sort control ───────────────────────────── */
+.rec-grid--row .recommendation-card,
+.rec-col-headers {
+  grid-template-columns: 30px 42px minmax(0,1fr) 168px 112px;
+  gap: 14px;
+}
+.rec-col-headers { align-items: center; padding: 4px 16px 8px 12px; }
+.rec-col-headers > * { display: flex; align-items: center; min-height: 22px; }
+.rec-col-head-pick { grid-column: 1 / 4; color: var(--ink-3); font-size: 11px; }
+.rec-col-deltas { grid-column: 4; }
+.rec-col-sort {
+  min-height: 22px; padding-left: 12px; font-size: 11px; color: var(--ink-3);
+  border-left-color: var(--border) !important;
+}
+.rec-col-sort .team-dot { width: 6px; height: 6px; transform: rotate(45deg); flex-shrink: 0; display: inline-block; }
+.rec-col-sort .team-dot--ally { background: var(--ally); }
+.rec-col-sort .team-dot--enemy { background: var(--enemy); }
+.rec-col-head-wr { grid-column: 5; display: flex; gap: 12px; justify-content: flex-end; padding-bottom: 0; }
+.rec-col-head-wr .rec-col-sort { border-left: none !important; padding: 4px 0; flex: none; min-width: 0; }
+
+/* ── §2.3 rating is the hero number ─────────────────────────────────────── */
+.rec-grid--row .card-stats { order: 5; gap: 3px; }
+.card-rating { font-family: var(--font-stat); font-size: 21px; font-weight: 700; color: var(--gold-bright); font-variant-numeric: tabular-nums; line-height: 1; }
+.card-rating--sorted { text-shadow: 0 0 14px rgba(200,155,60,0.35); }
+.card-wr-sub { display: flex; align-items: baseline; gap: 6px; font-family: var(--font-stat); font-variant-numeric: tabular-nums; }
+.card-wr-sub .k { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-4); margin-right: -2px; }
+.rec-grid--row .card-win-rate { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.rec-grid--row .card-wr-delta { font-size: 12px; font-weight: 700; }
+.rec-grid--row .card-total-games { font-size: 11px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px; }
+.card-total-games .low-n-warning { font-size: 11px; }
+
+/* ── §2.4 row details ───────────────────────────────────────────────────── */
+.rec-grid--row .card-champion-name { font-size: 17px; min-width: 0; }
+.rec-grid--row .delta-cell { min-width: 70px; padding-left: 12px; }
+/* team identity now lives in the header dots, so row dividers go neutral */
+.rec-grid--row .delta-cell:first-child,
+.rec-grid--row .delta-cell:last-child { border-left-color: var(--border); }
+/* Marcellus renders "1" as "I" — rank digits use the stat face instead */
+.rank-badge, .rank-num { font-family: var(--font-stat); font-weight: 700; font-size: 13px; }
+.recommendation-card .lola-link { opacity: 0; }
+.recommendation-card:hover .lola-link, .card-selected .lola-link { opacity: 0.55; }
+
+@media (max-width: 700px) {
+  .rec-grid--row .recommendation-card { grid-template-columns: auto 38px 1fr; }
+  .rec-grid--row .card-stats { order: 4; grid-column: 3; }
+  .rec-grid--row .card-deltas { order: 5; grid-column: 1 / -1; }
+  .rec-tabs-row { flex-wrap: wrap; }
+  .rec-tabs-row .lookup-row { width: 100%; max-width: none; margin-left: 0; }
+  .draft-verdict { grid-template-columns: 1fr 1fr; }
+  .dv-mid { grid-column: 1 / -1; order: -1; }
+}
+
+/* ── §3 Draft Overview scoreline ────────────────────────────────────────── */
+.ov-score-locked { color: var(--ink-3); }
+.ov-score-locked b { font-weight: 700; }
+.ov-score-locked .positive { color: var(--pos); }
+.ov-score-locked .negative { color: var(--neg); }
+.ov-adv-note { font-family: var(--font-stat); font-size: 10px; letter-spacing: 0.4px; color: var(--ink-3); }
+.ov-col-count { white-space: nowrap; }
+.ov-pc-name { line-height: 1.25; }
+
+/* ── §4 Settings: side nav, one section at a time ───────────────────────── */
+.config-panel.cfg2 { display: grid; grid-template-columns: 210px minmax(0,1fr); gap: 28px; align-items: start; }
+.cfg2-nav { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 2px; }
+.cfg2-nav-btn {
+  display: flex; align-items: center; gap: 10px; text-align: left; white-space: nowrap;
+  padding: 10px 12px; background: none; border: 1px solid transparent; border-radius: 2px;
+  color: var(--ink-3); font-family: var(--font-stat); font-size: 12.5px; letter-spacing: 0.4px;
+  cursor: pointer; transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.cfg2-nav-btn:hover { color: var(--ink); background: rgba(255,255,255,0.03); }
+.cfg2-nav-btn.is-active { color: var(--gold-bright); background: rgba(200,155,60,0.10); border-color: rgba(200,155,60,0.25); }
+.cfg2-nav-btn .n { margin-left: auto; font-size: 10px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.cfg2-nav-btn.is-active .n { color: var(--gold-mid); }
+.cfg2-nav-btn .dot { width: 6px; height: 6px; transform: rotate(45deg); background: var(--gold-deep); flex-shrink: 0; opacity: 0; }
+.cfg2-nav-btn.is-active .dot { opacity: 1; background: var(--gold); }
+.cfg2-body { min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.cfg2-body .config-section { margin: 0; }
+.cfg2-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.cfg2-head .config-section-title { margin-bottom: 4px; }
+.cfg2-head .config-desc { margin: 0; max-width: 62ch; }
+.cfg2-reset {
+  flex-shrink: 0; background: none; border: 1px solid var(--border); color: var(--ink-3);
+  font-family: var(--font-stat); font-size: 11px; letter-spacing: 0.6px;
+  padding: 6px 10px; border-radius: 2px; cursor: pointer; white-space: nowrap;
+}
+.cfg2-reset:hover { color: var(--gold-bright); border-color: var(--gold-deep); }
+.cfg2-reset:disabled { opacity: 0.4; cursor: default; }
+/* setting row: label + one-line help on the left, control on the right */
+.cfg2-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 24px; align-items: center; padding: 14px 0; border-top: 1px solid var(--hairline); }
+.cfg2-row:first-of-type { border-top: none; }
+.cfg2-row-lbl { font-family: var(--font-body); font-size: 14px; color: var(--ink); }
+.cfg2-row-help { grid-column: 1; font-size: 12px; color: var(--ink-3); line-height: 1.45; max-width: 60ch; }
+.cfg2-row-ctl { grid-row: 1 / span 2; grid-column: 2; display: flex; align-items: center; gap: 10px; justify-self: end; }
+.cfg2-row--disabled { opacity: 0.45; }
+.cfg2-ctl-unit { font-size: 12px; color: var(--ink-3); }
+.cfg2-switch { position: relative; width: 38px; height: 22px; border-radius: 11px; background: var(--panel-inset); border: 1px solid var(--border); cursor: pointer; transition: background 0.15s, border-color 0.15s; flex-shrink: 0; }
+.cfg2-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink-3); transition: left 0.15s, background 0.15s; }
+.cfg2-switch.is-on { background: rgba(200,155,60,0.22); border-color: var(--gold-deep); }
+.cfg2-switch.is-on::after { left: 19px; background: var(--gold-bright); }
+.cfg2-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+.cfg2-seg button { background: none; border: none; border-left: 1px solid var(--border); color: var(--ink-3); font-family: var(--font-stat); font-size: 11.5px; letter-spacing: 0.4px; padding: 7px 12px; cursor: pointer; }
+.cfg2-seg button:first-child { border-left: none; }
+.cfg2-seg button.is-active { background: rgba(200,155,60,0.18); color: var(--gold-bright); }
+/* scoring: presets + advanced disclosure */
+.cfg2-presets { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-top: 12px; }
+.cfg2-preset { text-align: left; padding: 12px 14px; background: var(--panel-inset); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; color: var(--ink-2); transition: border-color 0.12s, background 0.12s; }
+.cfg2-preset:hover { border-color: var(--gold-deep); }
+.cfg2-preset.is-active { border-color: var(--gold); background: rgba(200,155,60,0.10); }
+.cfg2-preset .t { display: block; font-family: var(--font-display); font-size: 14px; color: var(--ink); letter-spacing: 0.5px; margin-bottom: 4px; }
+.cfg2-preset.is-active .t { color: var(--gold-bright); }
+.cfg2-preset .d { display: block; font-size: 11.5px; line-height: 1.4; color: var(--ink-3); }
+.cfg2-disclosure { margin-top: 18px; border: 1px solid var(--border-soft); border-radius: 2px; }
+.cfg2-disclosure > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-family: var(--font-stat); font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--gold-mid); }
+.cfg2-disclosure > summary::-webkit-details-marker { display: none; }
+.cfg2-disclosure > summary::before { content: "\203a"; display: inline-block; transition: transform 0.15s; font-size: 14px; }
+.cfg2-disclosure[open] > summary::before { transform: rotate(90deg); }
+.cfg2-disclosure > summary .hint { margin-left: auto; text-transform: none; letter-spacing: 0.2px; color: var(--ink-3); font-size: 11.5px; }
+.cfg2-disclosure-body { padding: 4px 14px 16px; border-top: 1px solid var(--hairline); }
+.cfg2-role-row { display: flex; align-items: center; gap: 12px; margin: 12px 0 4px; }
+.cfg2-role-row .k { font-family: var(--font-stat); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-3); }
+.cfg2 .config-weights-grid { margin-top: 8px; }
+.cfg2 .weight-row { padding: 6px 0; }
+.cfg2 .weight-val { color: var(--ink-2); }
+.cfg2-mult { display: grid; grid-template-columns: 90px minmax(0,1fr) 44px; align-items: center; gap: 12px; padding: 8px 0; }
+.cfg2-mult .k { font-family: var(--font-stat); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.cfg2-mult .v { font-family: var(--font-stat); font-size: 12px; text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.cfg2-formula { margin-top: 10px; font-family: var(--font-stat); font-size: 11.5px; color: var(--ink-3); background: var(--panel-inset); border: 1px solid var(--hairline); padding: 8px 12px; border-radius: 2px; }
+.cfg2-formula b { color: var(--ink-2); font-weight: 600; }
+.cfg2-number { width: 84px; background: var(--panel-inset); border: 1px solid var(--border); border-radius: 2px; color: var(--ink); font-family: var(--font-stat); font-size: 13px; padding: 6px 8px; text-align: right; }
+.cfg2-number:focus { outline: none; border-color: var(--gold-deep); }
+/* My Champions keeps only the Lanes layout in the narrower column */
+.cfg2 .pool-variant-toggle, .cfg2 .pool-variant-note { display: none; }
+.cfg2 .pool-panel-head { margin-bottom: 14px; }
+.cfg2 .pool-lanes { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.cfg2 .pool-lane { min-width: 0; }
+
+@media (max-width: 760px) {
+  .config-panel.cfg2 { grid-template-columns: 1fr; }
+  .cfg2-nav { position: static; flex-direction: row; flex-wrap: wrap; }
+  .cfg2-presets { grid-template-columns: 1fr; }
+}

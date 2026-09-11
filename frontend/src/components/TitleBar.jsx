@@ -6,22 +6,7 @@ export default function TitleBar({ lcuConnected, lcuSession, version, onShowChan
 
   useEffect(() => {
     document.documentElement.setAttribute('data-desktop', '')
-
-    // Relay wheel events from the side gutters (outside .app-container) to the
-    // scroll container. In fullscreen the centered .app-container is narrower
-    // than the window, so wheel events over the gutter hit #root (overflow:
-    // hidden) and never reach the scrollable child.
-    const root = document.getElementById('root')
-    const handleGutterWheel = (e) => {
-      const container = root?.querySelector('.app-container')
-      if (!container || container.contains(e.target)) return
-      container.scrollTop += e.deltaY
-    }
-    root?.addEventListener('wheel', handleGutterWheel, { passive: true })
-
-    if (!appWindow) return () => {
-      root?.removeEventListener('wheel', handleGutterWheel)
-    }
+    if (!appWindow) return
 
     let unlisten
     appWindow.isMaximized().then(setMaximized)
@@ -29,10 +14,7 @@ export default function TitleBar({ lcuConnected, lcuSession, version, onShowChan
       appWindow.isMaximized().then(setMaximized)
     }).then(fn => { unlisten = fn })
 
-    return () => {
-      root?.removeEventListener('wheel', handleGutterWheel)
-      unlisten?.()
-    }
+    return () => { unlisten?.() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   let statusCls = ''
